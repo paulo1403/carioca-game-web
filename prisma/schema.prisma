@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model GameSession {
+  id           String    @id
+  creatorId    String    // ID of the player who created/hosts the game
+  status       String    // 'WAITING', 'PLAYING', 'ROUND_ENDED', 'FINISHED'
+  currentTurn  Int       @default(0)
+  currentRound Int       @default(1)
+  direction    String    @default("clockwise")
+  deck         String    // JSON string of Card[]
+  discardPile  String    // JSON string of Card[]
+  lastAction   String?   // JSON string of { playerId, type, description, timestamp }
+  pendingDiscardIntents String @default("[]") // JSON string of {playerId, timestamp}[]
+  pendingBuyIntents String @default("[]") // JSON string of {playerId, timestamp}[]
+  readyForNextRound String @default("[]") // JSON string of string[] (player IDs ready for next round)
+  reshuffleCount Int @default(0) // Number of times the deck has been reshuffled from discard pile
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  players      Player[]
+  history      GameHistory?
+}
+
+model Player {
+  id            String      @id
+  name          String
+  hand          String      // JSON string of Card[]
+  melds         String      @default("[]") // JSON string of Card[][] (Groups of cards played on table)
+  boughtCards   String      @default("[]") // JSON string of Card[] (Bought cards not yet melded)
+  score         Int         @default(0)
+  roundScores   String      @default("[]") // JSON string of number[] (Scores per round)
+  buysUsed      Int         @default(0) // Number of buys used by this player (max 7)
+  roundBuys     String      @default("[]") // JSON string of number[] (Buys used per round)
+  isBot         Boolean     @default(false)
+  difficulty    String?     // 'EASY', 'MEDIUM', 'HARD'
+  gameSessionId String
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+}
+
+model GameHistory {
+  id            String      @id @default(uuid())
+  gameSessionId String      @unique
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id])
+  winnerId      String?
+  participants  String      // JSON string of participant summaries
+  playedAt      DateTime    @default(now())
+}
+
+model Song {
+  id        String   @id @default(uuid())
+  title     String
+  artist    String
+  url       String
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,504 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import { Card, GameState } from "@/types/game";
+import { cn } from "@/lib/utils";
+
+// Hooks
+import { useGameState } from "@/hooks/useGameState";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useDownMode } from "@/hooks/useDownMode";
+import { useAddableCards } from "@/hooks/useAddableCards";
+import { useStealableJokers } from "@/hooks/useStealableJokers";
+import { useDiscardHint } from "@/hooks/useDiscardHint";
+import { useHandManagement } from "@/hooks/useHandManagement";
+import { useGameSounds } from "@/hooks/useGameSounds";
+
+// Components
+import { PlayerBadge } from "./PlayerBadge";
+import { MeldGroup } from "./MeldGroup";
+import { DeckArea } from "./DeckArea";
+import { ActionBar } from "./ActionBar";
+import { HandArea } from "./HandArea";
+import { DownModeControls } from "./DownModeControls";
+import { BuyConfirmDialog } from "./BuyConfirmDialog";
+import { HandAssistant } from "./HandAssistant";
+
+// Utils
+import { canAddToMeld, canStealJoker } from "@/utils/rules";
+import { findBestCardMove } from "@/utils/cardMoveHelper";
+
+// Types and interfaces
+interface BoardProps {
+  gameState: GameState;
+  myPlayerId: string;
+  onDrawDeck: () => void;
+  onDrawDiscard: () => void;
+  onDiscard: (cardId: string) => void;
+  onDown: (groups: Card[][]) => void;
+  onAddToMeld: (
+    cardId: string,
+    targetPlayerId: string,
+    meldIndex: number
+  ) => void;
+  onStealJoker: (
+    cardId: string,
+    targetPlayerId: string,
+    meldIndex: number
+  ) => void;
+  hasDrawn: boolean;
+}
+
+export const Board: React.FC<BoardProps> = ({
+  gameState,
+  myPlayerId,
+  onDrawDeck,
+  onDrawDiscard,
+  onDiscard,
+  onDown,
+  onAddToMeld,
+  onStealJoker,
+  hasDrawn,
+}) => {
+  // Game state
+  const { myPlayer, otherPlayers, isMyTurn, myHandPoints, haveMelded } =
+    useGameState(gameState, myPlayerId);
+
+  // UI state
+  const isMobile = useIsMobile();
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+  const [showBuyConfirmDialog, setShowBuyConfirmDialog] = useState(false);
+
+  // Down mode
+  const {
+    isDownMode,
+    tempGroup,
+    groupsToMeld,
+    toggleDownMode,
+    toggleCardInTempGroup,
+    setGroupsToMeld,
+    setTempGroup,
+    resetDownMode,
+  } = useDownMode();
+
+  // Hand management
+  const { sortMode, setSortMode, sortedHand, canDownCheck } = useHandManagement(
+    myPlayer?.hand ?? [],
+    gameState.currentRound
+  );
+
+  // Addable cards
+  const addableCards = useAddableCards(
+    isMyTurn,
+    hasDrawn,
+    isDownMode,
+    myPlayer,
+    otherPlayers,
+    haveMelded ?? false
+  );
+
+  // Stealable jokers
+  const stealableJokers = useStealableJokers(
+    gameState,
+    myPlayer,
+    isMyTurn,
+    isDownMode
+  );
+
+  // Discard hint
+  const { suggestedDiscardCardId, isDiscardUseful } = useDiscardHint(
+    myPlayer,
+    isMyTurn,
+    hasDrawn,
+    isDownMode,
+    gameState
+  );
+
+  // Sounds
+  const {
+    playClick,
+    playSelect,
+    playDrop,
+    playShuffle,
+    playSuccess,
+    playError,
+  } = useGameSounds();
+
+  // Player layout (top, left, right, bottom)
+  const layout = useMemo(() => {
+    const all = gameState.players;
+    const count = all.length;
+    const myIndex = all.findIndex((p) => p.id === myPlayerId);
+
+    // Helper to get player at relative offset
+    const getP = (offset: number) => all[(myIndex + offset) % count];
+
+    if (count === 2) {
+      return { top: getP(1) };
+    }
+    if (count === 3) {
+      return { left: getP(1), right: getP(2) };
+    }
+    if (count === 4) {
+      return { left: getP(1), top: getP(2), right: getP(3) };
+    }
+    if (count === 5) {
+      return {
+        left: getP(1),
+        topLeft: getP(2),
+        topRight: getP(3),
+        right: getP(4),
+      };
+    }
+
+    return {};
+  }, [gameState.players, myPlayerId]);
+
+  // Handlers
+  const handleCardClick = (cardId: string) => {
+    if (!isMyTurn || !hasDrawn) return;
+
+    // Check if card is addable to existing melds
+    if (addableCards.includes(cardId) && !isDownMode) {
+      const card = myPlayer?.hand.find((c) => c.id === cardId);
+      if (card && myPlayer) {
+        const bestMove = findBestCardMove(card, myPlayer, otherPlayers);
+        if (bestMove) {
+          onAddToMeld(cardId, bestMove.targetPlayerId, bestMove.meldIndex);
+          playSuccess();
+          return;
+        }
+      }
+    }
+
+    if (isDownMode) {
+      const card = myPlayer?.hand.find((c) => c.id === cardId);
+      if (!card) return;
+
+      if (groupsToMeld.some((g) => g.some((c) => c.id === cardId))) return;
+
+      toggleCardInTempGroup(card);
+      playSelect();
+    } else {
+      if (selectedCardId === cardId) {
+        setSelectedCardId(null);
+        playSelect();
+      } else {
+        setSelectedCardId(cardId);
+        playSelect();
+      }
+    }
+  };
+
+  const handleDiscardPileClick = () => {
+    if (isDownMode) return;
+
+    // Priority: If current player has drawn AND has a card selected -> DISCARD that card
+    if (isMyTurn && hasDrawn && selectedCardId) {
+      onDiscard(selectedCardId);
+      playDrop();
+      setSelectedCardId(null);
+      return;
+    }
+
+    // Otherwise: Allow anyone to BUY (others, or current player before/after drawing without selection)
+    if (gameState.discardPile.length === 0) return;
+    if (myPlayer && (myPlayer.buysUsed ?? 0) >= 7) {
+      playError();
+      return;
+    }
+    setShowBuyConfirmDialog(true);
+  };
+
+  const handleAddGroup = () => {
+    if (tempGroup.length < 3) {
+      playError();
+      return;
+    }
+    setGroupsToMeld((prev) => [...prev, [...tempGroup]]);
+    setTempGroup([]);
+    playSuccess();
+  };
+
+  const handleConfirmDown = () => {
+    if (groupsToMeld.length === 0) return;
+
+    // Calculate total cards being melded
+    const totalCardsToMeld = groupsToMeld.reduce(
+      (sum, group) => sum + group.length,
+      0
+    );
+    const cardsInHand = myPlayer?.hand.length || 0;
+    const cardsRemaining = cardsInHand - totalCardsToMeld;
+
+    // Validation: Must have at least 1 card left
+    if (cardsRemaining <= 0) {
+      playError();
+      return;
+    }
+
+    onDown(groupsToMeld);
+    resetDownMode();
+    playSuccess();
+  };
+
+  const handleStealJoker = (index: number) => {
+    if (index < 0 || index >= stealableJokers.length) return;
+
+    const sj = stealableJokers[index];
+    const stealingCard = myPlayer?.hand.find((card) =>
+      canStealJoker(
+        card,
+        gameState.players.find((p) => p.id === sj.playerId)?.melds?.[
+          sj.meldIndex
+        ] || [],
+        myPlayer.hand
+      )
+    );
+
+    if (stealingCard) {
+      onStealJoker(stealingCard.id, sj.playerId, sj.meldIndex);
+      playSuccess();
+    }
+  };
+
+  return (
+    <div
+      className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-2 md:p-4 flex flex-col justify-between overflow-hidden select-none"
+      style={{ paddingBottom: "safe-area-inset-bottom" }}
+    >
+      {/* Top Players Area */}
+      <div className="flex justify-around items-start w-full max-w-2xl mx-auto min-h-[60px]">
+        {/* Case: 5 Players (Top Left & Top Right) */}
+        {layout.topLeft && (
+          <PlayerBadge
+            key={layout.topLeft.id}
+            player={layout.topLeft}
+            isOwnPlayer={layout.topLeft.id === myPlayerId}
+            handPoints={layout.topLeft.id === myPlayerId ? myHandPoints : 0}
+            expandedPlayerId={expandedPlayerId}
+            onExpandToggle={setExpandedPlayerId}
+          />
+        )}
+        
+        {/* Case: 2 or 4 Players (Center Top) */}
+        {layout.top && (
+          <PlayerBadge
+            key={layout.top.id}
+            player={layout.top}
+            isOwnPlayer={layout.top.id === myPlayerId}
+            handPoints={layout.top.id === myPlayerId ? myHandPoints : 0}
+            expandedPlayerId={expandedPlayerId}
+            onExpandToggle={setExpandedPlayerId}
+          />
+        )}
+
+        {/* Case: 5 Players (Top Right) */}
+        {layout.topRight && (
+          <PlayerBadge
+            key={layout.topRight.id}
+            player={layout.topRight}
+            isOwnPlayer={layout.topRight.id === myPlayerId}
+            handPoints={layout.topRight.id === myPlayerId ? myHandPoints : 0}
+            expandedPlayerId={expandedPlayerId}
+            onExpandToggle={setExpandedPlayerId}
+          />
+        )}
+      </div>
+
+      {/* Middle Area */}
+      <div className="flex-1 flex justify-between items-center my-2 md:my-4 w-full">
+        {/* Left Player */}
+        <div className="flex items-center justify-center w-24 md:w-32">
+          {layout.left && (
+            <PlayerBadge
+              player={layout.left}
+              className="-rotate-90 origin-center transform translate-x-4"
+              isOwnPlayer={layout.left.id === myPlayerId}
+              handPoints={layout.left.id === myPlayerId ? myHandPoints : 0}
+              expandedPlayerId={expandedPlayerId}
+              onExpandToggle={setExpandedPlayerId}
+            />
+          )}
+        </div>
+
+        {/* Center Table */}
+        <DeckArea
+          isMyTurn={isMyTurn}
+          hasDrawn={hasDrawn}
+          isDownMode={isDownMode}
+          gameState={gameState}
+          myPlayer={myPlayer}
+          onDrawDeck={onDrawDeck}
+          onDrawDiscard={onDrawDiscard}
+          handleDiscardPileClick={handleDiscardPileClick}
+          setShowBuyConfirmDialog={setShowBuyConfirmDialog}
+          isDiscardUseful={isDiscardUseful}
+          playShuffle={playShuffle}
+          selectedCardId={selectedCardId}
+        />
+
+        {/* Right Player */}
+        <div className="flex items-center justify-center w-24 md:w-32">
+          {layout.right && (
+            <PlayerBadge
+              player={layout.right}
+              className="rotate-90 origin-center transform -translate-x-4"
+              isOwnPlayer={layout.right.id === myPlayerId}
+              handPoints={layout.right.id === myPlayerId ? myHandPoints : 0}
+              expandedPlayerId={expandedPlayerId}
+              onExpandToggle={setExpandedPlayerId}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Bottom: My Player Hand */}
+      <div className="flex flex-col items-center w-full relative">
+        {/* Action Bar */}
+        {!isDownMode && (
+          <ActionBar
+            stealableJokers={stealableJokers}
+            isMyTurn={isMyTurn}
+            hasDrawn={hasDrawn}
+            isDownMode={isDownMode}
+            canDown={canDownCheck.canDown}
+            hasMelds={haveMelded ?? false}
+            onToggleDownMode={toggleDownMode}
+            onStealJoker={handleStealJoker}
+          />
+        )}
+
+        {/* My Melds */}
+        {haveMelded &&
+          myPlayer &&
+          myPlayer.melds &&
+          myPlayer.melds.length > 0 && (
+            <div className="mb-4 flex justify-center gap-4 flex-wrap">
+              {myPlayer.melds.map((group, gIdx) => (
+                <MeldGroup
+                  key={gIdx}
+                  group={group}
+                  playerId={myPlayer.id}
+                  meldIndex={gIdx}
+                  size="large"
+                />
+              ))}
+            </div>
+          )}
+
+        {/* Status Message */}
+        <div
+          className={cn(
+            "mb-2 text-white font-bold text-sm md:text-lg bg-black/40 px-3 py-1 md:px-4 rounded-full transition-all text-center max-w-[90vw] truncate",
+            isMyTurn ? "ring-2 ring-yellow-400 bg-green-600/80" : ""
+          )}
+        >
+          {myPlayer?.name} (Tú) - R{gameState.currentRound}
+          {isDownMode && " - Selecciona cartas para formar grupos"}
+          {!isDownMode && isMyTurn && !hasDrawn && " - Roba una carta"}
+          {!isDownMode &&
+            isMyTurn &&
+            hasDrawn &&
+            !selectedCardId &&
+            (addableCards.length > 0
+              ? " - Cartas azules: ¡Se pueden añadir a juegos!"
+              : " - Selecciona una carta para botar")}
+          {!isDownMode &&
+            isMyTurn &&
+            hasDrawn &&
+            selectedCardId &&
+            " - Toca el Pozo para confirmar"}
+        </div>
+
+        <HandAssistant
+          hand={myPlayer?.hand ?? []}
+          topDiscard={
+            gameState.discardPile.length > 0
+              ? gameState.discardPile[gameState.discardPile.length - 1]
+              : undefined
+          }
+          sortMode={sortMode}
+          onToggleAutoSort={() =>
+            setSortMode((prev) => (prev === "auto" ? "suit" : "auto"))
+          }
+          canInteract={isMyTurn && hasDrawn && !isDownMode && !!myPlayer}
+          onPrefillDownMode={(cards) => {
+            if (!myPlayer || !isMyTurn || !hasDrawn) return;
+            if (!isDownMode) toggleDownMode();
+            setSelectedCardId(null);
+            setTempGroup(cards);
+            playSelect();
+          }}
+          canAutoDown={
+            !!myPlayer &&
+            canDownCheck.canDown &&
+            myPlayer.hand.length - canDownCheck.groups.flat().length > 0
+          }
+          onAutoDown={() => {
+            if (!myPlayer || !isMyTurn || !hasDrawn) return;
+            if (!isDownMode) toggleDownMode();
+            setSelectedCardId(null);
+            setGroupsToMeld(canDownCheck.groups);
+            setTempGroup([]);
+            playSelect();
+          }}
+          disabled={isDownMode || !myPlayer}
+        />
+
+        {/* Down Mode Controls */}
+        {isDownMode && (
+          <DownModeControls
+            groupsToMeld={groupsToMeld}
+            tempGroup={tempGroup}
+            onAddGroup={handleAddGroup}
+            onConfirmDown={handleConfirmDown}
+            onCancel={toggleDownMode}
+            canAutoFill={canDownCheck.canDown && groupsToMeld.length === 0}
+            onAutoFill={() => {
+              setGroupsToMeld(canDownCheck.groups);
+              setTempGroup([]);
+            }}
+            canConfirmDown={
+              myPlayer
+                ? myPlayer.hand.length -
+                    (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
+                      tempGroup.length) >
+                  0
+                : false
+            }
+          />
+        )}
+
+        {/* Hand Area */}
+        <HandArea
+          sortedHand={sortedHand}
+          groupsToMeld={groupsToMeld}
+          tempGroup={tempGroup}
+          selectedCardId={selectedCardId}
+          addableCards={addableCards}
+          suggestedDiscardCardId={suggestedDiscardCardId}
+          isMyTurn={isMyTurn}
+          hasDrawn={hasDrawn}
+          isDownMode={isDownMode}
+          isMobile={isMobile}
+          onClick={handleCardClick}
+          handPoints={myHandPoints}
+        />
+      </div>
+
+      {/* Buy Confirmation Dialog */}
+      <BuyConfirmDialog
+        show={showBuyConfirmDialog}
+        myPlayer={myPlayer}
+        onConfirm={() => {
+          setShowBuyConfirmDialog(false);
+          onDrawDiscard();
+          playShuffle();
+        }}
+        onCancel={() => setShowBuyConfirmDialog(false)}
+      />
+    </div>
+  );
+};

@@ -1,0 +1,97 @@
+import React from "react";
+import { Card, GameState, Player } from "@/types/game";
+import { CardWrapper } from "./CardWrapper";
+import { cn } from "@/lib/utils";
+
+interface HandAreaProps {
+  sortedHand: Card[];
+  groupsToMeld: Card[][];
+  tempGroup: Card[];
+  selectedCardId: string | null;
+  addableCards: string[];
+  suggestedDiscardCardId: string | null;
+  isMyTurn: boolean;
+  hasDrawn: boolean;
+  isDownMode: boolean;
+  isMobile: boolean;
+  onClick: (cardId: string) => void;
+  handPoints?: number;
+}
+
+export const HandArea: React.FC<HandAreaProps> = ({
+  sortedHand,
+  groupsToMeld,
+  tempGroup,
+  selectedCardId,
+  addableCards,
+  suggestedDiscardCardId,
+  isMyTurn,
+  hasDrawn,
+  isDownMode,
+  isMobile,
+  onClick,
+  handPoints = 0,
+}) => {
+  const visibleHand = sortedHand.filter(
+    (card) => !groupsToMeld.some((g) => g.some((c) => c.id === card.id))
+  );
+
+  const cardWidth = isMobile ? 80 : 96;
+  const step = isMobile ? 60 : 64;
+  const contentWidth =
+    visibleHand.length <= 1
+      ? cardWidth
+      : cardWidth + (visibleHand.length - 1) * step;
+
+  return (
+    <div className="w-full flex flex-col gap-3">
+      {/* Hand Cards Container */}
+      <div className="relative h-40 md:h-56 w-full max-w-4xl overflow-x-auto overflow-y-hidden pb-4 md:pb-6 px-4 md:px-6 bg-gradient-to-r from-slate-900/30 to-slate-800/30 rounded-2xl backdrop-blur-sm border border-slate-700/50 py-6 md:py-8 mx-auto touch-pan-x overscroll-x-contain">
+        <div
+          className="relative h-full mx-auto"
+          style={{ width: contentWidth + 24, minWidth: "100%" }}
+        >
+          {visibleHand.map((card, index) => {
+            const isSelected = selectedCardId === card.id;
+            const isTempSelected = tempGroup.some((c) => c.id === card.id);
+            const zIndex = isSelected || isTempSelected ? 50 : index;
+
+          return (
+            <div
+              key={card.id}
+              className="absolute bottom-0"
+              style={{ left: index * step, zIndex }}
+            >
+              <CardWrapper
+                card={card}
+                index={index}
+                disabled={!isMyTurn || !hasDrawn || isDownMode}
+                isSelected={isSelected}
+                isTempSelected={isTempSelected}
+                isAddable={addableCards.includes(card.id)}
+                isSuggestedDiscard={suggestedDiscardCardId === card.id}
+                onClick={() => onClick(card.id)}
+                isMobile={isMobile}
+              />
+            </div>
+          );
+        })}
+        </div>
+      </div>
+
+      {/* Hand Points Display */}
+      <div className="flex justify-center">
+        <div className="bg-gradient-to-r from-blue-600/80 to-blue-700/80 backdrop-blur-sm border-2 border-blue-400/50 rounded-full px-6 py-2 shadow-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-white/80 text-sm font-semibold">
+              Puntos en mano:
+            </span>
+            <span className="text-white font-bold text-xl bg-blue-900/50 px-4 py-1 rounded-full border border-blue-400/30">
+              {handPoints}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
