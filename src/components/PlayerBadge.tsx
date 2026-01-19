@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Player, Card } from "@/types/game";
 import { MeldGroup } from "./MeldGroup";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,11 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
     }
   };
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className={cn("relative flex flex-col items-center", className)}>
@@ -63,84 +68,56 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
         )}
       </div>
 
-      {/* Melds Display - Modal/Popover */}
-      {isExpanded && showMelds && (
-        <>
-          {/* Mobile Full Screen Overlay */}
-          {isMobile && (
-            <div
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in p-4"
-              onClick={() => onExpandToggle?.(null)}
-            >
-              <div
-                className="bg-green-900/90 border-2 border-white/20 rounded-2xl p-4 w-full max-w-sm max-h-[80vh] overflow-y-auto shadow-2xl relative"
-                onClick={(e) => e.stopPropagation()}
+      {/* Melds Display - Unified Modal */}
+      {isExpanded && showMelds && mounted && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4"
+          onClick={() => onExpandToggle?.(null)}
+        >
+          <div
+            className="bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-900">
+              <h3 className="font-bold text-lg md:text-xl text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-yellow-400" />
+                <span>Juegos de <span className="text-yellow-400">{player.name}</span></span>
+              </h3>
+              <button
+                onClick={() => onExpandToggle?.(null)}
+                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
               >
-                <div className="flex justify-between items-center mb-4 sticky top-0 bg-green-900/90 pb-2 border-b border-white/10 z-10">
-                  <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                    <Layers className="w-5 h-5 text-yellow-400" />
-                    Juegos de {player.name}
-                  </h3>
-                  <button
-                    onClick={() => onExpandToggle?.(null)}
-                    className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-transform active:scale-95"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-6 items-center w-full pb-4">
-                  {player.melds?.map((group: Card[], gIdx: number) => (
-                    <div
-                      key={gIdx}
-                      className="w-full flex flex-col items-center"
-                    >
-                      <MeldGroup
-                        group={group}
-                        playerId={player.id}
-                        meldIndex={gIdx}
-                        size="large"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          )}
 
-          {/* Popover for Desktop */}
-          {!isMobile && (
-            <div
-              className={cn(
-                "absolute top-full mt-4 flex flex-col gap-1 items-center bg-black/80 p-2 rounded-lg z-30 shadow-2xl border border-white/10 max-h-[200px] overflow-y-auto w-[180px] transition-all animate-in zoom-in-90"
-              )}
-            >
-              <span className="text-[10px] text-white/50 uppercase font-bold mb-1 w-full text-center sticky top-0 bg-black/80 pb-1 flex justify-between items-center px-2">
-                <span>Juegos de {player.name}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpandToggle?.(null);
-                  }}
-                  className="bg-red-500 rounded-full p-1 hover:bg-red-600"
-                >
-                  <X className="w-3 h-3 text-white" />
-                </button>
-              </span>
-              <div className="flex flex-col items-center gap-4 justify-center w-full">
+            {/* Content */}
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 place-items-center">
                 {player.melds?.map((group: Card[], gIdx: number) => (
-                  <MeldGroup
+                  <div
                     key={gIdx}
-                    group={group}
-                    playerId={player.id}
-                    meldIndex={gIdx}
-                    size="small"
-                  />
+                    className="flex flex-col items-center bg-black/20 p-4 rounded-lg w-full border border-white/5 hover:border-white/10 transition-colors"
+                  >
+                    <MeldGroup
+                      group={group}
+                      playerId={player.id}
+                      meldIndex={gIdx}
+                      size="large"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
-          )}
-        </>
+            
+            {/* Footer hint */}
+            <div className="p-3 bg-black/20 text-center border-t border-white/5">
+               <p className="text-xs text-white/40">Haz clic fuera para cerrar</p>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

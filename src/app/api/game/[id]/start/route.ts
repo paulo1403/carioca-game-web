@@ -30,9 +30,9 @@ export async function POST(
     const deck = shuffleDeck(createDeck());
     const discardPile = [deck.pop()!];
 
-    // Deal 12 cards to each player
+    // Deal 11 cards to each player
     const updates = session.players.map(player => {
-        const hand = deck.splice(0, 12);
+        const hand = deck.splice(0, 11);
         return prisma.player.update({
             where: { id: player.id },
             data: { 

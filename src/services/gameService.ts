@@ -1238,7 +1238,7 @@ export async function processMove(
       const newDiscardPile = [newDeck.pop()!];
 
       const playerUpdates = players.map((p) => {
-        const newHand = newDeck.splice(0, 12);
+        const newHand = newDeck.splice(0, 11);
         p.hand = newHand;
         p.melds = [];
         p.boughtCards = [];

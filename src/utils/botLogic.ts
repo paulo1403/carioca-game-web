@@ -774,7 +774,7 @@ const evaluateHandQuality = (hand: Card[], round: number): number => {
   const pointsPenalty = Math.min(pointsInHand / 150, 0.5);
 
   // Bonus for full hand
-  const sizeBonus = Math.min(totalCards / 12, 1) * 0.15;
+  const sizeBonus = Math.min(totalCards / 11, 1) * 0.15;
 
   const total =
     trioScore + escalaScore + jokerScore + sizeBonus - pointsPenalty;
