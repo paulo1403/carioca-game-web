@@ -11,6 +11,8 @@ export const isTrio = (cards: Card[], minLength: number = 3): boolean => {
 
 export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   if (cards.length < minLength) return false;
+  // Maximum length of a straight is 13 (no repeating values)
+  if (cards.length > 13) return false;
 
   const nonJokers = cards.filter((c) => c.suit !== "JOKER" && c.value !== 0);
   if (nonJokers.length === 0) return true; // All Jokers
@@ -19,22 +21,31 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   const firstSuit = nonJokers[0].suit;
   if (!nonJokers.every((c) => c.suit === firstSuit)) return false;
 
-  // Sort by value
-  const sorted = [...nonJokers].sort((a, b) => a.value - b.value);
-  const values = sorted.map((c) => c.value);
-
-  // Check for duplicates (cannot have same card twice in a sequence)
+  // Check for duplicates
+  const values = nonJokers.map((c) => c.value);
   if (new Set(values).size !== values.length) return false;
 
-  // Check gaps
-  let gaps = 0;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const diff = sorted[i + 1].value - sorted[i].value;
-    gaps += diff - 1;
+  if (nonJokers.length === 1) return true;
+
+  // Circular straight logic:
+  // Sort values
+  const sorted = [...values].sort((a, b) => a - b);
+
+  // Find the largest circular gap between adjacent cards
+  let maxGap = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    let gap;
+    if (i === sorted.length - 1) {
+      // Gap between last and first card (circular)
+      gap = (sorted[0] + 13) - sorted[i];
+    } else {
+      gap = sorted[i + 1] - sorted[i];
+    }
+    if (gap > maxGap) maxGap = gap;
   }
 
-  const jokersCount = cards.length - nonJokers.length;
-  return gaps <= jokersCount;
+  // The length of the smallest straight that contains all these cards is 13 - maxGap + 1
+  return (13 - maxGap + 1) <= cards.length;
 };
 
 export const validateContract = (

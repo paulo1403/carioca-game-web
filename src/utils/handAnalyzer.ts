@@ -23,28 +23,36 @@ export const isValidTrio = (cards: Card[]): boolean => {
 };
 
 // Check if a set of cards is a valid Escala (4+ cards of same suit in sequence)
-export const isValidEscala = (cards: Card[]): boolean => {
-  if (cards.length < 4) return false;
-  const nonJokers = cards.filter((c) => !isJoker(c));
-  const jokersCount = cards.length - nonJokers.length;
+export const isValidEscala = (cards: Card[], minLength: number = 4): boolean => {
+  if (cards.length < minLength) return false;
+  if (cards.length > 13) return false;
 
-  if (nonJokers.length === 0) return true;
+  const nonJokers = cards.filter((c) => !isJoker(c));
+  if (nonJokers.length === 0) return true; // All Jokers
 
   const targetSuit = nonJokers[0].suit;
   if (nonJokers.some((c) => c.suit !== targetSuit)) return false;
 
-  // Sort by value
-  const sorted = [...nonJokers].sort((a, b) => a.value - b.value);
+  // Check for duplicates
+  const values = nonJokers.map((c) => c.value);
+  if (new Set(values).size !== values.length) return false;
 
-  // Check gaps
-  let gaps = 0;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const diff = sorted[i + 1].value - sorted[i].value;
-    if (diff === 0) return false; // Duplicate cards not allowed in straight
-    gaps += diff - 1;
+  if (nonJokers.length === 1) return true;
+
+  // Circular straight logic
+  const sorted = [...values].sort((a, b) => a - b);
+  let maxGap = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    let gap;
+    if (i === sorted.length - 1) {
+      gap = (sorted[0] + 13) - sorted[i];
+    } else {
+      gap = sorted[i + 1] - sorted[i];
+    }
+    if (gap > maxGap) maxGap = gap;
   }
 
-  return gaps <= jokersCount;
+  return (13 - maxGap + 1) <= cards.length;
 };
 
 // --- Auto Grouping Logic ---
@@ -254,46 +262,60 @@ export const findPotentialContractGroups = (
     });
 
     const res: Card[][] = [];
-    Object.values(bySuit).forEach((suitCards) => {
-      suitCards.sort((a, b) => a.value - b.value);
-      let currentRun: Card[] = [suitCards[0]];
-      for (let i = 1; i < suitCards.length; i++) {
-        const prev = currentRun[currentRun.length - 1];
-        const curr = suitCards[i];
-        if (curr.value === prev.value + 1) {
-          currentRun.push(curr);
-        } else {
-          if (currentRun.length >= targetSize) {
-            res.push([...currentRun]);
-            currentRun.forEach((c) => usedCardIds.add(c.id));
-          } else if (
-            currentRun.length === targetSize - 1 &&
-            availableJokers > 0
-          ) {
-            availableJokers--;
-            const joker = jokers[availableJokers];
-            currentRun.push(joker);
-            res.push([...currentRun]);
-            currentRun.forEach((c) => usedCardIds.add(c.id));
-            usedCardIds.add(joker.id);
+    Object.entries(bySuit).forEach(([suit, suitCards]) => {
+      const valuesInSuit = new Map<number, Card>();
+      suitCards.forEach(c => valuesInSuit.set(c.value, c));
+
+      // Try all 13 starting positions
+      for (let s = 1; s <= 13; s++) {
+        const currentGroup: Card[] = [];
+        let jokersNeeded = 0;
+        const tempUsedIds = new Set<string>();
+
+        for (let i = 0; i < 13; i++) {
+          const val = ((s + i - 1) % 13) + 1;
+          const card = valuesInSuit.get(val);
+
+          if (card && !usedCardIds.has(card.id)) {
+            currentGroup.push(card);
+            tempUsedIds.add(card.id);
+          } else if (availableJokers - jokersNeeded > 0) {
+            jokersNeeded++;
+            // We use a placeholder joker for now
+            currentGroup.push({ id: `TEMP-JOKER-${jokersNeeded}`, suit: 'JOKER', value: 0, displayValue: 'Joker' });
+          } else {
+            break;
           }
-          currentRun = [curr];
+
+          if (currentGroup.length >= targetSize) {
+            // Found a valid straight!
+            // Realize this straight (use real jokers)
+            const realizedGroup: Card[] = [];
+            let jIndex = jokers.length - availableJokers;
+
+            for (const c of currentGroup) {
+              if (c.suit === 'JOKER') {
+                const realJoker = jokers[jokers.length - availableJokers];
+                realizedGroup.push(realJoker);
+                usedCardIds.add(realJoker.id);
+                availableJokers--;
+              } else {
+                realizedGroup.push(c);
+                usedCardIds.add(c.id);
+              }
+            }
+            res.push(realizedGroup);
+
+            // Re-map suit cards to remove used ones for this suit
+            suitCards = suitCards.filter(c => !usedCardIds.has(c.id));
+            valuesInSuit.clear();
+            suitCards.forEach(c => valuesInSuit.set(c.value, c));
+
+            // Move to next possible straight starting further ahead
+            s = (s + i); // Skip current segment
+            break;
+          }
         }
-      }
-      if (currentRun.length >= targetSize) {
-        res.push([...currentRun]);
-        currentRun.forEach((c) => usedCardIds.add(c.id));
-      } else if (
-        currentRun.length === targetSize - 1 &&
-        availableJokers > 0 &&
-        !usedCardIds.has(currentRun[0].id)
-      ) {
-        availableJokers--;
-        const joker = jokers[availableJokers];
-        currentRun.push(joker);
-        res.push([...currentRun]);
-        currentRun.forEach((c) => usedCardIds.add(c.id));
-        usedCardIds.add(joker.id);
       }
     });
     return res;
@@ -380,25 +402,59 @@ export const findAllValidGroups = (
     bySuit[c.suit].push(c);
   });
 
-  Object.values(bySuit).forEach((suitCards) => {
-    suitCards.sort((a, b) => a.value - b.value);
-    let currentRun: Card[] = [suitCards[0]];
-    for (let i = 1; i < suitCards.length; i++) {
-      const prev = currentRun[currentRun.length - 1];
-      const curr = suitCards[i];
-      if (curr.value === prev.value + 1) {
-        currentRun.push(curr);
-      } else {
-        if (currentRun.length >= 3) {
-          foundEscalas.push([...currentRun]);
-          currentRun.forEach((c) => usedCardIds.add(c.id));
+  Object.entries(bySuit).forEach(([suit, suitCards]) => {
+    const valuesInSuit = new Map<number, Card>();
+    suitCards.forEach(c => valuesInSuit.set(c.value, c));
+
+    // Try all 13 starting positions
+    for (let s = 1; s <= 13; s++) {
+      let currentGroup: Card[] = [];
+      let jokersNeeded = 0;
+
+      for (let i = 0; i < 13; i++) {
+        const val = ((s + i - 1) % 13) + 1;
+        const card = valuesInSuit.get(val);
+
+        if (card && !usedCardIds.has(card.id)) {
+          currentGroup.push(card);
+        } else if (availableJokers - jokersNeeded > 0) {
+          jokersNeeded++;
+          currentGroup.push({ id: `TEMP-JOKER-${jokersNeeded}`, suit: 'JOKER', value: 0, displayValue: 'Joker' });
+        } else {
+          break;
         }
-        currentRun = [curr];
+
+        // For additional groups, we need at least 3 cards
+        if (currentGroup.length >= 3) {
+          // If we found a valid one, let's see if we can make it longer
+          // but for find all valid groups, we can just take the current one and mark as used
+          // or ideally take the longest possible. 
+          // Let's peek ahead to see if next card is also available
+          const nextVal = ((s + currentGroup.length - 1) % 13) + 1;
+          const nextCard = valuesInSuit.get(nextVal);
+          if (nextCard && !usedCardIds.has(nextCard.id)) continue;
+          if (availableJokers - jokersNeeded > 0 && currentGroup.length < 13) continue;
+
+          // Realize the group
+          const realizedGroup: Card[] = [];
+          for (const c of currentGroup) {
+            if (c.suit === 'JOKER') {
+              const realJoker = jokers[jokers.length - availableJokers];
+              realizedGroup.push(realJoker);
+              usedCardIds.add(realJoker.id);
+              availableJokers--;
+            } else {
+              realizedGroup.push(c);
+              usedCardIds.add(c.id);
+            }
+          }
+          foundEscalas.push(realizedGroup);
+
+          // Move s forward
+          s = (s + currentGroup.length - 1);
+          break;
+        }
       }
-    }
-    if (currentRun.length >= 3) {
-      foundEscalas.push([...currentRun]);
-      currentRun.forEach((c) => usedCardIds.add(c.id));
     }
   });
 

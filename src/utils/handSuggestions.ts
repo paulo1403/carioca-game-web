@@ -72,8 +72,14 @@ export const getHandSuggestions = (
     const valuesToCard = bySuit.get(suit) ?? new Map<number, Card>();
     if (valuesToCard.size < 3) continue;
 
-    for (let start = 1; start <= 10; start++) {
-      const window = [start, start + 1, start + 2, start + 3];
+    // Try all 13 starting positions for a 4-card window
+    for (let start = 1; start <= 13; start++) {
+      const window = [
+        start,
+        ((start) % 13) + 1,
+        ((start + 1) % 13) + 1,
+        ((start + 2) % 13) + 1
+      ];
       const present = window.filter((v) => valuesToCard.has(v));
       if (present.length !== 3) continue;
       if (jokersCount > 0) continue;
@@ -83,7 +89,12 @@ export const getHandSuggestions = (
 
       const cards = present
         .map((v) => valuesToCard.get(v)!)
-        .sort((a, b) => a.value - b.value);
+        .sort((a, b) => {
+          // Special sort for circular display: if it's a wrap-around, 
+          // we want to maintain the visual order. 
+          // But for now, simple sort is fine as it's just for displayValue.
+          return a.value - b.value;
+        });
 
       const key = `${suit}:${missingValue}:${cards.map((c) => c.value).join(",")}`;
       if (nearEscalas.some((e) => `${e.suit}:${e.missing.value}:${e.cards.map((c) => c.value).join(",")}` === key)) {
