@@ -43,6 +43,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
         }),
     ],
+    session: {
+        strategy: "jwt",
+    },
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user
@@ -59,9 +62,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             return isLoggedIn || isPublicRoute
         },
-        async session({ session, user }) {
-            if (session.user && user) {
-                session.user.id = user.id
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id
+            }
+            return token
+        },
+        async session({ session, token }) {
+            if (session.user && token.sub) {
+                session.user.id = token.sub
             }
             return session
         },

@@ -22,7 +22,9 @@ export const moveSchema = Joi.object({
         'STEAL_JOKER',
         'DISCARD',
         'INTEND_BUY',
-        'INTEND_DRAW_DISCARD'
+        'INTEND_DRAW_DISCARD',
+        'READY_FOR_NEXT_ROUND',
+        'START_NEXT_ROUND'
     ).required(),
     payload: Joi.object().default({}),
 });

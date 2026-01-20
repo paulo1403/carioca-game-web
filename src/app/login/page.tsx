@@ -16,6 +16,7 @@ export default function LoginPage() {
         try {
             await signIn("nodemailer", {
                 email,
+                callbackUrl: "/",
                 redirect: false
             });
             // Redirect to custom verify page

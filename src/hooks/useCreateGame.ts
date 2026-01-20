@@ -17,7 +17,7 @@ export function useCreateGame() {
       const res = await fetch("/api/game/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hostName: hostName.trim() }),
+        body: JSON.stringify({ creatorName: hostName.trim() }),
       });
 
       if (!res.ok) {
