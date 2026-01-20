@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma"
 import Google from "next-auth/providers/google"
 import GitHub from "next-auth/providers/github"
 import Nodemailer from "next-auth/providers/nodemailer"
+import { html, text } from "@/lib/email-template"
+import nodemailer from "nodemailer"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     adapter: PrismaAdapter(prisma),
@@ -27,6 +29,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 },
             },
             from: process.env.EMAIL_FROM,
+            sendVerificationRequest: async ({ identifier: email, url, provider }) => {
+                const { host } = new URL(url)
+                const transport = nodemailer.createTransport(provider.server as any)
+
+                await transport.sendMail({
+                    to: email,
+                    from: provider.from,
+                    subject: `Inicia sesión en Carioca Game`,
+                    text: text({ url, host, email }),
+                    html: html({ url, host, email }),
+                })
+            },
         }),
     ],
     callbacks: {
@@ -34,9 +48,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             const isLoggedIn = !!auth?.user
             const isApiRoute = nextUrl.pathname.startsWith('/api')
             const isAuthRoute = nextUrl.pathname.startsWith('/api/auth')
+            const isAuthPage = nextUrl.pathname.startsWith('/auth')
             const isPublicRoute = ['/login'].includes(nextUrl.pathname)
 
-            if (isAuthRoute) return true
+            if (isAuthRoute || isAuthPage) return true
 
             if (isLoggedIn && nextUrl.pathname === '/login') {
                 return Response.redirect(new URL('/', nextUrl))
@@ -53,6 +68,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     pages: {
         signIn: "/login",
+        verifyRequest: "/auth/verify-request",
     },
     debug: true,
 })

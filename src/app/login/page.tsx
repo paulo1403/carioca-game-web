@@ -1,9 +1,11 @@
 "use client"
 import { useState } from "react"
 import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { LucideShieldCheck, LucideGamepad2, Loader2, Mail } from "lucide-react"
 
 export default function LoginPage() {
+    const router = useRouter()
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -12,10 +14,14 @@ export default function LoginPage() {
         if (!email) return;
         setIsLoading(true);
         try {
-            await signIn("nodemailer", { email, callbackUrl: "/" });
+            await signIn("nodemailer", {
+                email,
+                redirect: false
+            });
+            // Redirect to custom verify page
+            router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`);
         } catch (error) {
             console.error(error);
-        } finally {
             setIsLoading(false);
         }
     };
