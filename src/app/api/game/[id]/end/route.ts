@@ -11,7 +11,11 @@ export async function POST(
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id },
-      include: { players: true }
+      include: {
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!session) {
@@ -20,14 +24,14 @@ export async function POST(
 
     // Verify requester is host (index 0)
     if (session.players[0]?.id !== requesterId) {
-        return NextResponse.json({ error: 'Only host can end the game' }, { status: 403 });
+      return NextResponse.json({ error: 'Only host can end the game' }, { status: 403 });
     }
 
     await prisma.gameSession.update({
-        where: { id },
-        data: {
-            status: 'FINISHED',
-        }
+      where: { id },
+      data: {
+        status: 'FINISHED',
+      }
     });
 
     return NextResponse.json({ success: true });

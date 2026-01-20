@@ -18,6 +18,7 @@ export interface Player {
   isBot?: boolean;
   difficulty?: BotDifficulty;
   buysUsed: number; // Number of buys used by this player (max 7)
+  hasDrawn: boolean;
 }
 
 export interface GameState {
@@ -34,15 +35,15 @@ export interface GameState {
   lastAction?: {
     playerId: string;
     type:
-      | "DRAW_DECK"
-      | "DRAW_DISCARD"
-      | "DISCARD"
-      | "DOWN"
-      | "BUY"
-      | "ADD_TO_MELD"
-      | "STEAL_JOKER"
-      | "READY_FOR_NEXT_ROUND"
-      | "START_NEXT_ROUND";
+    | "DRAW_DECK"
+    | "DRAW_DISCARD"
+    | "DISCARD"
+    | "DOWN"
+    | "BUY"
+    | "ADD_TO_MELD"
+    | "STEAL_JOKER"
+    | "READY_FOR_NEXT_ROUND"
+    | "START_NEXT_ROUND";
     description: string;
     timestamp: number;
   };

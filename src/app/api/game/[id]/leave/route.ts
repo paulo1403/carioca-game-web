@@ -11,7 +11,11 @@ export async function POST(
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id },
-      include: { players: true }
+      include: {
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!session) {
@@ -21,21 +25,21 @@ export async function POST(
     // Check if player is in game
     const player = session.players.find(p => p.id === playerId);
     if (!player) {
-        return NextResponse.json({ error: 'Player not in game' }, { status: 404 });
+      return NextResponse.json({ error: 'Player not in game' }, { status: 404 });
     }
 
     // If host leaves (first player usually, or we can check index 0), we might want to destroy game or reassign host.
     // For MVP, if host leaves, game continues but without host, or destroy.
     // Let's just remove the player.
-    
+
     await prisma.player.delete({
-        where: { id: playerId }
+      where: { id: playerId }
     });
 
     // If no players left, maybe delete session? (Optional cleanup)
     const remainingPlayers = session.players.length - 1;
     if (remainingPlayers === 0) {
-        await prisma.gameSession.delete({ where: { id } });
+      await prisma.gameSession.delete({ where: { id } });
     }
 
     return NextResponse.json({ success: true, playerName: player.name });

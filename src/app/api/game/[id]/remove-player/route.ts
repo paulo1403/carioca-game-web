@@ -11,7 +11,11 @@ export async function POST(
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id },
-      include: { players: true }
+      include: {
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!session) {
@@ -19,7 +23,7 @@ export async function POST(
     }
 
     if (session.status !== 'WAITING') {
-        return NextResponse.json({ error: 'Cannot remove players during game' }, { status: 400 });
+      return NextResponse.json({ error: 'Cannot remove players during game' }, { status: 400 });
     }
 
     // Check if requester is Host (first player in list)
@@ -36,26 +40,26 @@ export async function POST(
     // HACK: The first player in the array might not be reliable.
     // However, for this MVP local usage, let's assume the frontend sends the request only if it's host.
     // AND we check if the requester is actually in the game.
-    
+
     // Better check: Is requester the host?
     // We don't have a reliable "Host" field.
     // Let's implement a simple check: allow anyone to kick anyone for now (trust based) OR
     // Try to verify if requester is player 0.
     // Actually, we can check if requester is in the game.
-    
+
     const requester = session.players.find(p => p.id === requesterId);
     if (!requester) {
-         return NextResponse.json({ error: 'Requester not in game' }, { status: 403 });
+      return NextResponse.json({ error: 'Requester not in game' }, { status: 403 });
     }
-    
+
     // If we want to be strict, we'd need to store hostId.
     // For now, let's allow it if the game is waiting.
-    
+
     // Prevent removing the LAST player (which destroys the game usually, but here we just empty it)
     // Prevent removing the Host? If we don't know who is host...
-    
+
     await prisma.player.delete({
-        where: { id: playerIdToRemove }
+      where: { id: playerIdToRemove }
     });
 
     return NextResponse.json({ success: true });

@@ -11,7 +11,11 @@ export async function GET(
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id },
-      include: { players: true },
+      include: {
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!session) {

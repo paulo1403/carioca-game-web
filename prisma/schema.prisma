@@ -43,6 +43,8 @@ model Player {
   roundBuys     String      @default("[]") // JSON string of number[] (Buys used per round)
   isBot         Boolean     @default(false)
   difficulty    String?     // 'EASY', 'MEDIUM', 'HARD'
+  hasDrawn      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
   gameSessionId String
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
 }

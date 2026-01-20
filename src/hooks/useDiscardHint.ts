@@ -3,6 +3,7 @@ import { Card, Player, GameState } from "@/types/game";
 import {
   findPotentialContractGroups,
   canFulfillContract,
+  findAllValidGroups,
 } from "@/utils/handAnalyzer";
 import { getCardPoints } from "@/utils/rules";
 
@@ -45,15 +46,15 @@ export const useDiscardHint = (
 
     // Suggest a card to discard: prefer cards NOT in potential contract groups
     // and cards with highest point value
-    const { trios, escalas } = findPotentialContractGroups(
-      myPlayer.hand,
-      gameState.currentRound
-    );
+    const alreadyMelded = myPlayer.melds && myPlayer.melds.length > 0;
+    const { trios, escalas } = alreadyMelded
+      ? findAllValidGroups(myPlayer.hand)
+      : findPotentialContractGroups(myPlayer.hand, gameState.currentRound);
 
     // Collect all cards that are part of valid groups
     const usefulCardIds = new Set<string>();
     [...trios, ...escalas].forEach((group) => {
-      group.forEach((card) => {
+      group.forEach((card: Card) => {
         usefulCardIds.add(card.id);
       });
     });

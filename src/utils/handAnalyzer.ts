@@ -167,8 +167,13 @@ export const checkDiscardHint = (
 // Check if hand can fulfill contract
 export const canFulfillContract = (
   hand: Card[],
-  round: number
+  round: number,
+  alreadyMelded: boolean = false
 ): { canDown: boolean; groups: Card[][] } => {
+  if (alreadyMelded) {
+    return canAdditionalDown(hand);
+  }
+
   const reqs = getContractRequirements(round);
 
   if (round === 8) {
@@ -308,9 +313,11 @@ export const findPotentialContractGroups = (
 export const organizeHandAuto = (
   hand: Card[],
   round: number,
-  returnGroups = false
+  alreadyMelded: boolean = false
 ): Card[] => {
-  const { trios, escalas } = findPotentialContractGroups(hand, round);
+  const { trios, escalas } = alreadyMelded
+    ? findAllValidGroups(hand)
+    : findPotentialContractGroups(hand, round);
 
   const organized: Card[] = [];
   const usedIds = new Set<string>();

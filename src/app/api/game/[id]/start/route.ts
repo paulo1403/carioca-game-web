@@ -11,7 +11,11 @@ export async function POST(
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id },
-      include: { players: true }
+      include: {
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!session) {
@@ -19,11 +23,11 @@ export async function POST(
     }
 
     if (session.status !== 'WAITING') {
-        return NextResponse.json({ error: 'Game already started' }, { status: 400 });
+      return NextResponse.json({ error: 'Game already started' }, { status: 400 });
     }
 
     if (session.players.length < 3) {
-        return NextResponse.json({ error: 'Minimum 3 players required' }, { status: 400 });
+      return NextResponse.json({ error: 'Minimum 3 players required' }, { status: 400 });
     }
 
     // Deal Cards
@@ -32,34 +36,35 @@ export async function POST(
 
     // Deal 11 cards to each player
     const updates = session.players.map(player => {
-        const hand = deck.splice(0, 11);
-        return prisma.player.update({
-            where: { id: player.id },
-            data: { 
-                hand: JSON.stringify(hand),
-                melds: '[]' // Reset melds on start
-            }
-        });
+      const hand = deck.splice(0, 11);
+      return prisma.player.update({
+        where: { id: player.id },
+        data: {
+          hand: JSON.stringify(hand),
+          melds: '[]', // Reset melds on start
+          hasDrawn: false
+        }
+      });
     });
 
     // Update Session
     const updateSession = prisma.gameSession.update({
-        where: { id },
-        data: {
-            status: 'PLAYING',
-            deck: JSON.stringify(deck),
-            discardPile: JSON.stringify(discardPile),
-            currentTurn: 0,
-            reshuffleCount: 0,
-            pendingBuyIntents: "[]",
-            pendingDiscardIntents: "[]",
-            lastAction: JSON.stringify({
-              playerId: "SYSTEM",
-              type: "START_GAME",
-              description: "¡Partida iniciada!",
-              timestamp: Date.now(),
-            }),
-        }
+      where: { id },
+      data: {
+        status: 'PLAYING',
+        deck: JSON.stringify(deck),
+        discardPile: JSON.stringify(discardPile),
+        currentTurn: 0,
+        reshuffleCount: 0,
+        pendingBuyIntents: "[]",
+        pendingDiscardIntents: "[]",
+        lastAction: JSON.stringify({
+          playerId: "SYSTEM",
+          type: "START_GAME",
+          description: "¡Partida iniciada!",
+          timestamp: Date.now(),
+        }),
+      }
     });
 
     await prisma.$transaction([...updates, updateSession]);

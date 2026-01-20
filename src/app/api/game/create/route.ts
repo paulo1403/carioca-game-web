@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     score: 0,
     isBot: false,
     buysUsed: 0,
+    hasDrawn: false,
   };
 
   try {
@@ -52,7 +53,9 @@ export async function POST(request: Request) {
         },
       },
       include: {
-        players: true,
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 

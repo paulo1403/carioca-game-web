@@ -33,11 +33,11 @@ export const HandArea: React.FC<HandAreaProps> = ({
   handPoints = 0,
 }) => {
   const visibleHand = sortedHand.filter(
-    (card) => !groupsToMeld.some((g) => g.some((c) => c.id === card.id))
+    (card) => !groupsToMeld.some((g) => g.some((c) => c.id === card.id)),
   );
 
   const cardWidth = isMobile ? 80 : 96;
-  const step = isMobile ? 60 : 64;
+  const step = isMobile ? 50 : 64;
   const contentWidth =
     visibleHand.length <= 1
       ? cardWidth
@@ -55,27 +55,40 @@ export const HandArea: React.FC<HandAreaProps> = ({
             const isSelected = selectedCardId === card.id;
             const isTempSelected = tempGroup.some((c) => c.id === card.id);
             const zIndex = isSelected || isTempSelected ? 50 : index;
+            const total = visibleHand.length;
+            const middle = (total - 1) / 2;
+            const offset = index - middle;
+            const rotation = total > 1 ? offset * (isMobile ? 1.5 : 2) : 0;
+            const yOffset = Math.abs(offset) * (isMobile ? 1 : 2);
 
-          return (
-            <div
-              key={card.id}
-              className="absolute bottom-0"
-              style={{ left: index * step, zIndex }}
-            >
-              <CardWrapper
-                card={card}
-                index={index}
-                disabled={!isMyTurn || !hasDrawn || isDownMode}
-                isSelected={isSelected}
-                isTempSelected={isTempSelected}
-                isAddable={addableCards.includes(card.id)}
-                isSuggestedDiscard={suggestedDiscardCardId === card.id}
-                onClick={() => onClick(card.id)}
-                isMobile={isMobile}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={card.id}
+                className="absolute bottom-0 transition-transform duration-500"
+                style={{
+                  left: index * step,
+                  zIndex,
+                  transform:
+                    isSelected || isTempSelected
+                      ? "translateY(-20px)"
+                      : `rotate(${rotation}deg) translateY(${yOffset}px)`,
+                }}
+              >
+                <CardWrapper
+                  card={card}
+                  index={index}
+                  disabled={!isMyTurn || !hasDrawn || isDownMode}
+                  isSelected={isSelected}
+                  isTempSelected={isTempSelected}
+                  isAddable={addableCards.includes(card.id)}
+                  isSuggestedDiscard={suggestedDiscardCardId === card.id}
+                  onClick={() => onClick(card.id)}
+                  isMobile={isMobile}
+                  size={isMobile ? "touch" : "normal"}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 

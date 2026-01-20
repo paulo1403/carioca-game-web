@@ -1,0 +1,415 @@
+"use client";
+
+import React from "react";
+import { useRouter } from "next/navigation";
+import { GameState } from "@/types/game";
+import { Board } from "@/components/Board";
+import { Toaster } from "@/components/Toaster";
+import { Modal } from "@/components/Modal";
+import { Shuffle, Trophy, Star, Users, Clock, Bot, User } from "lucide-react";
+
+interface GameBoardProps {
+  gameState: GameState;
+  myPlayerId: string;
+  roomId?: string;
+  modalConfig: {
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode;
+    type?: "info" | "confirm" | "danger";
+    onConfirm?: () => void;
+  };
+  roundWinnerModal: {
+    isOpen: boolean;
+    winnerName: string;
+    nextRound: number;
+    scores: {
+      name: string;
+      score: number;
+      buysUsed: number;
+      roundScores: number[];
+      roundBuys: number[];
+    }[];
+  };
+  reshuffleBanner: { count: number } | null;
+  onCloseModal: () => void;
+  onCloseRoundWinner: () => void;
+  onCloseReshuffleBanner: () => void;
+  onDrawDeck: () => void;
+  onDrawDiscard: () => void;
+  onDiscard: (cardId: string) => void;
+  onDown: (groups: any[][]) => void;
+  onAddToMeld: (
+    cardId: string,
+    targetPlayerId: string,
+    meldIndex: number,
+  ) => void;
+  onStealJoker: (
+    cardId: string,
+    targetPlayerId: string,
+    meldIndex: number,
+  ) => void;
+  onReadyForNextRound: () => void;
+  onStartNextRound: () => void;
+  onEndGame?: () => void;
+  onSkipBotTurn?: () => void;
+  hasDrawn: boolean;
+}
+
+export const GameBoard: React.FC<GameBoardProps> = ({
+  gameState,
+  myPlayerId,
+  roomId,
+  modalConfig,
+  roundWinnerModal,
+  reshuffleBanner,
+  onCloseModal,
+  onCloseRoundWinner,
+  onCloseReshuffleBanner,
+  onDrawDeck,
+  onDrawDiscard,
+  onDiscard,
+  onDown,
+  onAddToMeld,
+  onStealJoker,
+  onReadyForNextRound,
+  onStartNextRound,
+  onEndGame,
+  hasDrawn,
+}) => {
+  const router = useRouter();
+  const myPlayer = gameState.players.find((p) => p.id === myPlayerId);
+  const isHost = gameState.creatorId === myPlayerId;
+  const isRoundEnded = gameState.status === "ROUND_ENDED";
+  const isGameFinished = gameState.status === "FINISHED";
+
+  // Calculate if ready for next round
+  const playersReady = gameState.readyForNextRound?.length || 0;
+  const totalPlayers = gameState.players.length;
+  const allReady = playersReady === totalPlayers;
+
+  return (
+    <div className="relative">
+      <Toaster />
+
+      {/* Reshuffle Banner */}
+      {reshuffleBanner && (
+        <div className="fixed inset-0 z-120 pointer-events-none flex items-start justify-center p-4 pt-10">
+          <div
+            className="pointer-events-auto w-full max-w-2xl rounded-2xl border border-amber-500/30 bg-slate-950/80 backdrop-blur-xl shadow-2xl shadow-black/40 px-6 py-5 animate-in fade-in zoom-in-95 duration-200 cursor-pointer"
+            onClick={onCloseReshuffleBanner}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <Shuffle className="w-7 h-7 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-slate-100 font-extrabold text-lg leading-tight">
+                  ¡Se rebarajó el mazo!
+                </div>
+                <div className="text-slate-300 text-sm leading-snug">
+                  El descarte se mezcló y volvió al mazo. Rebarajadas esta
+                  ronda:{" "}
+                  <span className="font-bold text-amber-300">
+                    {reshuffleBanner.count}/3
+                  </span>
+                </div>
+              </div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Toca para cerrar
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* General Modal */}
+      <Modal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        onClose={onCloseModal}
+        onConfirm={modalConfig.onConfirm}
+        type={modalConfig.type}
+      >
+        {modalConfig.message}
+      </Modal>
+
+      {/* Round Winner Modal */}
+      {roundWinnerModal.isOpen && (
+        <div className="fixed inset-0 z-130 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 border border-yellow-500/30 rounded-2xl overflow-hidden max-w-2xl w-full mx-4 max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-linear-to-r from-yellow-600 to-amber-600 p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                <Trophy className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-1">
+                ¡Ronda Completada!
+              </h2>
+              <p className="text-yellow-100">
+                {roundWinnerModal.winnerName} ganó la ronda{" "}
+                {gameState.currentRound}
+              </p>
+            </div>
+
+            {/* Scores */}
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                Puntuaciones
+              </h3>
+              <div className="space-y-3 mb-6">
+                {roundWinnerModal.scores
+                  .sort((a, b) => a.score - b.score)
+                  .map((player, idx) => (
+                    <div
+                      key={player.name}
+                      className={`flex items-center justify-between p-3 rounded-xl ${
+                        idx === 0
+                          ? "bg-yellow-500/10 border border-yellow-500/30"
+                          : "bg-slate-800/50 border border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            idx === 0
+                              ? "bg-yellow-500 text-white"
+                              : idx === 1
+                                ? "bg-slate-400 text-white"
+                                : idx === 2
+                                  ? "bg-amber-700 text-white"
+                                  : "bg-slate-600 text-slate-300"
+                          }`}
+                        >
+                          {idx + 1}
+                        </div>
+                        <span className="font-medium text-slate-200">
+                          {player.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-slate-200">
+                            {player.score} pts
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {player.buysUsed} compras
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Next Round Info */}
+              {!isGameFinished && (
+                <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-slate-200">
+                      Siguiente Ronda: {roundWinnerModal.nextRound}
+                    </h4>
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <Users className="w-4 h-4" />
+                      {playersReady}/{totalPlayers} listos
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Game Finished */}
+              {isGameFinished && (
+                <div className="bg-linear-to-r from-purple-600/20 to-blue-600/20 rounded-xl p-4 border border-purple-500/30">
+                  <h4 className="font-bold text-lg text-center text-white mb-2">
+                    🎉 ¡Juego Terminado! 🎉
+                  </h4>
+                  <p className="text-center text-slate-300 text-sm">
+                    Gracias por jugar. ¡Excelente partida!
+                  </p>
+                </div>
+              )}
+
+              {/* Action Button */}
+              {!isGameFinished ? (
+                <button
+                  onClick={() => {
+                    if (isHost && allReady) {
+                      // Host inicia la ronda cuando todos están listos
+                      onStartNextRound();
+                      onCloseRoundWinner();
+                    } else if (
+                      !gameState.readyForNextRound?.includes(myPlayerId)
+                    ) {
+                      // Marcar como listo y cerrar
+                      onReadyForNextRound();
+                      onCloseRoundWinner();
+                    } else {
+                      // Ya está listo, solo cerrar
+                      onCloseRoundWinner();
+                    }
+                  }}
+                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${
+                    isHost && allReady
+                      ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse"
+                      : !gameState.readyForNextRound?.includes(myPlayerId)
+                        ? "bg-green-600 hover:bg-green-500 text-white"
+                        : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  }`}
+                >
+                  {isHost && allReady
+                    ? `🚀 Iniciar Ronda ${roundWinnerModal.nextRound}`
+                    : !gameState.readyForNextRound?.includes(myPlayerId)
+                      ? "✓ Marcarme Listo y Continuar"
+                      : "Cerrar"}
+                </button>
+              ) : (
+                <button
+                  onClick={onCloseRoundWinner}
+                  className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Cerrar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Waiting Screen Between Rounds */}
+      {isRoundEnded && !roundWinnerModal.isOpen && (
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+          <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <Trophy className="w-10 h-10 text-yellow-400" />
+              </div>
+
+              <h2 className="text-2xl font-bold text-slate-200 mb-2">
+                Ronda {gameState.currentRound} Completada
+              </h2>
+
+              <p className="text-slate-400 mb-8">
+                Esperando a que todos los jugadores estén listos...
+              </p>
+
+              {/* Players Ready Status */}
+              <div className="bg-slate-800/50 rounded-xl p-6 mb-8">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <Users className="w-5 h-5 text-slate-400" />
+                  <span className="text-lg font-semibold text-slate-200">
+                    {playersReady}/{totalPlayers} Listos
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-linear-to-r from-green-500 to-emerald-500 transition-all duration-500"
+                    style={{
+                      width: `${(playersReady / totalPlayers) * 100}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Player list */}
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {gameState.players.map((player: any) => (
+                    <div
+                      key={player.id}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                        gameState.readyForNextRound?.includes(player.id)
+                          ? "bg-green-500/20 border border-green-500/30"
+                          : "bg-slate-700/50 border border-slate-600"
+                      }`}
+                    >
+                      {player.isBot ? (
+                        <Bot className="w-4 h-4 text-purple-400" />
+                      ) : (
+                        <User className="w-4 h-4 text-blue-400" />
+                      )}
+                      <span className="text-sm font-medium text-slate-200 flex-1 truncate">
+                        {player.name}
+                        {player.id === myPlayerId && " (Tú)"}
+                      </span>
+                      {gameState.readyForNextRound?.includes(player.id) ? (
+                        <span className="text-green-400 text-xs">✓ Listo</span>
+                      ) : (
+                        <span className="text-slate-500 text-xs">
+                          Esperando...
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              {!gameState.readyForNextRound?.includes(myPlayerId) ? (
+                <button
+                  onClick={onReadyForNextRound}
+                  className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
+                >
+                  Marcarme Listo
+                </button>
+              ) : (
+                <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 font-medium py-3 px-8 rounded-lg border border-green-500/30">
+                  <span className="text-lg">✓</span>
+                  <span>Estás Listo</span>
+                </div>
+              )}
+
+              {isHost && allReady && (
+                <button
+                  onClick={onStartNextRound}
+                  className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg animate-pulse"
+                >
+                  🚀 Iniciar Ronda {gameState.currentRound + 1}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Game Board - Only show when actually playing */}
+      {!isRoundEnded && !isGameFinished && (
+        <Board
+          gameState={gameState}
+          myPlayerId={myPlayerId}
+          roomId={roomId}
+          onDrawDeck={onDrawDeck}
+          onDrawDiscard={onDrawDiscard}
+          onDiscard={onDiscard}
+          onDown={onDown}
+          onAddToMeld={onAddToMeld}
+          onStealJoker={onStealJoker}
+          onEndGame={onEndGame}
+          hasDrawn={hasDrawn}
+        />
+      )}
+
+      {/* Game Finished Screen */}
+      {isGameFinished && !roundWinnerModal.isOpen && (
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+          <div className="max-w-2xl w-full bg-linear-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 shadow-2xl text-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-purple-500/20 rounded-full flex items-center justify-center">
+              <Trophy className="w-10 h-10 text-purple-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2">
+              🎉 ¡Juego Terminado! 🎉
+            </h2>
+            <p className="text-slate-300 mb-8">
+              Gracias por jugar. ¡Excelente partida!
+            </p>
+            <button
+              onClick={() => router.push("/")}
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg transition-colors"
+            >
+              Volver al Inicio
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

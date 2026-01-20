@@ -23,15 +23,17 @@ import { HandArea } from "./HandArea";
 import { DownModeControls } from "./DownModeControls";
 import { BuyConfirmDialog } from "./BuyConfirmDialog";
 import { HandAssistant } from "./HandAssistant";
+import { GameHeader } from "./GameHeader";
 
 // Utils
-import { canAddToMeld, canStealJoker } from "@/utils/rules";
+import { canStealJoker } from "@/utils/rules";
 import { findBestCardMove } from "@/utils/cardMoveHelper";
 
 // Types and interfaces
 interface BoardProps {
   gameState: GameState;
   myPlayerId: string;
+  roomId?: string;
   onDrawDeck: () => void;
   onDrawDiscard: () => void;
   onDiscard: (cardId: string) => void;
@@ -39,25 +41,28 @@ interface BoardProps {
   onAddToMeld: (
     cardId: string,
     targetPlayerId: string,
-    meldIndex: number
+    meldIndex: number,
   ) => void;
   onStealJoker: (
     cardId: string,
     targetPlayerId: string,
-    meldIndex: number
+    meldIndex: number,
   ) => void;
+  onEndGame?: () => void;
   hasDrawn: boolean;
 }
 
 export const Board: React.FC<BoardProps> = ({
   gameState,
   myPlayerId,
+  roomId,
   onDrawDeck,
   onDrawDiscard,
   onDiscard,
   onDown,
   onAddToMeld,
   onStealJoker,
+  onEndGame,
   hasDrawn,
 }) => {
   // Game state
@@ -65,7 +70,7 @@ export const Board: React.FC<BoardProps> = ({
     useGameState(gameState, myPlayerId);
 
   // UI state
-  const isMobile = useIsMobile();
+  const { isMobile } = useIsMobile();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [showBuyConfirmDialog, setShowBuyConfirmDialog] = useState(false);
@@ -85,7 +90,8 @@ export const Board: React.FC<BoardProps> = ({
   // Hand management
   const { sortMode, setSortMode, sortedHand, canDownCheck } = useHandManagement(
     myPlayer?.hand ?? [],
-    gameState.currentRound
+    gameState.currentRound,
+    haveMelded ?? false,
   );
 
   // Addable cards
@@ -95,7 +101,7 @@ export const Board: React.FC<BoardProps> = ({
     isDownMode,
     myPlayer,
     otherPlayers,
-    haveMelded ?? false
+    haveMelded ?? false,
   );
 
   // Stealable jokers
@@ -103,7 +109,7 @@ export const Board: React.FC<BoardProps> = ({
     gameState,
     myPlayer,
     isMyTurn,
-    isDownMode
+    isDownMode,
   );
 
   // Discard hint
@@ -112,28 +118,33 @@ export const Board: React.FC<BoardProps> = ({
     isMyTurn,
     hasDrawn,
     isDownMode,
-    gameState
+    gameState,
   );
 
   // Sounds
-  const {
-    playClick,
-    playSelect,
-    playDrop,
-    playShuffle,
-    playSuccess,
-    playError,
-  } = useGameSounds();
+  const { playSelect, playDrop, playShuffle, playSuccess, playError } =
+    useGameSounds();
 
-  // Player layout (top, left, right, bottom)
+  // Player layout (responsive for mobile and desktop)
   const layout = useMemo(() => {
     const all = gameState.players;
     const count = all.length;
     const myIndex = all.findIndex((p) => p.id === myPlayerId);
+    const otherPlayers = all.filter((p) => p.id !== myPlayerId);
 
     // Helper to get player at relative offset
     const getP = (offset: number) => all[(myIndex + offset) % count];
 
+    // Mobile layout - stack players differently for better space usage
+    if (isMobile) {
+      if (count <= 3) {
+        return { others: otherPlayers.slice(0, 2) };
+      }
+      // For 4+ players on mobile, use a grid layout
+      return { others: otherPlayers };
+    }
+
+    // Desktop layout - original circular layout
     if (count === 2) {
       return { top: getP(1) };
     }
@@ -141,7 +152,11 @@ export const Board: React.FC<BoardProps> = ({
       return { left: getP(1), right: getP(2) };
     }
     if (count === 4) {
-      return { left: getP(1), top: getP(2), right: getP(3) };
+      return {
+        left: getP(1),
+        top: getP(2),
+        right: getP(3),
+      };
     }
     if (count === 5) {
       return {
@@ -153,7 +168,7 @@ export const Board: React.FC<BoardProps> = ({
     }
 
     return {};
-  }, [gameState.players, myPlayerId]);
+  }, [gameState.players, myPlayerId, isMobile]);
 
   // Handlers
   const handleCardClick = (cardId: string) => {
@@ -227,7 +242,7 @@ export const Board: React.FC<BoardProps> = ({
     // Calculate total cards being melded
     const totalCardsToMeld = groupsToMeld.reduce(
       (sum, group) => sum + group.length,
-      0
+      0,
     );
     const cardsInHand = myPlayer?.hand.length || 0;
     const cardsRemaining = cardsInHand - totalCardsToMeld;
@@ -251,10 +266,10 @@ export const Board: React.FC<BoardProps> = ({
       canStealJoker(
         card,
         gameState.players.find((p) => p.id === sj.playerId)?.melds?.[
-          sj.meldIndex
+        sj.meldIndex
         ] || [],
-        myPlayer.hand
-      )
+        myPlayer.hand,
+      ),
     );
 
     if (stealingCard) {
@@ -265,63 +280,119 @@ export const Board: React.FC<BoardProps> = ({
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-2 md:p-4 flex flex-col justify-between overflow-hidden select-none"
+      className="min-h-screen felt-table p-2 md:p-4 flex flex-col justify-between overflow-hidden select-none"
       style={{ paddingBottom: "safe-area-inset-bottom" }}
     >
-      {/* Top Players Area */}
-      <div className="flex justify-around items-start w-full max-w-2xl mx-auto min-h-[60px]">
-        {/* Case: 5 Players (Top Left & Top Right) */}
-        {layout.topLeft && (
-          <PlayerBadge
-            key={layout.topLeft.id}
-            player={layout.topLeft}
-            isOwnPlayer={layout.topLeft.id === myPlayerId}
-            handPoints={layout.topLeft.id === myPlayerId ? myHandPoints : 0}
-            expandedPlayerId={expandedPlayerId}
-            onExpandToggle={setExpandedPlayerId}
-          />
-        )}
-        
-        {/* Case: 2 or 4 Players (Center Top) */}
-        {layout.top && (
-          <PlayerBadge
-            key={layout.top.id}
-            player={layout.top}
-            isOwnPlayer={layout.top.id === myPlayerId}
-            handPoints={layout.top.id === myPlayerId ? myHandPoints : 0}
-            expandedPlayerId={expandedPlayerId}
-            onExpandToggle={setExpandedPlayerId}
-          />
-        )}
-
-        {/* Case: 5 Players (Top Right) */}
-        {layout.topRight && (
-          <PlayerBadge
-            key={layout.topRight.id}
-            player={layout.topRight}
-            isOwnPlayer={layout.topRight.id === myPlayerId}
-            handPoints={layout.topRight.id === myPlayerId ? myHandPoints : 0}
-            expandedPlayerId={expandedPlayerId}
-            onExpandToggle={setExpandedPlayerId}
-          />
-        )}
-      </div>
-
-      {/* Middle Area */}
-      <div className="flex-1 flex justify-between items-center my-2 md:my-4 w-full">
-        {/* Left Player */}
-        <div className="flex items-center justify-center w-24 md:w-32">
-          {layout.left && (
+      <GameHeader
+        gameState={gameState}
+        myPlayerId={myPlayerId}
+        roomId={roomId}
+        onEndGame={onEndGame}
+      />
+      <div className="h-10 md:h-12"></div> {/* Spacer for fixed header */}
+      {/* Players Area - Responsive Layout */}
+      {isMobile ? (
+        // Mobile Layout - Grid for better space usage
+        <div className="w-full max-w-sm mx-auto mb-4">
+          {layout.others && layout.others.length > 0 && (
+            <div
+              className={cn(
+                "grid gap-2 place-items-center",
+                layout.others.length <= 2 ? "grid-cols-2" : "grid-cols-2",
+              )}
+            >
+              {layout.others.slice(0, 4).map((player) => (
+                <div key={player.id} className="w-full">
+                  <PlayerBadge
+                    player={player}
+                    isOwnPlayer={false}
+                    isCurrentTurn={
+                      gameState.currentTurn ===
+                      gameState.players.findIndex((p) => p.id === player.id)
+                    }
+                    handPoints={0}
+                    expandedPlayerId={expandedPlayerId}
+                    onExpandToggle={setExpandedPlayerId}
+                    className="w-full transform-none text-center"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Desktop Layout - Original circular layout
+        <div className="flex justify-around items-start w-full max-w-2xl mx-auto min-h-15">
+          {/* Case: 5 Players (Top Left & Top Right) */}
+          {layout.topLeft && (
             <PlayerBadge
-              player={layout.left}
-              className="-rotate-90 origin-center transform translate-x-4"
-              isOwnPlayer={layout.left.id === myPlayerId}
-              handPoints={layout.left.id === myPlayerId ? myHandPoints : 0}
+              key={layout.topLeft.id}
+              player={layout.topLeft}
+              isOwnPlayer={layout.topLeft.id === myPlayerId}
+              isCurrentTurn={
+                gameState.currentTurn ===
+                gameState.players.findIndex((p) => p.id === layout.topLeft?.id)
+              }
+              handPoints={layout.topLeft.id === myPlayerId ? myHandPoints : 0}
+              expandedPlayerId={expandedPlayerId}
+              onExpandToggle={setExpandedPlayerId}
+            />
+          )}
+
+          {/* Case: 2 or 4 Players (Center Top) */}
+          {layout.top && (
+            <PlayerBadge
+              key={layout.top.id}
+              player={layout.top}
+              isOwnPlayer={layout.top.id === myPlayerId}
+              isCurrentTurn={
+                gameState.currentTurn ===
+                gameState.players.findIndex((p) => p.id === layout.top?.id)
+              }
+              handPoints={layout.top.id === myPlayerId ? myHandPoints : 0}
+              expandedPlayerId={expandedPlayerId}
+              onExpandToggle={setExpandedPlayerId}
+            />
+          )}
+
+          {/* Case: 5 Players (Top Right) */}
+          {layout.topRight && (
+            <PlayerBadge
+              key={layout.topRight.id}
+              player={layout.topRight}
+              isOwnPlayer={layout.topRight.id === myPlayerId}
+              isCurrentTurn={
+                gameState.currentTurn ===
+                gameState.players.findIndex((p) => p.id === layout.topRight?.id)
+              }
+              handPoints={layout.topRight.id === myPlayerId ? myHandPoints : 0}
               expandedPlayerId={expandedPlayerId}
               onExpandToggle={setExpandedPlayerId}
             />
           )}
         </div>
+      )}
+      {/* Middle Area */}
+      <div className="flex-1 flex justify-between items-center my-2 md:my-4 w-full">
+        {/* Left Player - Only show on desktop */}
+        {!isMobile && (
+          <div className="flex items-center justify-center w-24 md:w-32">
+            {layout.left && (
+              <PlayerBadge
+                player={layout.left}
+                className="-rotate-90 origin-center transform translate-x-4"
+                isOwnPlayer={layout.left.id === myPlayerId}
+                isCurrentTurn={
+                  gameState.currentTurn ===
+                  gameState.players.findIndex((p) => p.id === layout.left?.id)
+                }
+                handPoints={layout.left.id === myPlayerId ? myHandPoints : 0}
+                expandedPlayerId={expandedPlayerId}
+                onExpandToggle={setExpandedPlayerId}
+              />
+            )}
+          </div>
+        )}
 
         {/* Center Table */}
         <DeckArea
@@ -339,21 +410,26 @@ export const Board: React.FC<BoardProps> = ({
           selectedCardId={selectedCardId}
         />
 
-        {/* Right Player */}
-        <div className="flex items-center justify-center w-24 md:w-32">
-          {layout.right && (
-            <PlayerBadge
-              player={layout.right}
-              className="rotate-90 origin-center transform -translate-x-4"
-              isOwnPlayer={layout.right.id === myPlayerId}
-              handPoints={layout.right.id === myPlayerId ? myHandPoints : 0}
-              expandedPlayerId={expandedPlayerId}
-              onExpandToggle={setExpandedPlayerId}
-            />
-          )}
-        </div>
+        {/* Right Player - Only show on desktop */}
+        {!isMobile && (
+          <div className="flex items-center justify-center w-24 md:w-32">
+            {layout.right && (
+              <PlayerBadge
+                player={layout.right}
+                className="rotate-90 origin-center transform -translate-x-4"
+                isOwnPlayer={layout.right.id === myPlayerId}
+                isCurrentTurn={
+                  gameState.currentTurn ===
+                  gameState.players.findIndex((p) => p.id === layout.right?.id)
+                }
+                handPoints={layout.right.id === myPlayerId ? myHandPoints : 0}
+                expandedPlayerId={expandedPlayerId}
+                onExpandToggle={setExpandedPlayerId}
+              />
+            )}
+          </div>
+        )}
       </div>
-
       {/* Bottom: My Player Hand */}
       <div className="flex flex-col items-center w-full relative">
         {/* Action Bar */}
@@ -392,7 +468,7 @@ export const Board: React.FC<BoardProps> = ({
         <div
           className={cn(
             "mb-2 text-white font-bold text-sm md:text-lg bg-black/40 px-3 py-1 md:px-4 rounded-full transition-all text-center max-w-[90vw] truncate",
-            isMyTurn ? "ring-2 ring-yellow-400 bg-green-600/80" : ""
+            isMyTurn ? "ring-2 ring-yellow-400 bg-green-600/80" : "",
           )}
         >
           {myPlayer?.name} (Tú) - R{gameState.currentRound}
@@ -463,9 +539,9 @@ export const Board: React.FC<BoardProps> = ({
             canConfirmDown={
               myPlayer
                 ? myPlayer.hand.length -
-                    (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
-                      tempGroup.length) >
-                  0
+                (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
+                  tempGroup.length) >
+                0
                 : false
             }
           />
@@ -487,7 +563,6 @@ export const Board: React.FC<BoardProps> = ({
           handPoints={myHandPoints}
         />
       </div>
-
       {/* Buy Confirmation Dialog */}
       <BuyConfirmDialog
         show={showBuyConfirmDialog}

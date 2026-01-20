@@ -1,17 +1,9 @@
-import {
-  Card,
-  GameState,
-  Player,
-  ROUND_CONTRACTS,
-  BotDifficulty,
-} from "@/types/game";
+import { Card, GameState, Player, BotDifficulty } from "@/types/game";
 import {
   validateContract,
   validateAdditionalDown,
   canAddToMeld,
   canStealJoker,
-  isTrio,
-  isEscala,
   getCardPoints,
   calculateHandPoints,
 } from "@/utils/rules";
@@ -27,7 +19,7 @@ interface BotMove {
     | "ADD_TO_MELD"
     | "STEAL_JOKER"
     | "DISCARD";
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
 }
 
 /**
@@ -48,7 +40,7 @@ interface CardGroup {
 export const calculateBotMove = (
   gameState: GameState,
   botId: string,
-  difficulty: BotDifficulty = "MEDIUM"
+  difficulty: BotDifficulty = "MEDIUM",
 ): BotMove | null => {
   // Validate bot exists and it's their turn
   const botIndex = gameState.players.findIndex((p) => p.id === botId);
@@ -61,7 +53,7 @@ export const calculateBotMove = (
 
   if (gameState.currentTurn !== botIndex) {
     console.warn(
-      `[Bot] Not ${bot.name}'s turn. Current turn: ${gameState.currentTurn}`
+      `[Bot] Not ${bot.name}'s turn. Current turn: ${gameState.currentTurn}`,
     );
     return null;
   }
@@ -81,16 +73,13 @@ export const calculateBotMove = (
       const competitiveAnalysis = analyzeCompetitivePosition(gameState, bot.id);
       if (competitiveAnalysis.hasLeader && competitiveAnalysis.leaderAnalysis) {
         const handPoints = calculateHandPoints(bot.hand);
-        const leaderHandPoints = calculateHandPoints(
-          competitiveAnalysis.leaderAnalysis.hand
-        );
 
         // If we have way too many points in hand, try emergency down
         if (handPoints > 100 && !hasPlayerMelded(bot)) {
           const downMove = findDownMove(gameState, bot, "HARD");
           if (downMove) {
             console.log(
-              `[Bot] ${bot.name} EMERGENCY DOWN - too many points in hand!`
+              `[Bot] ${bot.name} EMERGENCY DOWN - too many points in hand!`,
             );
             return downMove;
           }
@@ -142,15 +131,8 @@ export const calculateBotMove = (
  * Check if the bot has drawn a card this turn
  */
 const checkIfBotHasDrawn = (gameState: GameState, botId: string): boolean => {
-  const lastAction = gameState.lastAction;
-  if (!lastAction) return false;
-
-  return (
-    lastAction.playerId === botId &&
-    (lastAction.type === "DRAW_DECK" ||
-      lastAction.type === "DRAW_DISCARD" ||
-      lastAction.type === "BUY")
-  );
+  const bot = gameState.players.find((p) => p.id === botId);
+  return bot ? bot.hasDrawn : false;
 };
 
 /**
@@ -166,7 +148,7 @@ const hasPlayerMelded = (player: Player): boolean => {
 const decideDraw = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
 ): BotMove => {
   const discardPile = gameState.discardPile;
   const topDiscard =
@@ -199,7 +181,7 @@ const decideDraw = (
     const isUseful = evaluateCardUsefulness(
       topDiscard,
       bot.hand,
-      gameState.currentRound
+      gameState.currentRound,
     );
 
     if (isUseful) {
@@ -212,7 +194,7 @@ const decideDraw = (
         competitiveAnalysis.hasLeader &&
         countMatchingValues(
           competitiveAnalysis.leaderAnalysis?.hand || [],
-          topDiscard.value
+          topDiscard.value,
         ) > 0
       ) {
         return { action: "DRAW_DISCARD" };
@@ -231,7 +213,7 @@ const decideDraw = (
   const isUseful = evaluateCardUsefulness(
     topDiscard,
     bot.hand,
-    gameState.currentRound
+    gameState.currentRound,
   );
 
   // JOKERS: ALWAYS BUY if possible (invaluable for any strategy)
@@ -255,14 +237,14 @@ const decideDraw = (
     const leaderHasMatching =
       countMatchingValues(
         competitiveAnalysis.leaderAnalysis.hand,
-        topDiscard.value
+        topDiscard.value,
       ) > 0;
 
     if (leaderHasMatching) {
       // EXTREMELY aggressive blocking of leader (90% chance for HARD)
       if (Math.random() < 0.9) {
         console.log(
-          `[Bot] HARD difficulty: BLOCKING LEADER with card ${topDiscard.value}`
+          `[Bot] HARD difficulty: BLOCKING LEADER with card ${topDiscard.value}`,
         );
         return { action: "DRAW_DISCARD" };
       }
@@ -298,7 +280,7 @@ const decideDraw = (
 const decideDiscard = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
 ): BotMove => {
   const hand = [...bot.hand];
 
@@ -369,13 +351,14 @@ const decideDiscard = (
 
   // Candidates for discard: cards NOT in groups, NOT jokers
   const discardCandidates = hand.filter(
-    (c) => !cardsInGroups.has(c.id) && c.suit !== "JOKER" && c.value !== 0
+    (c) => !cardsInGroups.has(c.id) && c.suit !== "JOKER" && c.value !== 0,
   );
 
   if (discardCandidates.length > 0) {
     // For HARD: Be VERY strategic about discards
     if (difficulty === "HARD") {
-      const competitiveAnalysis = analyzeCompetitivePosition(gameState, bot.id);
+      // Analyze competitive position for strategic discarding
+      analyzeCompetitivePosition(gameState, bot.id);
 
       // STRATEGY 1: Discard cards that block opponents the LEAST
       // Calculate "popularity" of each candidate (how many opponents want it)
@@ -397,12 +380,12 @@ const decideDiscard = (
 
       // Sort candidates by popularity (ascending) - discard least wanted cards
       discardCandidates.sort(
-        (a, b) => (cardPopularity[a.id] || 0) - (cardPopularity[b.id] || 0)
+        (a, b) => (cardPopularity[a.id] || 0) - (cardPopularity[b.id] || 0),
       );
 
       // Among least popular cards, prefer low-value cards
       const leastPopularCards = discardCandidates.filter(
-        (c) => cardPopularity[c.id] === cardPopularity[discardCandidates[0].id]
+        (c) => cardPopularity[c.id] === cardPopularity[discardCandidates[0].id],
       );
 
       leastPopularCards.sort((a, b) => getCardPoints(a) - getCardPoints(b));
@@ -428,7 +411,7 @@ const decideDiscard = (
   // EMERGENCY ONLY: If forced to discard a joker (hand full and can't do anything else)
   // This should almost never happen in normal gameplay
   console.warn(
-    `[Bot] ${bot.name} forced to discard a joker - emergency situation!`
+    `[Bot] ${bot.name} forced to discard a joker - emergency situation!`,
   );
   return { action: "DISCARD", payload: { cardId: hand[0].id } };
 };
@@ -439,7 +422,7 @@ const decideDiscard = (
 const findDownMove = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
 ): BotMove | null => {
   const round = gameState.currentRound;
   const hand = bot.hand;
@@ -493,7 +476,7 @@ const findDownMove = (
     if (competitiveAnalysis.hasLeader && competitiveAnalysis.leaderAnalysis) {
       if (competitiveAnalysis.hasLeader) {
         console.log(
-          `[Bot] HARD difficulty: Going down aggressively to pressure leader`
+          `[Bot] HARD difficulty: Going down aggressively to pressure leader`,
         );
         return {
           action: "DOWN",
@@ -523,7 +506,7 @@ const findDownMove = (
  */
 const findAddToMeldMove = (
   gameState: GameState,
-  bot: Player
+  bot: Player,
 ): BotMove | null => {
   // Look through all melds on the table
   // Priority: Own melds > opponent melds that would help us finish > random additions
@@ -598,7 +581,7 @@ const findAddToMeldMove = (
 const findAdditionalDownMove = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
 ): BotMove | null => {
   const hand = bot.hand;
 
@@ -627,7 +610,7 @@ const findAdditionalDownMove = (
 const findStealJokerMove = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
 ): BotMove | null => {
   // Look through all melds on the table
   // For HARD: Prioritize stealing from the leader or strong opponents
@@ -657,7 +640,7 @@ const findStealJokerMove = (
 
       // Try to find BEST card in hand that can steal it
       const stealableCandidates = bot.hand.filter((card) =>
-        canStealJoker(card, meld, bot.hand)
+        canStealJoker(card, meld, bot.hand),
       );
 
       if (stealableCandidates.length === 0) continue;
@@ -666,7 +649,7 @@ const findStealJokerMove = (
       if (difficulty === "HARD") {
         // Pick the LOWEST point card to minimize loss (best trade)
         const bestCard = stealableCandidates.reduce((best, current) =>
-          getCardPoints(current) < getCardPoints(best) ? current : best
+          getCardPoints(current) < getCardPoints(best) ? current : best,
         );
 
         return {
@@ -708,7 +691,7 @@ const findStealJokerMove = (
  * Get round requirements (trio count, escala count, sizes)
  */
 const getRoundRequirements = (
-  round: number
+  round: number,
 ): {
   trios: number;
   escalas: number;
@@ -737,14 +720,14 @@ const getRoundRequirements = (
 const evaluateCardUsefulness = (
   card: Card,
   hand: Card[],
-  round: number
+  _round: number,
 ): boolean => {
   // Jokers are always useful
   if (card.suit === "JOKER" || card.value === 0) return true;
 
   // Check for matching values (trio potential)
   const matchingCount = hand.filter(
-    (c) => c.value === card.value && c.suit !== "JOKER" && c.value !== 0
+    (c) => c.value === card.value && c.suit !== "JOKER" && c.value !== 0,
   ).length;
 
   if (matchingCount >= 1) return true;
@@ -758,7 +741,7 @@ const evaluateCardUsefulness = (
 /**
  * Evaluate overall quality of hand (0-1, higher is better)
  */
-const evaluateHandQuality = (hand: Card[], round: number): number => {
+const evaluateHandQuality = (hand: Card[], _round: number): number => {
   const trios = findTrios(hand);
   const escalas = findEscalas(hand);
   const jokers = hand.filter((c) => c.suit === "JOKER" || c.value === 0).length;
@@ -818,7 +801,7 @@ const canFormSequence = (hand: Card[], targetCard: Card): boolean => {
  */
 const countMatchingValues = (hand: Card[], value: number): number => {
   return hand.filter(
-    (c) => c.value === value && c.suit !== "JOKER" && c.value !== 0
+    (c) => c.value === value && c.suit !== "JOKER" && c.value !== 0,
   ).length;
 };
 
@@ -855,7 +838,6 @@ const findTrios = (hand: Card[]): CardGroup[] => {
  */
 const findEscalas = (hand: Card[]): CardGroup[] => {
   const groups: CardGroup[] = [];
-  const usedIds = new Set<string>();
 
   // Group by suit
   const bySuit: Record<string, Card[]> = {};
@@ -906,7 +888,7 @@ const isSequenceValid = (cards: Card[]): boolean => {
 const findGroupCombinations = (
   hand: Card[],
   round: number,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
 ): CardGroup[] => {
   if (round === -1) {
     // Any valid group for additional down
@@ -983,7 +965,7 @@ interface CompetitiveAnalysis {
 
 const analyzeCompetitivePosition = (
   gameState: GameState,
-  botId: string
+  _botId: string,
 ): CompetitiveAnalysis => {
   const players = gameState.players;
 

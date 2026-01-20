@@ -13,6 +13,7 @@ interface CardWrapperProps {
   isSuggestedDiscard?: boolean;
   onClick?: () => void;
   isMobile?: boolean;
+  size?: "small" | "normal" | "large" | "touch";
 }
 
 export const CardWrapper: React.FC<CardWrapperProps> = ({
@@ -25,6 +26,7 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
   isSuggestedDiscard,
   onClick,
   isMobile,
+  size = "normal",
 }) => {
   return (
     <div
@@ -41,7 +43,7 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
           : "",
         isSuggestedDiscard && !isSelected && !isTempSelected && !isAddable
           ? "-translate-y-2 z-20 ring-4 ring-red-400 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.5)]"
-          : ""
+          : "",
       )}
       style={{
         zIndex: isSelected || isTempSelected ? 50 : index,
@@ -50,8 +52,9 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
       <PlayingCard
         card={card}
         isSelected={isSelected}
+        size={size}
         className={cn(
-          "w-20 h-28 md:w-24 md:h-36 shadow-xl transition-all duration-300",
+          "shadow-xl transition-all duration-300",
           isSelected && "ring-4 ring-yellow-400 border-yellow-500 card-glow",
           isTempSelected && "ring-4 ring-green-400 border-green-500",
           isAddable &&
@@ -62,7 +65,7 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
             !isSelected &&
             !isTempSelected &&
             !isAddable &&
-            "border-red-500"
+            "border-red-500",
         )}
       />
       {isAddable && !isSelected && !isTempSelected && (

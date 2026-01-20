@@ -13,7 +13,11 @@ export async function POST(
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id },
-      include: { players: true },
+      include: {
+        players: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (!session) {
@@ -37,13 +41,12 @@ export async function POST(
     }
 
     const botId = uuidv4();
-    const botName = `Bot ${session.players.length + 1} (${
-      difficulty === "EASY"
+    const botName = `Bot ${session.players.length + 1} (${difficulty === "EASY"
         ? "Fácil"
         : difficulty === "MEDIUM"
-        ? "Medio"
-        : "Difícil"
-    })`;
+          ? "Medio"
+          : "Difícil"
+      })`;
 
     // Deal cards if game already started? No, assuming lobby only.
     // If we support joining mid-game, we'd need to deal cards.
