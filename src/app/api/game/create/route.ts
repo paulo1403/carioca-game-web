@@ -4,8 +4,24 @@ import { createDeck, shuffleDeck } from "@/utils/deck";
 import { v4 as uuidv4 } from "uuid";
 import { GameState, Player } from "@/types/game";
 
+import { createGameSchema, validateRequest } from "@/lib/validations";
+import { auth } from "@/auth";
+
 export async function POST(request: Request) {
-  const { hostName } = await request.json();
+  const body = await request.json();
+
+  // 1. Validar con JOI
+  const { value, error } = await validateRequest(createGameSchema, body);
+  if (error) {
+    return NextResponse.json({ error: "Invalid input", details: error }, { status: 400 });
+  }
+
+  const { creatorName, difficulty = "MEDIUM" } = value;
+
+  // 2. Verificar si hay sesión
+  const session = await auth();
+  const ownerId = session?.user?.id;
+
   const roomId = uuidv4().slice(0, 8);
   const hostId = uuidv4();
 
@@ -17,7 +33,7 @@ export async function POST(request: Request) {
   // Host Player
   const hostPlayer: Player = {
     id: hostId,
-    name: hostName || "Anfitrión",
+    name: creatorName || "Anfitrión",
     hand: [], // Empty initially
     boughtCards: [], // Empty initially
     melds: [], // Empty initially
@@ -32,6 +48,7 @@ export async function POST(request: Request) {
       data: {
         id: roomId,
         creatorId: hostId,
+        ownerId: ownerId, // El usuario de Auth que es dueño de la sala
         status: "WAITING",
         currentTurn: 0,
         currentRound: 1,
@@ -42,6 +59,7 @@ export async function POST(request: Request) {
         players: {
           create: {
             id: hostPlayer.id,
+            userId: ownerId, // Si está autenticado, vinculamos el jugador al usuario
             name: hostPlayer.name,
             hand: "[]",
             boughtCards: "[]",

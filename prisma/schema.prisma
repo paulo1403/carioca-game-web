@@ -11,42 +11,112 @@ datasource db {
 }
 
 model GameSession {
-  id           String    @id
-  creatorId    String    // ID of the player who created/hosts the game
-  status       String    // 'WAITING', 'PLAYING', 'ROUND_ENDED', 'FINISHED'
-  currentTurn  Int       @default(0)
-  currentRound Int       @default(1)
-  direction    String    @default("clockwise")
-  deck         String    // JSON string of Card[]
-  discardPile  String    // JSON string of Card[]
-  lastAction   String?   // JSON string of { playerId, type, description, timestamp }
-  pendingDiscardIntents String @default("[]") // JSON string of {playerId, timestamp}[]
-  pendingBuyIntents String @default("[]") // JSON string of {playerId, timestamp}[]
-  readyForNextRound String @default("[]") // JSON string of string[] (player IDs ready for next round)
-  reshuffleCount Int @default(0) // Number of times the deck has been reshuffled from discard pile
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  
-  players      Player[]
-  history      GameHistory?
+  id                    String   @id
+  creatorId             String // ID of the player who created the game (UUID from frontend)
+  ownerId               String? // ID of the User who owns the session (for Auth)
+  owner                 User?    @relation("OwnedGames", fields: [ownerId], references: [id])
+  status                String // 'WAITING', 'PLAYING', 'ROUND_ENDED', 'FINISHED'
+  currentTurn           Int      @default(0)
+  currentRound          Int      @default(1)
+  direction             String   @default("clockwise")
+  deck                  String // JSON string of Card[]
+  discardPile           String // JSON string of Card[]
+  lastAction            String? // JSON string of { playerId, type, description, timestamp }
+  pendingDiscardIntents String   @default("[]") // JSON string of {playerId, timestamp}[]
+  pendingBuyIntents     String   @default("[]") // JSON string of {playerId, timestamp}[]
+  readyForNextRound     String   @default("[]") // JSON string of string[] (player IDs ready for next round)
+  reshuffleCount        Int      @default(0) // Number of times the deck has been reshuffled from discard pile
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  players Player[]
+  history GameHistory?
+  user    User?        @relation(fields: [userId], references: [id])
+  userId  String?
+
+  @@index([ownerId])
 }
 
 model Player {
   id            String      @id
+  userId        String? // Link to User if authenticated
+  user          User?       @relation(fields: [userId], references: [id])
   name          String
-  hand          String      // JSON string of Card[]
-  melds         String      @default("[]") // JSON string of Card[][] (Groups of cards played on table)
-  boughtCards   String      @default("[]") // JSON string of Card[] (Bought cards not yet melded)
+  hand          String // JSON string of Card[]
+  melds         String      @default("[]") // JSON string of Card[][]
+  boughtCards   String      @default("[]") // JSON string of Card[]
   score         Int         @default(0)
-  roundScores   String      @default("[]") // JSON string of number[] (Scores per round)
-  buysUsed      Int         @default(0) // Number of buys used by this player (max 7)
-  roundBuys     String      @default("[]") // JSON string of number[] (Buys used per round)
+  roundScores   String      @default("[]") // JSON string of number[]
+  buysUsed      Int         @default(0)
+  roundBuys     String      @default("[]") // JSON string of number[]
   isBot         Boolean     @default(false)
-  difficulty    String?     // 'EASY', 'MEDIUM', 'HARD'
+  difficulty    String? // 'EASY', 'MEDIUM', 'HARD'
   hasDrawn      Boolean     @default(false)
   createdAt     DateTime    @default(now())
   gameSessionId String
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([gameSessionId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+
+  // Game relations
+  ownedSessions  GameSession[] @relation("OwnedGames")
+  playerProfiles Player[]
+
+  // Stats
+  gamesPlayed Int @default(0)
+  gamesWon    Int @default(0)
+  totalScore  Int @default(0)
+  elo         Int @default(1200)
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  gameSessions GameSession[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model GameHistory {
@@ -54,7 +124,7 @@ model GameHistory {
   gameSessionId String      @unique
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id])
   winnerId      String?
-  participants  String      // JSON string of participant summaries
+  participants  String // JSON string of participant summaries
   playedAt      DateTime    @default(now())
 }
 

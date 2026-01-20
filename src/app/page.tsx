@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PlayingCard } from "@/components/Card";
 import { RulesModal } from "@/components/RulesModal";
+import { ProfileModal } from "@/components/ProfileModal";
 import { useCreateGame } from "@/hooks/useCreateGame";
+import { useSession, signOut } from "next-auth/react";
 import {
   HelpCircle,
   Loader2,
@@ -13,18 +15,46 @@ import {
   History as HistoryIcon,
   Scan,
   X,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 
 export default function Home() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [joinCode, setJoinCode] = useState("");
-  const [hostName, setHostName] = useState("");
+  const [hostName, setHostName] = useState(session?.user?.name || "");
   const [showRules, setShowRules] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Update hostName when session loads
+  useEffect(() => {
+    if (session?.user?.name && !hostName) {
+      setHostName(session.user.name);
+    }
+  }, [session, hostName]);
 
   // Use React Query hook for creating game
   const createGameMutation = useCreateGame();
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) return null; // Prevent flicker before redirect
 
   const createGame = async () => {
     if (!hostName.trim()) {
@@ -43,18 +73,16 @@ export default function Home() {
   const handleScan = (text: string) => {
     if (text) {
       // If URL, extract ID
-      // Example: http://localhost:3000/game/abcd-1234
       if (text.includes("/game/")) {
         const parts = text.split("/game/");
         if (parts.length > 1) {
-          const id = parts[1].split("?")[0]; // Remove query params if any
+          const id = parts[1].split("?")[0];
           setJoinCode(id);
           router.push(`/game/${id}`);
           setShowScanner(false);
           return;
         }
       }
-      // If raw ID
       setJoinCode(text);
       router.push(`/game/${text}`);
       setShowScanner(false);
@@ -77,35 +105,59 @@ export default function Home() {
             className="w-32 h-48"
           />
         </div>
-        <div className="absolute top-1/2 left-5 transform -rotate-45">
-          <div className="w-72 h-72 bg-blue-500 rounded-full blur-[110px] opacity-50"></div>
+      </div>
+
+      {/* Top Header Controls (Global Fixed) */}
+      <div className="fixed top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start z-50 pointer-events-none">
+        <div className="pointer-events-auto">
+          <Link
+            href="/history"
+            className="flex items-center justify-center w-12 h-12 bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl text-slate-400 hover:text-blue-400 hover:border-blue-500/50 transition-all shadow-xl"
+            title="Historial"
+          >
+            <HistoryIcon className="w-6 h-6" />
+          </Link>
         </div>
-        <div className="absolute top-1/3 right-0 transform rotate-12">
-          <div className="w-72 h-72 bg-cyan-400 rounded-full blur-[120px] opacity-30"></div>
+
+        <div className="flex gap-3 pointer-events-auto">
+          {session?.user && (
+            <button
+              onClick={() => setShowProfile(true)}
+              className="flex items-center gap-3 bg-slate-900/50 backdrop-blur-md border border-slate-800 p-1.5 pr-4 rounded-2xl hover:border-slate-700 transition-all shadow-xl group"
+            >
+              <div className="w-9 h-9 bg-blue-600/20 rounded-xl flex items-center justify-center border border-blue-500/30 group-hover:bg-blue-600/30 transition-colors">
+                <UserIcon className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="text-left hidden sm:block">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Jugador</p>
+                <p className="text-sm font-bold text-white leading-none">
+                  {session.user.name || session.user.email?.split('@')[0]}
+                </p>
+              </div>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowRules(true)}
+            className="w-12 h-12 bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-400 hover:border-blue-500/50 transition-all shadow-xl"
+            title="Reglas"
+          >
+            <HelpCircle className="w-6 h-6" />
+          </button>
+
+          {session?.user && (
+            <button
+              onClick={() => signOut()}
+              className="w-12 h-12 bg-red-950/20 backdrop-blur-md border border-red-900/30 rounded-2xl flex items-center justify-center text-red-400/70 hover:text-red-400 hover:border-red-500/50 transition-all shadow-xl"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="max-w-md w-full surface-1 backdrop-blur-2xl p-8 rounded-3xl shadow-2xl border border-slate-700/70 text-center relative z-10 animate-in fade-in zoom-in-95 duration-700">
-        {/* History Button (Top Left) */}
-        <Link
-          href="/history"
-          className="absolute top-4 left-4 text-slate-500 hover:text-blue-400 transition-colors"
-          title="Historial de Partidas"
-        >
-          <HistoryIcon className="w-6 h-6" />
-        </Link>
-
-        {/* Top Right Controls */}
-        <div className="absolute top-4 right-4 flex gap-2">
-          {/* Rules Button */}
-          <button
-            onClick={() => setShowRules(true)}
-            className="text-slate-500 hover:text-blue-400 transition-colors"
-            title="Ver Reglas"
-          >
-            <HelpCircle className="w-6 h-6" />
-          </button>
-        </div>
 
         {/* Logo / Title */}
         <div className="mb-10 relative h-44 md:h-48 flex justify-center items-center group">
@@ -139,7 +191,7 @@ export default function Home() {
         <div className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-tertiary uppercase tracking-wider block ml-1">
-              Tu Nombre (Anfitrión)
+              {session?.user ? "Tu Nombre de Juego" : "Tu Nombre (Anfitrión)"}
             </label>
             <input
               type="text"
@@ -148,6 +200,9 @@ export default function Home() {
               onChange={(e) => setHostName(e.target.value)}
               className="w-full surface-0 border border-slate-700/70 rounded-xl px-4 py-4 text-primary placeholder-tertiary focus:outline-none focus:border-blue-500/80 focus:surface-2 transition-all text-center"
             />
+            {session?.user && !hostName && (
+              <p className="text-[10px] text-blue-400/60 font-medium">Se usará tu nombre de cuenta por defecto</p>
+            )}
             <button
               onClick={createGame}
               disabled={createGameMutation.isPending || !hostName.trim()}
@@ -213,6 +268,7 @@ export default function Home() {
       </div>
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
+      <ProfileModal isOpen={showProfile} onClose={() => setShowProfile(false)} />
 
       {/* QR Scanner Modal - Improved Mobile */}
       {showScanner && (

@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useGameHistory, GameHistoryEntry } from "@/hooks/useGameHistory";
+import { useSession } from "next-auth/react";
 
 export default function HistoryPage() {
   const { isMobile } = useIsMobile();
   const { data: history = [], isLoading: loading } = useGameHistory();
+  const { data: session } = useSession();
 
   // Type assertion for safety
   const games = history as GameHistoryEntry[];
@@ -35,7 +37,7 @@ export default function HistoryPage() {
             <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2 md:gap-3 text-slate-100">
               <HistoryIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-500" />
               <span className="truncate">
-                {isMobile ? "Historial" : "Historial de Partidas"}
+                {isMobile ? "Historial" : `Historial de ${session?.user?.name || "Jugador"}`}
               </span>
             </h1>
             {!isMobile && (
@@ -101,7 +103,7 @@ export default function HistoryPage() {
                 <div className="text-2xl font-bold text-purple-400">
                   {Math.round(
                     games.reduce((sum, g) => sum + g.participants.length, 0) /
-                      games.length,
+                    games.length,
                   ) || 0}
                 </div>
                 <div className="text-xs md:text-sm text-slate-400">
@@ -119,20 +121,20 @@ export default function HistoryPage() {
                 const date = new Date(game.playedAt);
                 const formattedDate = isMobile
                   ? date.toLocaleDateString("es-CL", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : date.toLocaleDateString("es-CL", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
 
                 return (
                   <div
@@ -178,11 +180,10 @@ export default function HistoryPage() {
                             {game.participants.map((p) => (
                               <span
                                 key={p.id}
-                                className={`text-xs px-2 py-1 rounded-full border whitespace-nowrap ${
-                                  p.id === game.winnerId
+                                className={`text-xs px-2 py-1 rounded-full border whitespace-nowrap ${p.id === game.winnerId
                                     ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 font-medium"
                                     : "bg-slate-800/70 border-slate-700/70 text-slate-400"
-                                }`}
+                                  }`}
                               >
                                 {p.name.length > 12
                                   ? `${p.name.slice(0, 12)}...`
@@ -227,11 +228,10 @@ export default function HistoryPage() {
                             {game.participants.map((p) => (
                               <span
                                 key={p.id}
-                                className={`text-sm px-3 py-1.5 rounded-full border ${
-                                  p.id === game.winnerId
+                                className={`text-sm px-3 py-1.5 rounded-full border ${p.id === game.winnerId
                                     ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 font-medium"
                                     : "bg-slate-800 border-slate-700 text-slate-400"
-                                }`}
+                                  }`}
                               >
                                 {p.name}
                               </span>

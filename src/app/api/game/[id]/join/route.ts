@@ -3,12 +3,28 @@ import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { Card } from "@/types/game";
 
+import { joinGameSchema, validateRequest } from "@/lib/validations";
+import { auth } from "@/auth";
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { playerName } = await request.json();
+  const body = await request.json();
+
+  // 1. Validar con JOI
+  const { value, error } = await validateRequest(joinGameSchema, body);
+  if (error) {
+    return NextResponse.json({ error: "Invalid input", details: error }, { status: 400 });
+  }
+
+  const { name } = value;
+
+  // 2. Verificar si hay sesión
+  const sessionUser = await auth();
+  const userId = sessionUser?.user?.id;
+
   const playerId = uuidv4();
 
   try {
@@ -40,7 +56,8 @@ export async function POST(
     await prisma.player.create({
       data: {
         id: playerId,
-        name: playerName,
+        userId: userId, // Vinculamos el jugador al usuario de Auth si existe
+        name: name,
         hand: "[]",
         boughtCards: "[]",
         melds: "[]",

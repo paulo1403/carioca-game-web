@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { GameState, Card, Player, BotDifficulty } from "@/types/game";
 import { createDeck, shuffleDeck } from "@/utils/deck";
+import { updateUserStats } from "@/utils/updateUserStats";
 import {
   validateContract,
   validateAdditionalDown,
@@ -294,9 +295,8 @@ export async function processMove(
       lastAction = {
         playerId,
         type: "BUY",
-        description: `${buyingPlayer.name} compró del descarte (${
-          boughtCards.length
-        } carta${boughtCards.length === 1 ? "" : "s"})`,
+        description: `${buyingPlayer.name} compró del descarte (${boughtCards.length
+          } carta${boughtCards.length === 1 ? "" : "s"})`,
         timestamp: Date.now(),
       };
     } else if (action === "INTEND_BUY") {
@@ -531,6 +531,9 @@ export async function processMove(
               ),
             },
           });
+
+          // Update user statistics
+          await updateUserStats(sessionId, currentPlayer.id);
 
           return {
             success: true,
@@ -1399,8 +1402,7 @@ export async function autoReadyBots(sessionId: string) {
     });
 
     console.log(
-      `[Bot] Auto-ready ${botPlayers.length} bots. Ready count: ${
-        updatedReady.length
+      `[Bot] Auto-ready ${botPlayers.length} bots. Ready count: ${updatedReady.length
       }/${session.players.filter((p) => p.id !== session.creatorId).length}`,
     );
 

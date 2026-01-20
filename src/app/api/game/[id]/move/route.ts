@@ -1,15 +1,40 @@
 import { NextResponse } from "next/server";
 import { processMove, checkAndProcessBotTurns } from "@/services/gameService";
+import { moveSchema, validateRequest } from "@/lib/validations";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { playerId, action, payload } = await request.json();
+  const body = await request.json();
+
+  // 1. Validar con JOI
+  const { value, error } = await validateRequest(moveSchema, body);
+  if (error) {
+    return NextResponse.json({ error: "Invalid move data", details: error }, { status: 400 });
+  }
+
+  const { playerId, action, payload } = value;
 
   try {
-    // 1. Process the Human Player's Move
+    // 2. Control de Autorización (Seguridad)
+    // Verificamos si este jugador pertenece a un usuario autenticado
+    const playerRecord = await prisma.player.findUnique({
+      where: { id: playerId },
+      select: { userId: true }
+    });
+
+    if (playerRecord?.userId) {
+      const session = await auth();
+      if (session?.user?.id !== playerRecord.userId) {
+        return NextResponse.json({ error: "Not authorized to move for this player" }, { status: 403 });
+      }
+    }
+
+    // 3. Procesar el movimiento
     const result = await processMove(id, playerId, action, payload);
 
     if (!result.success) {
