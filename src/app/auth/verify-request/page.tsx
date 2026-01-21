@@ -1,10 +1,10 @@
 "use client"
-
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Mail, CheckCircle, ArrowLeft, Sparkles } from "lucide-react"
 import Link from "next/link"
 
-export default function VerifyRequestPage() {
+function VerifyRequestContent() {
     const searchParams = useSearchParams()
     const email = searchParams.get("email") || "tu correo"
 
@@ -93,5 +93,13 @@ export default function VerifyRequestPage() {
                 El enlace expira en 24 horas
             </p>
         </div>
+    )
+}
+
+export default function VerifyRequestPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Cargando...</div>}>
+            <VerifyRequestContent />
+        </Suspense>
     )
 }
