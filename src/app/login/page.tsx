@@ -84,18 +84,18 @@ export default function LoginPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                         <button
-                            onClick={() => signIn("google", { callbackUrl: "/" })}
-                            className="flex items-center justify-center gap-3 bg-slate-800/50 hover:bg-slate-800 text-slate-300 font-semibold py-3 px-4 rounded-xl border border-slate-700/50 transition-all active:scale-[0.98] text-sm"
+                            disabled
+                            className="flex items-center justify-center gap-3 bg-slate-800/20 text-slate-500 font-semibold py-3 px-4 rounded-xl border border-slate-700/30 text-sm cursor-not-allowed"
                         >
-                            <img src="https://authjs.dev/img/providers/google.svg" className="w-4 h-4" alt="Google" />
-                            Google
+                            <img src="https://authjs.dev/img/providers/google.svg" className="w-4 h-4 opacity-50" alt="Google" />
+                            Google (WIP)
                         </button>
                         <button
-                            onClick={() => signIn("github", { callbackUrl: "/" })}
-                            className="flex items-center justify-center gap-3 bg-slate-800/50 hover:bg-slate-800 text-slate-300 font-semibold py-3 px-4 rounded-xl border border-slate-700/50 transition-all active:scale-[0.98] text-sm"
+                            disabled
+                            className="flex items-center justify-center gap-3 bg-slate-800/20 text-slate-500 font-semibold py-3 px-4 rounded-xl border border-slate-700/30 text-sm cursor-not-allowed"
                         >
-                            <img src="https://authjs.dev/img/providers/github.svg" className="w-4 h-4 invert" alt="GitHub" />
-                            GitHub
+                            <img src="https://authjs.dev/img/providers/github.svg" className="w-4 h-4 invert opacity-50" alt="GitHub" />
+                            GitHub (WIP)
                         </button>
                     </div>
                 </div>

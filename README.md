@@ -102,6 +102,10 @@ Ve a tu proyecto en Vercel > Settings > Environment Variables y agrega las sigui
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Llave Pública | Supabase > Settings > API > anon / public |
 | `AUTH_SECRET` | Llave secreta Auth | Generar con `openssl rand -base64 32` |
 | `AUTH_TRUST_HOST` | Confianza en host | `true` (necesario para Vercel) |
+| `EMAIL_HOST` | Host SMTP | `smtp.gmail.com` |
+| `EMAIL_USER` | Usuario SMTP | Tu correo (ej: `cariocagameweb@gmail.com`) |
+| `EMAIL_PASS` | Password SMTP | Tu contraseña de aplicación |
+| `EMAIL_FROM` | Remitente | Tu correo (ej: `cariocagameweb@gmail.com`) |
 
 **Nota**: Asegúrate de reemplazar `[YOUR-PASSWORD]` por tu contraseña real de Supabase en `DATABASE_URL` y `DIRECT_URL`.
 
