@@ -41,28 +41,86 @@ Este proyecto está en proceso de implementar un sistema robusto de seguridad y 
 - **TypeScript**: 5.x
 - **Sonidos**: use-sound
 
-## 📦 Instalación
+## 🛠️ Guía de Despliegue y Configuración
 
+### 💻 Ambiente Local (Desde Cero)
+
+Sigue estos pasos para configurar el proyecto en tu máquina local por primera vez.
+
+**Prerrequisitos:**
+- [Node.js](https://nodejs.org/) (v18 o superior)
+- [PostgreSQL](https://www.postgresql.org/) (Instalado y corriendo)
+- Git
+
+**Pasos:**
+
+1.  **Clonar el repositorio**
+    ```bash
+    git clone <repository-url>
+    cd carioca-game-web
+    ```
+
+2.  **Instalar dependencias**
+    ```bash
+    npm install
+    ```
+
+3.  **Configurar Variables de Entorno**
+    Crea un archivo `.env` basado en el ejemplo:
+    ```bash
+    cp .env.example .env
+    ```
+    Abre el archivo `.env` y configura tu conexión a la base de datos:
+    ```env
+    DATABASE_URL="postgresql://usuario:password@localhost:5432/carioca_game?schema=public"
+    ```
+
+4.  **Configurar Base de Datos**
+    Ejecuta las migraciones para crear las tablas:
+    ```bash
+    npm run db:migrate
+    ```
+
+5.  **Iniciar Servidor de Desarrollo**
+    ```bash
+    npm run dev
+    ```
+    El juego estará disponible en [http://localhost:3000](http://localhost:3000).
+
+### 🚀 Ambiente QAS / Producción (Vercel)
+
+Despliegue recomendado usando [Vercel](https://vercel.com) con Supabase.
+
+**1. Configuración de Variables en Vercel**
+Ve a tu proyecto en Vercel > Settings > Environment Variables y agrega las siguientes:
+
+| Variable | Descripción | Valor / Origen |
+|:---|:---|:---|
+| `DATABASE_URL` | Conexión (Pooler) | Supabase > Settings > Database > Connection Pooling (Transaction) |
+| `DIRECT_URL` | Conexión Directa | Supabase > Settings > Database > Direct connection |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL de la API | Supabase > Settings > API > Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Llave Pública | Supabase > Settings > API > anon / public |
+| `AUTH_SECRET` | Llave secreta Auth | Generar con `openssl rand -base64 32` |
+| `AUTH_TRUST_HOST` | Confianza en host | `true` (necesario para Vercel) |
+
+**Nota**: Asegúrate de reemplazar `[YOUR-PASSWORD]` por tu contraseña real de Supabase en `DATABASE_URL` y `DIRECT_URL`.
+
+**2. Despliegue**
+Conecta tu repositorio de GitHub a Vercel. Vercel detectará automáticamente que es un proyecto Next.js.
+- **Build Command**: `next build` (default)
+- **Install Command**: `npm install` o `pnpm install` (default)
+- **Output Directory**: `.next` (default)
+
+Al hacer push a `main`, Vercel iniciará el despliegue automáticamente.
+
+**3. Migraciones de Base de Datos**
+Vercel no ejecuta migraciones automáticamente. Puedes hacerlo desde tu local conectándote a la DB de producción o agregar un paso en el build (no recomendado para producción crítica, pero útil en hobby).
+
+Para correr migraciones manualmente desde tu PC a la DB de Supabase:
 ```bash
-# Clonar el repositorio
-git clone <repository-url>
-cd carioca-game-web
-
-# Instalar dependencias
-npm install
-
-# Configurar variables de entorno
-cp .env.example .env.local
-# Editar .env.local con tu DATABASE_URL
-
-# Ejecutar migraciones de Prisma
-npx prisma migrate dev
-
-# Iniciar servidor de desarrollo
-npm run dev
+# Asegúrate de tener las credenciales de Supabase en tu .env local
+npx prisma migrate deploy
 ```
-
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ## 🎮 Cómo Jugar
 
@@ -146,7 +204,7 @@ npm run format       # Formatear código con Prettier
 
 ### Para Usuarios
 - [Cómo Jugar](#-cómo-jugar) - Reglas básicas del juego
-- [Instalación](#-instalación) - Setup del proyecto
+- [Guía de Despliegue](#-guía-de-despliegue-y-configuración) - Setup del proyecto
 
 ### Para Desarrolladores
 - [Estructura del Proyecto](#-estructura-del-proyecto) - Organización del código
@@ -239,7 +297,7 @@ Este proyecto es de código abierto y está disponible bajo la licencia MIT.
 
 ## 👤 Autor
 
-Paulo - [GitHub Profile](https://github.com/yourusername)
+Paulo - [GitHub Profile](https://github.com/paulo1403)
 
 ## 🙏 Agradecimientos
 
