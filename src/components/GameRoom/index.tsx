@@ -9,6 +9,7 @@ import { useGameSounds } from "@/hooks/useGameSounds";
 import { useGameState } from "@/hooks/game/useGameState";
 import { useGameActions } from "@/hooks/game/useGameActions";
 import { useGameLobby } from "@/hooks/game/useGameLobby";
+import { useMyPlayerId } from "@/hooks/game/useMyPlayerId";
 
 interface GameRoomProps {
   roomId: string;
@@ -19,21 +20,22 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   const router = useRouter();
   const { playSuccess, playError, playStart, playClick } = useGameSounds();
 
-  // Player ID
-  const [myPlayerId, setMyPlayerId] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(`carioca_player_id_${roomId}`);
-      return stored ? stored.trim() : "";
-    }
-    return "";
+  // Get player ID using React Query hook
+  const {
+    myPlayerId,
+    isLoading: isLoadingPlayerId,
+    invalidateMyPlayerId,
+  } = useMyPlayerId({
+    roomId,
+    enabled: true,
   });
+
   const [optimisticDrawn, setOptimisticDrawn] = useState<boolean>(false);
 
   // UI State
   const [, setError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
-  const [joinName, setJoinName] = useState(playerName);
   const [isCopied, setIsCopied] = useState(false);
   const [isRoomIdCopied, setIsRoomIdCopied] = useState(false);
 
@@ -194,6 +196,15 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   };
 
   const handleLeaveGame = async () => {
+    if (!myPlayerId) {
+      toast({
+        title: "Cargando",
+        description: "Un momento, estamos cargando tu información...",
+        type: "info",
+      });
+      return;
+    }
+
     try {
       await lobbyActions.leaveGame.mutateAsync();
       localStorage.removeItem(`carioca_player_id_${roomId}`);
@@ -203,16 +214,15 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     }
   };
 
-  const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!joinName.trim()) return;
-
+  const handleJoin = async () => {
     setIsJoining(true);
     setError(null);
 
     try {
-      const data = await lobbyActions.joinGame.mutateAsync(joinName.trim());
-      setMyPlayerId(data.playerId);
+      const data = await lobbyActions.joinGame.mutateAsync(playerName);
+      // Save playerId to localStorage and invalidate the query cache
+      localStorage.setItem(`carioca_player_id_${roomId}`, data.playerId);
+      invalidateMyPlayerId();
       playSuccess();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Error al unirse");
@@ -468,8 +478,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
         myPlayerId={myPlayerId}
         isJoining={isJoining}
         isAddingBot={isAddingBot}
-        joinName={joinName}
-        setJoinName={setJoinName}
+        playerName={playerName}
         isCopied={isCopied}
         isRoomIdCopied={isRoomIdCopied}
         onJoin={handleJoin}
@@ -488,7 +497,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   return (
     <GameBoard
       gameState={gameState}
-      myPlayerId={myPlayerId}
+      myPlayerId={myPlayerId!}
       roomId={roomId}
       hasDrawn={hasDrawn ?? false}
       modalConfig={modalConfig}

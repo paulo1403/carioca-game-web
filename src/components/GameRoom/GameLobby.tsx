@@ -28,11 +28,10 @@ interface GameLobbyProps {
   myPlayerId: string | null;
   isJoining: boolean;
   isAddingBot: boolean;
-  joinName: string;
-  setJoinName: (name: string) => void;
+  playerName: string;
   isCopied: boolean;
   isRoomIdCopied: boolean;
-  onJoin: (e: React.FormEvent) => void;
+  onJoin: () => void;
   onAddBot: (difficulty: "EASY" | "MEDIUM" | "HARD") => void;
   onKickPlayer: (playerId: string) => void;
   onStartGame: () => void;
@@ -56,12 +55,17 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   isAddingBot,
   isCopied,
   isRoomIdCopied,
+  isJoining,
+  playerName,
+  onJoin,
   onAddBot,
   onKickPlayer,
   onStartGame,
   onLeaveGame,
   onCopyInviteLink,
   onCopyRoomId,
+  modalConfig,
+  onCloseModal,
 }) => {
   const [showQR, setShowQR] = useState(false);
   const isHost = gameState.creatorId === myPlayerId;
@@ -190,6 +194,31 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Join Button - If user is not in the game yet */}
+          {!myPlayerId && (
+            <div className="mb-8 bg-linear-to-r from-blue-950/50 to-slate-900/50 border border-blue-800/50 rounded-xl p-6">
+              <div className="max-w-md mx-auto">
+                <button
+                  onClick={onJoin}
+                  disabled={isJoining}
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  {isJoining ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Uniéndose como {playerName}...
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-5 h-5" />
+                      Unirse como {playerName}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -362,10 +391,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-6">
                 <button
                   onClick={onLeaveGame}
-                  className="w-full bg-red-950/50 hover:bg-red-900/50 text-red-400 hover:text-red-300 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-900/30 hover:border-red-800/50"
+                  disabled={!myPlayerId}
+                  className="w-full bg-red-950/50 hover:bg-red-900/50 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-red-400 hover:text-red-300 disabled:text-slate-500 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-900/30 hover:border-red-800/50 disabled:border-slate-700/30"
                 >
                   <LogOut className="w-5 h-5" />
-                  Salir de la Sala
+                  {!myPlayerId ? "Cargando..." : "Salir de la Sala"}
                 </button>
               </div>
 

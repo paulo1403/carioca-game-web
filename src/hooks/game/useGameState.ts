@@ -61,9 +61,9 @@ export function useGameState({
         return 3000; // 3 segundos durante juego activo
       }
 
-      // Polling en lobby - menos frecuente
+      // Polling en lobby - más frecuente para feedback rápido
       if (state.status === "WAITING") {
-        return 8000; // 8 segundos en lobby
+        return 2000; // 2 segundos en lobby
       }
 
       // Polling muy lento en estados terminados

@@ -29,7 +29,7 @@ export function useGameLobby({
       const res = await fetch(`/api/game/${roomId}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerName: playerName.trim() }),
+        body: JSON.stringify({ name: playerName.trim() }),
       });
 
       if (!res.ok) {
@@ -40,9 +40,13 @@ export function useGameLobby({
       return res.json();
     },
     onSuccess: (data) => {
-      // Store player ID in localStorage
-      localStorage.setItem(`carioca_player_id_${roomId}`, data.playerId);
+      // Store player ID in localStorage IMMEDIATELY
+      if (typeof window !== "undefined" && data.playerId) {
+        localStorage.setItem(`carioca_player_id_${roomId}`, data.playerId);
+      }
       invalidateGameState();
+      // Force refetch right away for instant UI update
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -93,12 +97,18 @@ export function useGameLobby({
   // Kick player
   const kickPlayer = useMutation({
     mutationFn: async (playerIdToKick: string) => {
+      const currentId =
+        myPlayerId ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem(`carioca_player_id_${roomId}`)
+          : null);
+
       const res = await fetch(`/api/game/${roomId}/remove-player`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playerIdToRemove: playerIdToKick,
-          requesterId: myPlayerId,
+          requesterId: currentId,
         }),
       });
 
@@ -159,10 +169,16 @@ export function useGameLobby({
   // End game
   const endGame = useMutation({
     mutationFn: async () => {
+      const currentId =
+        myPlayerId ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem(`carioca_player_id_${roomId}`)
+          : null);
+
       const res = await fetch(`/api/game/${roomId}/end`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requesterId: myPlayerId }),
+        body: JSON.stringify({ requesterId: currentId }),
       });
 
       if (!res.ok) {
@@ -174,6 +190,13 @@ export function useGameLobby({
     },
     onSuccess: () => {
       // Clear localStorage and redirect handled by component
+      localStorage.removeItem(`carioca_player_id_${roomId}`);
+
+      // Force redirect to home
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
+
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -189,10 +212,17 @@ export function useGameLobby({
   // Leave game
   const leaveGame = useMutation({
     mutationFn: async () => {
+      if (!myPlayerId) {
+        throw new Error("No se encontró tu ID de jugador. Recargando...");
+      }
+
       const res = await fetch(`/api/game/${roomId}/remove-player`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId: myPlayerId }),
+        body: JSON.stringify({
+          playerIdToRemove: myPlayerId,
+          requesterId: myPlayerId,
+        }),
       });
 
       if (!res.ok) {
@@ -204,6 +234,9 @@ export function useGameLobby({
     },
     onSuccess: () => {
       // Clear localStorage and redirect handled by component
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`carioca_player_id_${roomId}`);
+      }
       onSuccess?.();
     },
     onError: (error: Error) => {
