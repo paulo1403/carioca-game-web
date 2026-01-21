@@ -4,9 +4,17 @@ export const isTrio = (cards: Card[], minLength: number = 3): boolean => {
   if (cards.length < minLength) return false;
 
   const nonJokers = cards.filter((c) => c.suit !== "JOKER" && c.value !== 0);
+  const jokers = cards.filter((c) => c.suit === "JOKER" || c.value === 0);
+
   if (nonJokers.length === 0) return true; // All Jokers
+
+  // Check if all non-jokers have the same value
   const firstValue = nonJokers[0].value;
-  return nonJokers.every((c) => c.value === firstValue);
+  if (!nonJokers.every((c) => c.value === firstValue)) return false;
+
+  // Count total cards of the same value (non-jokers + jokers as wildcards)
+  const totalCardsOfValue = nonJokers.length + jokers.length;
+  return totalCardsOfValue >= minLength;
 };
 
 export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
@@ -15,6 +23,8 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   if (cards.length > 13) return false;
 
   const nonJokers = cards.filter((c) => c.suit !== "JOKER" && c.value !== 0);
+  const jokers = cards.filter((c) => c.suit === "JOKER" || c.value === 0);
+
   if (nonJokers.length === 0) return true; // All Jokers
 
   // Check suit (all non-jokers must be same suit)
@@ -37,7 +47,7 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
     let gap;
     if (i === sorted.length - 1) {
       // Gap between last and first card (circular)
-      gap = (sorted[0] + 13) - sorted[i];
+      gap = sorted[0] + 13 - sorted[i];
     } else {
       gap = sorted[i + 1] - sorted[i];
     }
@@ -45,12 +55,17 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   }
 
   // The length of the smallest straight that contains all these cards is 13 - maxGap + 1
-  return (13 - maxGap + 1) <= cards.length;
+  const minStraightLength = 13 - maxGap + 1;
+
+  // Count total cards (non-jokers + jokers as wildcards for gaps)
+  const totalCards = nonJokers.length + jokers.length;
+
+  return minStraightLength <= totalCards;
 };
 
 export const validateContract = (
   groups: Card[][],
-  round: number
+  round: number,
 ): { valid: boolean; error?: string } => {
   // Round 1: At least 1 group of 3+ cards of same value
   if (round === 1) {
@@ -184,7 +199,7 @@ export const validateContract = (
 };
 
 export const validateAdditionalDown = (
-  groups: Card[][]
+  groups: Card[][],
 ): { valid: boolean; error?: string } => {
   if (groups.length === 0) {
     return {
@@ -232,7 +247,7 @@ export const canAddToMeld = (card: Card, meld: Card[]): boolean => {
 export const canStealJoker = (
   card: Card,
   meld: Card[],
-  hand: Card[]
+  hand: Card[],
 ): boolean => {
   // Check if meld has a joker
   if (!meld.some((c) => c.suit === "JOKER" || c.value === 0)) return false;
@@ -256,7 +271,7 @@ export const canStealJoker = (
         // The previous logic (meldLength - 1) was incorrect for Carioca.
         const neededCount = 1;
         const matchingCardsInHand = hand.filter(
-          (c) => c.value === value && c.suit !== "JOKER"
+          (c) => c.value === value && c.suit !== "JOKER",
         ).length;
         // We need at least 1 card (the one we are dragging/selecting is usually in hand)
         return matchingCardsInHand >= neededCount;

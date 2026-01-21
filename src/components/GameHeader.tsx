@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { GameState, ROUND_CONTRACTS } from "@/types/game";
+import { RulesModal } from "@/components/RulesModal";
 import {
   Trophy,
   User,
@@ -34,6 +35,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showEndGameModal, setShowEndGameModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const currentTurnPlayer = gameState.players[gameState.currentTurn];
   const contract = ROUND_CONTRACTS[gameState.currentRound - 1];
   const myPlayer = gameState.players.find((p) => p.id === myPlayerId);
@@ -59,7 +61,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             </span>
           </div>
           <div className="h-8 w-px bg-white/10 hidden md:block"></div>
-          <div className="flex flex-col hidden md:flex">
+          <div className="flex-col hidden md:flex">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
               Objetivo
             </span>
@@ -148,7 +150,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
-                  // TODO: Mostrar modal de reglas
+                  setShowRulesModal(true);
                 }}
                 className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-slate-800/50 transition-colors text-slate-200"
               >
@@ -272,6 +274,12 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Rules Modal */}
+      <RulesModal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+      />
     </>
   );
 };

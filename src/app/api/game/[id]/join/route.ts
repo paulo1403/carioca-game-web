@@ -8,7 +8,7 @@ import { auth } from "@/auth";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const body = await request.json();
@@ -16,7 +16,10 @@ export async function POST(
   // 1. Validar con JOI
   const { value, error } = await validateRequest(joinGameSchema, body);
   if (error) {
-    return NextResponse.json({ error: "Invalid input", details: error }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid input", details: error },
+      { status: 400 },
+    );
   }
 
   const { name } = value;
@@ -24,8 +27,6 @@ export async function POST(
   // 2. Verificar si hay sesión
   const sessionUser = await auth();
   const userId = sessionUser?.user?.id;
-
-  const playerId = uuidv4();
 
   try {
     const session = await prisma.gameSession.findUnique({
@@ -44,13 +45,23 @@ export async function POST(
     if (session.status !== "WAITING") {
       return NextResponse.json(
         { error: "Game already started" },
-        { status: 400 }
+        { status: 400 },
       );
+    }
+
+    // Check if user is already in the game (if authenticated)
+    if (userId) {
+      const existingPlayer = session.players.find((p) => p.userId === userId);
+      if (existingPlayer) {
+        return NextResponse.json({ playerId: existingPlayer.id });
+      }
     }
 
     if (session.players.length >= 5) {
       return NextResponse.json({ error: "Game full" }, { status: 400 });
     }
+
+    const playerId = uuidv4();
 
     // Add new player
     await prisma.player.create({
