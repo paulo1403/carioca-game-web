@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Player, Card } from "@/types/game";
 import { MeldGroup } from "./MeldGroup";
 import { cn } from "@/lib/utils";
-import { X, Layers, Zap } from "lucide-react";
+import { X, Layers, Zap, Pencil, Check } from "lucide-react";
 
 interface PlayerBadgeProps {
   player: Player;
@@ -13,6 +13,8 @@ interface PlayerBadgeProps {
   handPoints?: number;
   expandedPlayerId?: string | null;
   onExpandToggle?: (playerId: string | null) => void;
+  onUpdateName?: (newName: string) => void;
+  gameStatus?: string;
 }
 
 export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
@@ -23,7 +25,11 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
   handPoints = 0,
   expandedPlayerId,
   onExpandToggle,
+  onUpdateName,
+  gameStatus,
 }) => {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState(player.name);
   const showMelds = player.melds && player.melds.length > 0;
   const isExpanded = expandedPlayerId === player.id;
 
@@ -32,6 +38,15 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
     if (onExpandToggle) {
       onExpandToggle(isExpanded ? null : player.id);
     }
+  };
+
+  const handleUpdateName = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (newName.trim() && newName !== player.name && onUpdateName) {
+      onUpdateName(newName.trim());
+    }
+    setIsEditingName(false);
   };
 
   const [mounted, setMounted] = useState(false);
@@ -45,20 +60,62 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
       <div
         onClick={handleBadgeClick}
         className={cn(
-          "bg-black/30 p-1 md:p-2 rounded-lg text-white text-center transition-all w-24 md:w-32 relative cursor-pointer select-none",
+          "bg-black/30 p-1 md:p-2 rounded-lg text-white text-center transition-all w-24 md:w-32 relative cursor-pointer select-none group",
           isExpanded ? "ring-2 ring-blue-400 bg-blue-900/50" : "",
           isCurrentTurn
             ? "ring-2 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)] bg-green-900/20"
             : "",
         )}
       >
-        <div className="font-bold text-xs md:text-base truncate">
-          {player.name}
-        </div>
+        {isEditingName && isOwnPlayer ? (
+          <form
+            onSubmit={handleUpdateName}
+            className="flex items-center gap-1 mb-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              autoFocus
+              className="bg-slate-800 text-white text-[10px] md:text-sm px-1 py-0.5 rounded border border-blue-500 w-full outline-hidden"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={() => setIsEditingName(false)}
+            />
+            <button
+              type="submit"
+              className="bg-green-600 p-0.5 rounded hover:bg-green-500 transition-colors"
+            >
+              <Check className="w-3 h-3 text-white" />
+            </button>
+          </form>
+        ) : (
+          <div className="font-bold text-xs md:text-base truncate flex items-center justify-center gap-1">
+            {player.name}
+            {isOwnPlayer && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingName(true);
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+              >
+                <Pencil className="w-3 h-3 text-white/50" />
+              </button>
+            )}
+          </div>
+        )}
         <div className="text-[10px] md:text-xs">
           {player.hand.length} cartas
         </div>
-        <div className="text-[10px] md:text-xs">Pts: {player.score}</div>
+        <div className="text-[10px] md:text-xs text-blue-300">
+          Compras: {player.buysUsed}
+        </div>
+        {!isOwnPlayer && gameStatus === "PLAYING" ? (
+          <div className="text-[10px] md:text-xs text-white/50 italic">
+            Pts: ???
+          </div>
+        ) : (
+          <div className="text-[10px] md:text-xs">Pts: {player.score}</div>
+        )}
         {isOwnPlayer && (
           <div className="text-[10px] md:text-xs text-yellow-300 font-semibold">
             Mano: {handPoints} pts

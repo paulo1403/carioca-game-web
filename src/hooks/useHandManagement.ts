@@ -11,20 +11,27 @@ export type SortMode = "rank" | "suit" | "auto";
 export const useHandManagement = (
   hand: Card[],
   currentRound: number,
-  haveMelded: boolean = false
+  haveMelded: boolean = false,
+  boughtCards: Card[] = []
 ) => {
   const [sortMode, setSortMode] = useState<SortMode>("suit");
 
   const sortedHand = useCallback(() => {
     if (!hand) return [];
 
+    const boughtIds = new Set(boughtCards.map(c => c.id));
+    const oldCards = hand.filter(c => !boughtIds.has(c.id));
+    const newCards = hand.filter(c => boughtIds.has(c.id));
+
+    let processedOld;
     if (sortMode === "auto") {
-      return organizeHandAuto(hand, currentRound, haveMelded);
+      processedOld = organizeHandAuto(oldCards, currentRound, haveMelded);
+    } else {
+      processedOld = sortCards(oldCards);
     }
 
-    // For rank/suit sorting, just use sortCards which organizes by suit naturally
-    return sortCards(hand);
-  }, [hand, sortMode, currentRound, haveMelded])();
+    return [...processedOld, ...newCards];
+  }, [hand, boughtCards, sortMode, currentRound, haveMelded])();
 
   const canDownCheck = useCallback(() => {
     const result = canFulfillContract(hand, currentRound, haveMelded);

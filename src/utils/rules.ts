@@ -1,4 +1,4 @@
-import { Card, ROUND_CONTRACTS } from "@/types/game";
+import { Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
 
 export const isTrio = (cards: Card[], minLength: number = 3): boolean => {
   if (cards.length < minLength) return false;
@@ -67,135 +67,65 @@ export const validateContract = (
   groups: Card[][],
   round: number,
 ): { valid: boolean; error?: string } => {
-  // Round 1: At least 1 group of 3+ cards of same value
-  if (round === 1) {
-    if (groups.length < 1)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 1 grupo de 3+ cartas del mismo valor.",
-      };
-    if (!groups.every((g) => isTrio(g, 3)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 3 cartas del mismo valor.",
-      };
-    return { valid: true };
+  const reqs = ROUND_CONTRACTS_DATA[round];
+  if (!reqs) {
+    return { valid: false, error: "Ronda desconocida o contrato no válido." };
   }
 
-  // Round 2: At least 2 groups of 3+ cards of same value
-  if (round === 2) {
-    if (groups.length < 2)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 2 grupos de 3+ cartas del mismo valor.",
-      };
-    if (!groups.every((g) => isTrio(g, 3)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 3 cartas del mismo valor.",
-      };
-    return { valid: true };
+  // Create a copy of groups to process
+  let remainingGroups = [...groups];
+  let requiredTrios = reqs.trios;
+  let requiredEscalas = reqs.escalas;
+
+  // Track which groups were used to fulfill which part of the contract
+  const usedIndices = new Set<number>();
+
+  // 1. Try to fulfill Escalas first (usually more restrictive)
+  if (requiredEscalas > 0) {
+    for (let i = 0; i < remainingGroups.length; i++) {
+      if (isEscala(remainingGroups[i], reqs.escalaSize)) {
+        requiredEscalas--;
+        usedIndices.add(i);
+        if (requiredEscalas === 0) break;
+      }
+    }
   }
 
-  // Round 3: At least 1 group of 4+ cards of same value
-  if (round === 3) {
-    if (groups.length < 1)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 1 grupo de 4+ cartas del mismo valor.",
-      };
-    if (!groups.every((g) => isTrio(g, 4)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 4 cartas del mismo valor.",
-      };
-    return { valid: true };
+  // 2. Try to fulfill Trios with remaining groups
+  if (requiredTrios > 0) {
+    for (let i = 0; i < remainingGroups.length; i++) {
+      if (usedIndices.has(i)) continue;
+      if (isTrio(remainingGroups[i], reqs.trioSize)) {
+        requiredTrios--;
+        usedIndices.add(i);
+        if (requiredTrios === 0) break;
+      }
+    }
   }
 
-  // Round 4: At least 2 groups of 4+ cards of same value
-  if (round === 4) {
-    if (groups.length < 2)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 2 grupos de 4+ cartas del mismo valor.",
-      };
-    if (!groups.every((g) => isTrio(g, 4)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 4 cartas del mismo valor.",
-      };
-    return { valid: true };
+  // Check if minimum requirements reached
+  if (requiredTrios > 0 || requiredEscalas > 0) {
+    const errorMsg = [];
+    if (requiredTrios > 0) errorMsg.push(`${requiredTrios} trío(s) de ${reqs.trioSize}+`);
+    if (requiredEscalas > 0) errorMsg.push(`${requiredEscalas} escala(s) de ${reqs.escalaSize}+`);
+    return {
+      valid: false,
+      error: `No cumples el contrato. Falta: ${errorMsg.join(" y ")}.`,
+    };
   }
 
-  // Round 5: At least 1 group of 5+ cards of same value
-  if (round === 5) {
-    if (groups.length < 1)
+  // 3. All additional groups must be valid (at least trio/escala of 3)
+  for (let i = 0; i < remainingGroups.length; i++) {
+    if (usedIndices.has(i)) continue;
+    if (!isTrio(remainingGroups[i], 3) && !isEscala(remainingGroups[i], 3)) {
       return {
         valid: false,
-        error: "Debes bajar al menos 1 grupo de 5+ cartas del mismo valor.",
+        error: `El grupo adicional ${i + 1} no es válido.`,
       };
-    if (!groups.every((g) => isTrio(g, 5)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 5 cartas del mismo valor.",
-      };
-    return { valid: true };
+    }
   }
 
-  // Round 6: At least 2 groups of 5+ cards of same value
-  if (round === 6) {
-    if (groups.length < 2)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 2 grupos de 5+ cartas del mismo valor.",
-      };
-    if (!groups.every((g) => isTrio(g, 5)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 5 cartas del mismo valor.",
-      };
-    return { valid: true };
-  }
-
-  // Round 7: At least 1 group of 6+ cards of same value
-  if (round === 7) {
-    if (groups.length < 1)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 1 grupo de 6+ cartas del mismo valor.",
-      };
-    if (!groups.every((g) => isTrio(g, 6)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben tener al menos 6 cartas del mismo valor.",
-      };
-    return { valid: true };
-  }
-
-  // Round 8: At least 1 group of 7 cards in a straight
-  if (round === 8) {
-    if (groups.length < 1)
-      return {
-        valid: false,
-        error: "Debes bajar al menos 1 escalera de 7 cartas.",
-      };
-    if (!groups.every((g) => isEscala(g, 7)))
-      return {
-        valid: false,
-        error:
-          "Todos los grupos deben ser escaleras válidas de al menos 7 cartas.",
-      };
-    return { valid: true };
-  }
-
-  return { valid: false, error: "Ronda desconocida o contrato no válido." };
+  return { valid: true };
 };
 
 export const validateAdditionalDown = (
@@ -250,42 +180,29 @@ export const canStealJoker = (
   hand: Card[],
 ): boolean => {
   // Check if meld has a joker
-  if (!meld.some((c) => c.suit === "JOKER" || c.value === 0)) return false;
+  const jokers = meld.filter((c) => c.suit === "JOKER" || c.value === 0);
+  if (jokers.length === 0) return false;
 
-  const meldLength = meld.length;
   const nonJokers = meld.filter((c) => c.suit !== "JOKER" && c.value !== 0);
+  if (nonJokers.length === 0) return false;
 
   // For trios (all non-jokers have same value)
-  const isTrioMeld =
-    nonJokers.length > 0 &&
-    nonJokers.every((c) => c.value === nonJokers[0].value);
+  const isTrioMeld = nonJokers.every((c) => c.value === nonJokers[0].value);
 
   if (isTrioMeld) {
-    if (nonJokers.length > 0) {
-      const value = nonJokers[0].value;
-      // To steal a joker from a trio, you need (meldLength - 1) cards of that value
-      // Example: (5, 5, Joker) = 3 cards total, need 2 fives to steal the joker
-      // Result: (5, 5, 5, 5) = valid trio with 4 cards
-      if (card.value === value) {
-        // Correct Rule: You only need 1 matching card to replace the Joker in a Trio
-        // The previous logic (meldLength - 1) was incorrect for Carioca.
-        const neededCount = 1;
-        const matchingCardsInHand = hand.filter(
-          (c) => c.value === value && c.suit !== "JOKER",
-        ).length;
-        // We need at least 1 card (the one we are dragging/selecting is usually in hand)
-        return matchingCardsInHand >= neededCount;
-      }
-    }
-  } else {
-    // For escalas: check if the card can fit in the sequence
-    const newMeld = meld
-      .filter((c) => c.suit !== "JOKER" && c.value !== 0)
-      .concat(card);
-    return isEscala(newMeld, 3);
-  }
+    // REFINED RULE: Requires 2 natural cards already in the meld
+    if (nonJokers.length < 2) return false;
 
-  return false;
+    // Card must match the trio's value
+    return card.value === nonJokers[0].value && card.suit !== "JOKER";
+  } else {
+    // For escalas: check if the card can fit in the sequence replacing ONE joker
+    const remainingJokers = jokers.slice(1);
+    const newMeld = [...nonJokers, card, ...remainingJokers];
+
+    // Check if it forms a valid escala of the same original length
+    return isEscala(newMeld, meld.length);
+  }
 };
 
 /**

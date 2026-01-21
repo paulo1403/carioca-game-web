@@ -381,6 +381,15 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     );
   };
 
+  const handleUpdateName = async (newName: string) => {
+    try {
+      await gameActions.updateName.mutateAsync(newName);
+      playClick();
+    } catch {
+      // Error handling already done in hook
+    }
+  };
+
   const handleSkipBotTurn = async () => {
     try {
       if (!gameState) return;
@@ -516,6 +525,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
       onStartNextRound={handleStartNextRound}
       onEndGame={handleEndGame}
       onSkipBotTurn={handleSkipBotTurn}
+      onUpdateName={handleUpdateName}
     />
   );
 };

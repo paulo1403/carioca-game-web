@@ -1,4 +1,4 @@
-import { Card, ROUND_CONTRACTS } from "@/types/game";
+import { Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
 
 // Helper to sort cards for display/logic
 export const sortCards = (cards: Card[]) => {
@@ -55,23 +55,8 @@ export const isValidEscala = (cards: Card[], minLength: number = 4): boolean => 
   return (13 - maxGap + 1) <= cards.length;
 };
 
-// --- Auto Grouping Logic ---
-
 export const getContractRequirements = (round: number) => {
-  const reqs: Record<
-    number,
-    { trios: number; escalas: number; trioSize: number; escalaSize: number }
-  > = {
-    1: { trios: 1, escalas: 0, trioSize: 3, escalaSize: 0 },
-    2: { trios: 2, escalas: 0, trioSize: 3, escalaSize: 0 },
-    3: { trios: 1, escalas: 0, trioSize: 4, escalaSize: 0 },
-    4: { trios: 2, escalas: 0, trioSize: 4, escalaSize: 0 },
-    5: { trios: 1, escalas: 0, trioSize: 5, escalaSize: 0 },
-    6: { trios: 2, escalas: 0, trioSize: 5, escalaSize: 0 },
-    7: { trios: 1, escalas: 0, trioSize: 6, escalaSize: 0 },
-    8: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 7 },
-  };
-  return reqs[round] || { trios: 0, escalas: 0, trioSize: 0, escalaSize: 0 };
+  return ROUND_CONTRACTS_DATA[round] || { trios: 0, escalas: 0, trioSize: 0, escalaSize: 0 };
 };
 
 // Find all potential groups in a hand
@@ -183,19 +168,6 @@ export const canFulfillContract = (
   }
 
   const reqs = getContractRequirements(round);
-
-  if (round === 8) {
-    // Round 8: At least 1 Escalera of 7+
-    const { escalas } = findPotentialContractGroups(hand, round);
-    const hasEscala7 = escalas.some((e) => e.length >= 7);
-    return {
-      canDown: hasEscala7,
-      groups: hasEscala7
-        ? escalas.filter((e) => e.length >= 7).slice(0, 1)
-        : [],
-    };
-  }
-
   const { trios, escalas } = findPotentialContractGroups(hand, round);
 
   // Filter groups by minimum size requirements
@@ -207,7 +179,7 @@ export const canFulfillContract = (
     return {
       canDown: true,
       groups: [
-        ...validTrios.slice(0, reqs.trios), // Take at least the required count
+        ...validTrios.slice(0, reqs.trios),
         ...validEscalas.slice(0, reqs.escalas),
       ],
     };

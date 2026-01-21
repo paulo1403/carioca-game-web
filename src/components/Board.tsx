@@ -49,6 +49,7 @@ interface BoardProps {
     meldIndex: number,
   ) => void;
   onEndGame?: () => void;
+  onUpdateName: (newName: string) => void;
   hasDrawn: boolean;
 }
 
@@ -63,6 +64,7 @@ export const Board: React.FC<BoardProps> = ({
   onAddToMeld,
   onStealJoker,
   onEndGame,
+  onUpdateName,
   hasDrawn,
 }) => {
   // Game state
@@ -92,6 +94,7 @@ export const Board: React.FC<BoardProps> = ({
     myPlayer?.hand ?? [],
     gameState.currentRound,
     haveMelded ?? false,
+    myPlayer?.boughtCards ?? [],
   );
 
   // Addable cards
@@ -122,8 +125,15 @@ export const Board: React.FC<BoardProps> = ({
   );
 
   // Sounds
-  const { playSelect, playDrop, playShuffle, playSuccess, playError } =
+  const { playSelect, playDrop, playShuffle, playSuccess, playError, playYourTurn } =
     useGameSounds();
+
+  // Highlight turn for human
+  React.useEffect(() => {
+    if (isMyTurn && gameState.status === "PLAYING") {
+      playYourTurn();
+    }
+  }, [isMyTurn, gameState.status, playYourTurn]);
 
   // Player layout (responsive for mobile and desktop)
   const layout = useMemo(() => {
@@ -217,8 +227,17 @@ export const Board: React.FC<BoardProps> = ({
       return;
     }
 
-    // Otherwise: Allow anyone to BUY (others, or current player before/after drawing without selection)
-    if (gameState.discardPile.length === 0) return;
+    // Otherwise: Allow anyone to BUY (others, or current player before drawing)
+    const turnPlayer = gameState.players[gameState.currentTurn];
+    const isBuyWindowClosed = turnPlayer?.hasDrawn;
+
+    if (gameState.discardPile.length === 0 || isBuyWindowClosed) {
+      if (isBuyWindowClosed) {
+        // Optional: show a mini-toast or feedback that buy is closed
+      }
+      return;
+    }
+
     if (myPlayer && (myPlayer.buysUsed ?? 0) >= 7) {
       playError();
       return;
@@ -313,6 +332,8 @@ export const Board: React.FC<BoardProps> = ({
                     handPoints={0}
                     expandedPlayerId={expandedPlayerId}
                     onExpandToggle={setExpandedPlayerId}
+                    gameStatus={gameState.status}
+                    onUpdateName={onUpdateName}
                     className="w-full transform-none text-center"
                   />
                 </div>
@@ -336,6 +357,8 @@ export const Board: React.FC<BoardProps> = ({
               handPoints={layout.topLeft.id === myPlayerId ? myHandPoints : 0}
               expandedPlayerId={expandedPlayerId}
               onExpandToggle={setExpandedPlayerId}
+              gameStatus={gameState.status}
+              onUpdateName={onUpdateName}
             />
           )}
 
@@ -352,6 +375,8 @@ export const Board: React.FC<BoardProps> = ({
               handPoints={layout.top.id === myPlayerId ? myHandPoints : 0}
               expandedPlayerId={expandedPlayerId}
               onExpandToggle={setExpandedPlayerId}
+              gameStatus={gameState.status}
+              onUpdateName={onUpdateName}
             />
           )}
 
@@ -368,6 +393,8 @@ export const Board: React.FC<BoardProps> = ({
               handPoints={layout.topRight.id === myPlayerId ? myHandPoints : 0}
               expandedPlayerId={expandedPlayerId}
               onExpandToggle={setExpandedPlayerId}
+              gameStatus={gameState.status}
+              onUpdateName={onUpdateName}
             />
           )}
         </div>
@@ -389,6 +416,8 @@ export const Board: React.FC<BoardProps> = ({
                 handPoints={layout.left.id === myPlayerId ? myHandPoints : 0}
                 expandedPlayerId={expandedPlayerId}
                 onExpandToggle={setExpandedPlayerId}
+                gameStatus={gameState.status}
+                onUpdateName={onUpdateName}
               />
             )}
           </div>
@@ -425,6 +454,8 @@ export const Board: React.FC<BoardProps> = ({
                 handPoints={layout.right.id === myPlayerId ? myHandPoints : 0}
                 expandedPlayerId={expandedPlayerId}
                 onExpandToggle={setExpandedPlayerId}
+                gameStatus={gameState.status}
+                onUpdateName={onUpdateName}
               />
             )}
           </div>
@@ -561,6 +592,7 @@ export const Board: React.FC<BoardProps> = ({
           isMobile={isMobile}
           onClick={handleCardClick}
           handPoints={myHandPoints}
+          boughtCardIds={myPlayer?.boughtCards.map((c) => c.id)}
         />
       </div>
       {/* Buy Confirmation Dialog */}

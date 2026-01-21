@@ -16,6 +16,7 @@ interface HandAreaProps {
   isMobile: boolean;
   onClick: (cardId: string) => void;
   handPoints?: number;
+  boughtCardIds?: string[];
 }
 
 export const HandArea: React.FC<HandAreaProps> = ({
@@ -31,7 +32,10 @@ export const HandArea: React.FC<HandAreaProps> = ({
   isMobile,
   onClick,
   handPoints = 0,
+  boughtCardIds = [],
 }) => {
+  const boughtCardIdsSet = React.useMemo(() => new Set(boughtCardIds), [boughtCardIds]);
+
   const visibleHand = sortedHand.filter(
     (card) => !groupsToMeld.some((g) => g.some((c) => c.id === card.id)),
   );
@@ -82,6 +86,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                   isTempSelected={isTempSelected}
                   isAddable={addableCards.includes(card.id)}
                   isSuggestedDiscard={suggestedDiscardCardId === card.id}
+                  isNew={boughtCardIdsSet.has(card.id)}
                   onClick={() => onClick(card.id)}
                   isMobile={isMobile}
                   size={isMobile ? "touch" : "normal"}

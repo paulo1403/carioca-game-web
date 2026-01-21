@@ -15,6 +15,8 @@ export interface Player {
   melds?: Card[][]; // Groups of cards played on the table
   boughtCards: Card[]; // Bought cards not yet melded
   score: number;
+  roundScores: number[]; // Points accumulated in each round
+  roundBuys: number[]; // Number of buys in each round
   isBot?: boolean;
   difficulty?: BotDifficulty;
   buysUsed: number; // Number of buys used by this player (max 7)
@@ -49,45 +51,63 @@ export interface GameState {
   };
 }
 
+export interface ContractRequirement {
+  trios: number;
+  trioSize: number;
+  escalas: number;
+  escalaSize: number;
+}
+
+export const ROUND_CONTRACTS_DATA: Record<number, ContractRequirement> = {
+  1: { trios: 1, trioSize: 3, escalas: 0, escalaSize: 0 },
+  2: { trios: 2, trioSize: 3, escalas: 0, escalaSize: 0 },
+  3: { trios: 1, trioSize: 4, escalas: 0, escalaSize: 0 },
+  4: { trios: 2, trioSize: 4, escalas: 0, escalaSize: 0 },
+  5: { trios: 1, trioSize: 5, escalas: 0, escalaSize: 0 },
+  6: { trios: 2, trioSize: 5, escalas: 0, escalaSize: 0 },
+  7: { trios: 1, trioSize: 6, escalas: 0, escalaSize: 0 },
+  8: { trios: 0, trioSize: 0, escalas: 1, escalaSize: 7 },
+};
+
 export const ROUND_CONTRACTS = [
   {
     round: 1,
-    name: "1 Grupo de 3+",
-    description: "Al menos 1 grupo de 3+ cartas del mismo valor",
+    name: "1/3",
+    description: "1 grupo de 3+ cartas del mismo valor",
   },
   {
     round: 2,
-    name: "2 Grupos de 3+",
-    description: "Al menos 2 grupos de 3+ cartas del mismo valor",
+    name: "2/3",
+    description: "2 grupos de 3+ cartas del mismo valor",
   },
   {
     round: 3,
-    name: "1 Grupo de 4+",
-    description: "Al menos 1 grupo de 4+ cartas del mismo valor",
+    name: "1/4",
+    description: "1 grupo de 4+ cartas del mismo valor",
   },
   {
     round: 4,
-    name: "2 Grupos de 4+",
-    description: "Al menos 2 grupos de 4+ cartas del mismo valor",
+    name: "2/4",
+    description: "2 grupos de 4+ cartas del mismo valor",
   },
   {
     round: 5,
-    name: "1 Grupo de 5+",
-    description: "Al menos 1 grupo de 5+ cartas del mismo valor",
+    name: "1/5",
+    description: "1 grupo de 5+ cartas del mismo valor",
   },
   {
     round: 6,
-    name: "2 Grupos de 5+",
-    description: "Al menos 2 grupos de 5+ cartas del mismo valor",
+    name: "2/5",
+    description: "2 grupos de 5+ cartas del mismo valor",
   },
   {
     round: 7,
-    name: "1 Grupo de 6+",
-    description: "Al menos 1 grupo de 6+ cartas del mismo valor",
+    name: "1/6",
+    description: "1 grupo de 6+ cartas del mismo valor",
   },
   {
     round: 8,
-    name: "Escalera de 7+",
-    description: "Al menos 1 escalera de 7 cartas",
+    name: "Escalera de 7",
+    description: "1 escalera de 7 cartas del mismo palo",
   },
 ];

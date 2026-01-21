@@ -11,6 +11,7 @@ interface CardWrapperProps {
   isTempSelected?: boolean;
   isAddable?: boolean;
   isSuggestedDiscard?: boolean;
+  isNew?: boolean;
   onClick?: () => void;
   isMobile?: boolean;
   size?: "small" | "normal" | "large" | "touch";
@@ -24,6 +25,7 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
   isTempSelected,
   isAddable,
   isSuggestedDiscard,
+  isNew,
   onClick,
   isMobile,
   size = "normal",
@@ -58,14 +60,18 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
           isSelected && "ring-4 ring-yellow-400 border-yellow-500 card-glow",
           isTempSelected && "ring-4 ring-green-400 border-green-500",
           isAddable &&
-            !isSelected &&
-            !isTempSelected &&
-            "border-blue-500 card-pulse",
+          !isSelected &&
+          !isTempSelected &&
+          "border-blue-500 card-pulse",
           isSuggestedDiscard &&
-            !isSelected &&
-            !isTempSelected &&
-            !isAddable &&
-            "border-red-500",
+          !isSelected &&
+          !isTempSelected &&
+          !isAddable &&
+          "border-red-500",
+          isNew &&
+          !isSelected &&
+          !isTempSelected &&
+          "ring-4 ring-emerald-400 border-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.5)]",
         )}
       />
       {isAddable && !isSelected && !isTempSelected && (

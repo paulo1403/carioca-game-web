@@ -34,6 +34,9 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
   selectedCardId,
 }) => {
   const { isMobile } = useIsMobile();
+  const turnPlayer = gameState.players[gameState.currentTurn];
+  const isBuyWindowOpen = gameState.discardPile.length > 0 && !turnPlayer?.hasDrawn;
+
   return (
     <div className="flex gap-4 md:gap-8 items-center justify-center glass-panel p-4 md:p-8 rounded-3xl transform scale-90 md:scale-100 shadow-2xl">
       {/* Deck */}
@@ -98,7 +101,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           onClick={handleDiscardPileClick}
           className={cn(
             "relative transition-all duration-300 card-bounce-in",
-            gameState.discardPile.length > 0 &&
+            isBuyWindowOpen &&
               (myPlayer?.buysUsed ?? 0) < 7 &&
               !isDownMode
               ? "cursor-pointer hover:scale-105 hover:ring-4 hover:ring-yellow-400 rounded-lg hover:-translate-y-2"
@@ -109,7 +112,10 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
             <PlayingCard
               card={gameState.discardPile[gameState.discardPile.length - 1]}
               size={isMobile ? "touch" : "normal"}
-              className="transition-all duration-300"
+              className={cn(
+                "transition-all duration-300",
+                !isBuyWindowOpen && "opacity-60 grayscale-[0.3]"
+              )}
             />
           ) : (
             <div
@@ -123,13 +129,13 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           )}
 
           {/* Buy Counter */}
-          {gameState.discardPile.length > 0 && (
+          {gameState.discardPile.length > 0 && isBuyWindowOpen && (
             <div className="absolute -top-2 -right-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full border border-white/20 w-10 text-center animate-pulse">
               {7 - (myPlayer?.buysUsed ?? 0)} compras
             </div>
           )}
 
-          {gameState.discardPile.length > 0 &&
+          {isBuyWindowOpen &&
             (myPlayer?.buysUsed ?? 0) < 7 &&
             !isDownMode &&
             (!isMyTurn || !selectedCardId) && (
@@ -139,7 +145,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
             )}
 
           {/* Hint Indicator */}
-          {isDiscardUseful && (
+          {isDiscardUseful && isBuyWindowOpen && (
             <div
               className="absolute -top-2 -right-2 bg-yellow-400 text-black p-1 rounded-full shadow-lg animate-bounce z-20"
               title="¡Esta carta te sirve!"

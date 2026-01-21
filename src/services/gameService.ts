@@ -43,7 +43,7 @@ export async function getGameState(
     discardPile: JSON.parse(session.discardPile) as Card[],
     currentTurn: session.currentTurn,
     currentRound: session.currentRound,
-    direction: "clockwise",
+    direction: "counter-clockwise",
     status: session.status as
       | "WAITING"
       | "PLAYING"
@@ -143,6 +143,7 @@ export async function processMove(
 
       if (card) {
         currentPlayer.hand.push(card);
+        currentPlayer.boughtCards.push(card);
         currentPlayer.hasDrawn = true;
         lastAction = {
           playerId,
@@ -206,6 +207,15 @@ export async function processMove(
         return { success: false, error: "Player not found", status: 404 };
       }
 
+      // RULE: Buying is only allowed BEFORE the current turn player has drawn
+      if (currentPlayer.hasDrawn) {
+        return {
+          success: false,
+          error: "La ventana de compra ha cerrado. El jugador de turno ya robó una carta.",
+          status: 400,
+        };
+      }
+
       if (buyingPlayer.buysUsed >= 7) {
         return {
           success: false,
@@ -233,9 +243,9 @@ export async function processMove(
           }))
           .filter((p) => p.index >= 0)
           .map((p) => {
-            // Calculate clockwise distance from current turn
+            // Calculate counter-clockwise (to the right) distance from current turn
             let distance =
-              (p.index - currentTurnIndex + players.length) % players.length;
+              (currentTurnIndex - p.index + players.length) % players.length;
             // If it's the current player, distance is 0
             if (p.index === currentTurnIndex) distance = 0;
             return { ...p, distance };
@@ -354,70 +364,6 @@ export async function processMove(
         validation = validateAdditionalDown(normalizedGroups);
       } else {
         validation = validateContract(normalizedGroups, session.currentRound);
-
-        if (!validation.valid) {
-          const reqs = {
-            1: { trios: 1, escalas: 0, trioSize: 3, escalaSize: 0 },
-            2: { trios: 2, escalas: 0, trioSize: 3, escalaSize: 0 },
-            3: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 4 },
-            4: { trios: 0, escalas: 2, trioSize: 0, escalaSize: 4 },
-            5: { trios: 1, escalas: 0, trioSize: 5, escalaSize: 0 },
-            6: { trios: 2, escalas: 0, trioSize: 5, escalaSize: 0 },
-            7: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 6 },
-            8: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 7 },
-          }[session.currentRound] || {
-            trios: 0,
-            escalas: 0,
-            trioSize: 0,
-            escalaSize: 0,
-          };
-
-          const remainingGroups = [...normalizedGroups];
-          let requiredTrios = reqs.trios;
-          let requiredEscalas = reqs.escalas;
-
-          const usedIndices = new Set<number>();
-
-          for (let i = 0; i < remainingGroups.length; i++) {
-            if (
-              requiredTrios > 0 &&
-              isTrio(remainingGroups[i], reqs.trioSize)
-            ) {
-              requiredTrios--;
-              usedIndices.add(i);
-            }
-          }
-
-          for (let i = 0; i < remainingGroups.length; i++) {
-            if (usedIndices.has(i)) continue;
-            if (
-              requiredEscalas > 0 &&
-              isEscala(remainingGroups[i], reqs.escalaSize)
-            ) {
-              requiredEscalas--;
-              usedIndices.add(i);
-            }
-          }
-
-          if (requiredTrios === 0 && requiredEscalas === 0) {
-            let allExtrasValid = true;
-            for (let i = 0; i < remainingGroups.length; i++) {
-              if (!usedIndices.has(i)) {
-                if (
-                  !isTrio(remainingGroups[i], 3) &&
-                  !isEscala(remainingGroups[i], 3)
-                ) {
-                  allExtrasValid = false;
-                  break;
-                }
-              }
-            }
-
-            if (allExtrasValid) {
-              validation = { valid: true };
-            }
-          }
-        }
       }
 
       if (!validation.valid) {
@@ -850,10 +796,7 @@ export async function processMove(
         };
       }
 
-      const meldToSteal = targetPlayer.melds[meldIndex];
-      const meldLength = meldToSteal.length;
-      const isOriginalTrio = meldLength === 3 || meldLength === 5;
-      const jokerIndex = meldToSteal.findIndex((c) => c.suit === "JOKER");
+      const jokerIndex = targetMeld.findIndex((c) => c.suit === "JOKER" || c.value === 0);
       if (jokerIndex === -1) {
         return {
           success: false,
@@ -863,37 +806,19 @@ export async function processMove(
       }
       const joker = targetMeld[jokerIndex];
 
-      if (isOriginalTrio) {
-        const cardsToRemove = [card];
+      // Atomic swap logic:
+      // 1. Remove card from player hand and boughtCards
+      currentPlayer.hand.splice(cardIndex, 1);
+      const boughtIdx = currentPlayer.boughtCards.findIndex((bc) => bc.id === card.id);
+      if (boughtIdx > -1) currentPlayer.boughtCards.splice(boughtIdx, 1);
 
-        cardsToRemove.forEach((c) => {
-          const idx = currentPlayer.hand.findIndex((hc) => hc.id === c.id);
-          if (idx > -1) currentPlayer.hand.splice(idx, 1);
-        });
+      // 2. Swap joker in target meld with the card
+      targetPlayer.melds[meldIndex].splice(jokerIndex, 1);
+      targetPlayer.melds[meldIndex].push(card);
 
-        cardsToRemove.forEach((c) => {
-          const idx = currentPlayer.boughtCards.findIndex(
-            (bc) => bc.id === c.id,
-          );
-          if (idx > -1) currentPlayer.boughtCards.splice(idx, 1);
-        });
-
-        targetPlayer.melds[meldIndex].splice(jokerIndex, 1);
-        targetPlayer.melds[meldIndex].push(...cardsToRemove);
-        currentPlayer.hand.push(joker);
-      } else {
-        currentPlayer.hand.splice(cardIndex, 1);
-
-        const boughtIdx = currentPlayer.boughtCards.findIndex(
-          (bc) => bc.id === card.id,
-        );
-        if (boughtIdx > -1) currentPlayer.boughtCards.splice(boughtIdx, 1);
-
-        targetPlayer.melds[meldIndex as number] = targetMeld;
-        targetPlayer.melds[meldIndex].splice(jokerIndex, 1);
-        targetPlayer.melds[meldIndex].push(card);
-        currentPlayer.hand.push(joker);
-      }
+      // 3. Add joker to player hand and boughtCards (so it's highlighted)
+      currentPlayer.hand.push(joker);
+      currentPlayer.boughtCards.push(joker);
 
       const updatePromises = [];
 
@@ -1161,7 +1086,7 @@ export async function processMove(
           }
         }
 
-        const nextTurn = (session.currentTurn + 1) % players.length;
+        const nextTurn = (session.currentTurn - 1 + players.length) % players.length;
 
         await prisma.gameSession.update({
           where: { id: sessionId },
@@ -1186,7 +1111,10 @@ export async function processMove(
 
         await prisma.player.update({
           where: { id: currentPlayer.id },
-          data: { hand: JSON.stringify(currentPlayer.hand) },
+          data: {
+            hand: JSON.stringify(currentPlayer.hand),
+            boughtCards: "[]"
+          },
         });
 
         return { success: true };
@@ -1289,7 +1217,7 @@ export async function processMove(
       });
       await Promise.all(playerUpdates);
 
-      const nextStarter = session.currentRound % players.length;
+      const nextStarter = (players.length - (session.currentRound % players.length)) % players.length;
 
       await prisma.gameSession.update({
         where: { id: sessionId },
@@ -1297,6 +1225,7 @@ export async function processMove(
           currentRound: nextRound,
           currentTurn: nextStarter,
           status: "PLAYING",
+          direction: "counter-clockwise",
           deck: JSON.stringify(newDeck),
           discardPile: JSON.stringify(newDiscardPile),
           reshuffleCount: 0,
@@ -1420,21 +1349,36 @@ export async function autoReadyBots(sessionId: string) {
 
 export async function checkAndProcessBotTurns(sessionId: string) {
   const MAX_BOT_ITERATIONS = 50;
-  const MAX_TIME_PER_TURN = 30000; // 30 seconds max per turn
+  const MAX_TIME_PER_TURN = 10000; // 10 seconds max per turn (Watchdog)
   const startTime = Date.now();
 
   for (let i = 0; i < MAX_BOT_ITERATIONS; i++) {
-    // Check timeout - if we're taking too long, force skip
-    if (Date.now() - startTime > MAX_TIME_PER_TURN) {
-      console.warn("[Bot] Bot turn timeout! Forcing next turn.");
-      break;
-    }
-
     const gameState = await getGameState(sessionId);
     if (!gameState || gameState.status !== "PLAYING") break;
 
     const currentPlayer = gameState.players[gameState.currentTurn];
-    if (!currentPlayer.isBot) break; // It's not a bot's turn, exit loop
+    if (!currentPlayer.isBot) break;
+
+    // Check timeout - if we're taking too long, force a basic legal move
+    if (Date.now() - startTime > MAX_TIME_PER_TURN) {
+      console.warn(`[Watchdog] Bot ${currentPlayer.name} timeout! Forcing emergency move.`);
+
+      // Emergency Move: Draw if needed, then discard highest card
+      if (!currentPlayer.hasDrawn) {
+        await processMove(sessionId, currentPlayer.id, "DRAW_DECK");
+        // Refresh player state after draw
+        const updatedState = await getGameState(sessionId);
+        const refreshedPlayer = updatedState?.players.find(p => p.id === currentPlayer.id);
+        if (refreshedPlayer) {
+          const cardToDiscard = [...refreshedPlayer.hand].sort((a, b) => getCardPoints(b) - getCardPoints(a))[0];
+          await processMove(sessionId, refreshedPlayer.id, "DISCARD", { cardId: cardToDiscard.id });
+        }
+      } else {
+        const cardToDiscard = [...currentPlayer.hand].sort((a, b) => getCardPoints(b) - getCardPoints(a))[0];
+        await processMove(sessionId, currentPlayer.id, "DISCARD", { cardId: cardToDiscard.id });
+      }
+      break;
+    }
 
     const difficulty = currentPlayer.difficulty || "MEDIUM";
 
@@ -1514,41 +1458,21 @@ export async function checkAndProcessBotTurns(sessionId: string) {
       }
     } else {
       // calculateBotMove returned null - bot couldn't decide
-      // Force a discard to prevent infinite loop
-      console.log(
-        `[Bot] ${currentPlayer.name} couldn't decide move. Forcing discard...`,
-      );
-      const hand = currentPlayer.hand;
-      if (hand.length > 0) {
-        // Try to discard the worst card (highest points)
-        let cardToDiscard = hand[0];
-        let maxPoints = 0;
-        for (const card of hand) {
-          const points = getCardPoints(card);
-          if (points > maxPoints && card.suit !== "JOKER" && card.value !== 0) {
-            cardToDiscard = card;
-            maxPoints = points;
-          }
+      console.log(`[Bot] ${currentPlayer.name} couldn't decide. Forcing emergency move...`);
+
+      if (!currentPlayer.hasDrawn) {
+        await processMove(sessionId, currentPlayer.id, "DRAW_DECK");
+        // Re-fetch to get new hand
+        const updatedState = await getGameState(sessionId);
+        const refreshedPlayer = updatedState?.players.find(p => p.id === currentPlayer.id);
+        if (refreshedPlayer && refreshedPlayer.hand.length > 0) {
+          const cardToDiscard = [...refreshedPlayer.hand].sort((a, b) => getCardPoints(b) - getCardPoints(a))[0];
+          await processMove(sessionId, refreshedPlayer.id, "DISCARD", { cardId: cardToDiscard.id });
         }
-        const result = await processMove(
-          sessionId,
-          currentPlayer.id,
-          "DISCARD",
-          {
-            cardId: cardToDiscard.id,
-          },
-        );
-        if (!result.success) {
-          console.error(
-            `[Bot] Force discard failed for ${currentPlayer.name}:`,
-            result.error,
-          );
-          break;
-        }
+      } else if (currentPlayer.hand.length > 0) {
+        const cardToDiscard = [...currentPlayer.hand].sort((a, b) => getCardPoints(b) - getCardPoints(a))[0];
+        await processMove(sessionId, currentPlayer.id, "DISCARD", { cardId: cardToDiscard.id });
       } else {
-        console.error(
-          `[Bot] ${currentPlayer.name} has no cards but couldn't decide move`,
-        );
         break;
       }
     }

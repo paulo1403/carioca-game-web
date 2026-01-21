@@ -56,6 +56,7 @@ export async function POST(
         discardPile: JSON.stringify(discardPile),
         currentTurn: 0,
         reshuffleCount: 0,
+        direction: 'counter-clockwise',
         pendingBuyIntents: "[]",
         pendingDiscardIntents: "[]",
         lastAction: JSON.stringify({

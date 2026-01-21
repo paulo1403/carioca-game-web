@@ -12,12 +12,13 @@ export const SOUNDS = {
     SUCCESS: `${BASE_URL}/confirmation_001.wav`, // Assuming confirmation_001 exists
     SHUFFLE: `${BASE_URL}/switch_002.wav`, // Assuming switch_002 exists
     POP: `${BASE_URL}/drop_001.wav`,
-    START: `${BASE_URL}/confirmation_002.wav`
+    START: `${BASE_URL}/confirmation_002.wav`,
+    YOUR_TURN: `${BASE_URL}/sharp_echo.wav`
 };
 
 export const useGameSounds = () => {
     const [isMuted, setIsMuted] = useState(false);
-    const audioRefs = useRef<{[key: string]: HTMLAudioElement}>({});
+    const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
     // Load mute preference
     useEffect(() => {
@@ -62,5 +63,6 @@ export const useGameSounds = () => {
         playShuffle: () => playSound(SOUNDS.SHUFFLE, 0.4),
         playPop: () => playSound(SOUNDS.POP, 0.4),
         playStart: () => playSound(SOUNDS.START, 0.5),
+        playYourTurn: () => playSound(SOUNDS.YOUR_TURN, 0.6),
     };
 };

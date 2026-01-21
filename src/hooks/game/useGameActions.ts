@@ -305,6 +305,35 @@ export function useGameActions({
     },
   });
 
+  // Update player name
+  const updateName = useMutation({
+    mutationFn: async (newName: string) => {
+      const res = await fetch(`/api/game/${roomId}/update-name`, {
+        method: "POST",
+        body: JSON.stringify({ playerId: myPlayerId, newName }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al actualizar nombre");
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateGameState();
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        type: "error",
+      });
+      onError?.(error);
+    },
+  });
+
   return {
     drawDeck,
     buyFromDiscard,
@@ -314,5 +343,6 @@ export function useGameActions({
     stealJoker,
     readyForNextRound,
     startNextRound,
+    updateName,
   };
 }

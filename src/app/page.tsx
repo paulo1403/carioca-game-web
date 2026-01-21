@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PlayingCard } from "@/components/Card";
 import { RulesModal } from "@/components/RulesModal";
 import { ProfileModal } from "@/components/ProfileModal";
+import { ChangelogModal } from "@/components/ChangelogModal";
 import { useCreateGame } from "@/hooks/useCreateGame";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -17,6 +18,7 @@ import {
   X,
   LogOut,
   User as UserIcon,
+  Sparkles,
 } from "lucide-react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 
@@ -28,6 +30,7 @@ export default function Home() {
   const [showRules, setShowRules] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -143,6 +146,14 @@ export default function Home() {
             title="Reglas"
           >
             <HelpCircle className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={() => setShowChangelog(true)}
+            className="w-12 h-12 bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-amber-400 hover:border-amber-500/50 transition-all shadow-xl"
+            title="Novedades"
+          >
+            <Sparkles className="w-5 h-5" />
           </button>
 
           {session?.user && (
@@ -269,6 +280,7 @@ export default function Home() {
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
       <ProfileModal isOpen={showProfile} onClose={() => setShowProfile(false)} />
+      <ChangelogModal isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
 
       {/* QR Scanner Modal - Improved Mobile */}
       {showScanner && (

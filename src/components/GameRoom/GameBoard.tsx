@@ -6,6 +6,7 @@ import { GameState } from "@/types/game";
 import { Board } from "@/components/Board";
 import { Toaster } from "@/components/Toaster";
 import { Modal } from "@/components/Modal";
+import { ResultsModal } from "@/components/ResultsModal";
 import { Shuffle, Trophy, Star, Users, Clock, Bot, User } from "lucide-react";
 
 interface GameBoardProps {
@@ -53,6 +54,7 @@ interface GameBoardProps {
   onStartNextRound: () => void;
   onEndGame?: () => void;
   onSkipBotTurn?: () => void;
+  onUpdateName: (newName: string) => void;
   hasDrawn: boolean;
 }
 
@@ -75,13 +77,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onReadyForNextRound,
   onStartNextRound,
   onEndGame,
+  onUpdateName,
   hasDrawn,
 }) => {
+  const [showResults, setShowResults] = React.useState(false);
+
   const router = useRouter();
   const myPlayer = gameState.players.find((p) => p.id === myPlayerId);
   const isHost = gameState.creatorId === myPlayerId;
   const isRoundEnded = gameState.status === "ROUND_ENDED";
   const isGameFinished = gameState.status === "FINISHED";
+
+  // Auto-show results if game is finished
+  React.useEffect(() => {
+    if (isGameFinished) {
+      setShowResults(true);
+    }
+  }, [isGameFinished]);
 
   // Calculate if ready for next round
   const playersReady = gameState.readyForNextRound?.length || 0;
@@ -164,23 +176,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   .map((player, idx) => (
                     <div
                       key={player.name}
-                      className={`flex items-center justify-between p-3 rounded-xl ${
-                        idx === 0
-                          ? "bg-yellow-500/10 border border-yellow-500/30"
-                          : "bg-slate-800/50 border border-slate-700"
-                      }`}
+                      className={`flex items-center justify-between p-3 rounded-xl ${idx === 0
+                        ? "bg-yellow-500/10 border border-yellow-500/30"
+                        : "bg-slate-800/50 border border-slate-700"
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            idx === 0
-                              ? "bg-yellow-500 text-white"
-                              : idx === 1
-                                ? "bg-slate-400 text-white"
-                                : idx === 2
-                                  ? "bg-amber-700 text-white"
-                                  : "bg-slate-600 text-slate-300"
-                          }`}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${idx === 0
+                            ? "bg-yellow-500 text-white"
+                            : idx === 1
+                              ? "bg-slate-400 text-white"
+                              : idx === 2
+                                ? "bg-amber-700 text-white"
+                                : "bg-slate-600 text-slate-300"
+                            }`}
                         >
                           {idx + 1}
                         </div>
@@ -248,13 +258,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       onCloseRoundWinner();
                     }
                   }}
-                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${
-                    isHost && allReady
-                      ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse"
-                      : !gameState.readyForNextRound?.includes(myPlayerId)
-                        ? "bg-green-600 hover:bg-green-500 text-white"
-                        : "bg-slate-700 hover:bg-slate-600 text-slate-200"
-                  }`}
+                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${isHost && allReady
+                    ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse"
+                    : !gameState.readyForNextRound?.includes(myPlayerId)
+                      ? "bg-green-600 hover:bg-green-500 text-white"
+                      : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+                    }`}
                 >
                   {isHost && allReady
                     ? `🚀 Iniciar Ronda ${roundWinnerModal.nextRound}`
@@ -316,11 +325,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   {gameState.players.map((player: any) => (
                     <div
                       key={player.id}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                        gameState.readyForNextRound?.includes(player.id)
-                          ? "bg-green-500/20 border border-green-500/30"
-                          : "bg-slate-700/50 border border-slate-600"
-                      }`}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${gameState.readyForNextRound?.includes(player.id)
+                        ? "bg-green-500/20 border border-green-500/30"
+                        : "bg-slate-700/50 border border-slate-600"
+                        }`}
                     >
                       {player.isBot ? (
                         <Bot className="w-4 h-4 text-purple-400" />
@@ -384,32 +392,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           onAddToMeld={onAddToMeld}
           onStealJoker={onStealJoker}
           onEndGame={onEndGame}
+          onUpdateName={onUpdateName}
           hasDrawn={hasDrawn}
         />
       )}
 
-      {/* Game Finished Screen */}
-      {isGameFinished && !roundWinnerModal.isOpen && (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-          <div className="max-w-2xl w-full bg-linear-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-8 shadow-2xl text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-purple-500/20 rounded-full flex items-center justify-center">
-              <Trophy className="w-10 h-10 text-purple-400" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">
-              🎉 ¡Juego Terminado! 🎉
-            </h2>
-            <p className="text-slate-300 mb-8">
-              Gracias por jugar. ¡Excelente partida!
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg transition-colors"
-            >
-              Volver al Inicio
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Detailed Final Scoreboard Modal */}
+      <ResultsModal
+        isOpen={showResults}
+        players={gameState.players}
+        onClose={() => {
+          setShowResults(false);
+          router.push("/");
+        }}
+      />
+
+      <ResultsModal
+        isOpen={showResults}
+        players={gameState.players}
+        onClose={() => {
+          setShowResults(false);
+          router.push("/");
+        }}
+      />
     </div>
   );
 };

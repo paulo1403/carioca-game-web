@@ -38,6 +38,8 @@ export async function POST(request: Request) {
     boughtCards: [], // Empty initially
     melds: [], // Empty initially
     score: 0,
+    roundScores: [],
+    roundBuys: [],
     isBot: false,
     buysUsed: 0,
     hasDrawn: false,
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
         status: "WAITING",
         currentTurn: 0,
         currentRound: 1,
-        direction: "clockwise",
+        direction: "counter-clockwise",
         deck: "[]", // Empty
         discardPile: "[]", // Empty
         reshuffleCount: 0,
