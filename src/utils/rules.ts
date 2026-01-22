@@ -18,19 +18,16 @@ export const isDifferentSuitGroup = (
 
   // Get unique suits from non-jokers
   const uniqueSuits = new Set(nonJokers.map((c) => c.suit));
+
+  // Rule: All natural cards must have different suits
+  if (uniqueSuits.size !== nonJokers.length) return false;
+
+  // Since there are only 4 legal suits, we can have at most 4 natural cards 
+  // in a Different Suit Group. Any additional cards must be Jokers.
+  if (nonJokers.length > 4) return false;
+
   const suitCount = uniqueSuits.size;
-
-  // For a valid different-suit group:
-  // - Need at least minLength total cards
-  // - Need at least minLength different suits represented
-  // - Jokers can only make up the difference if we have some real cards with different suits
   const totalCards = suitCount + jokers.length;
-
-  // Must have minimum different suits
-  if (suitCount < minLength) {
-    // Can use jokers to complete to minLength suits ONLY if we have at least some real cards
-    return suitCount > 0 && totalCards >= minLength;
-  }
 
   return totalCards >= minLength;
 };
@@ -74,18 +71,32 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   const values = nonJokers.map((c) => c.value).sort((a, b) => a - b);
   if (new Set(values).size !== values.length) return false;
 
-  // Linear check
+  // Linear check helper
   const isLinearSequence = (vals: number[], jokerCount: number) => {
     const range = vals[vals.length - 1] - vals[0] + 1;
     const gaps = range - vals.length;
     return gaps <= jokerCount;
   };
 
+  // 1. Check Standard Linear (Ace as 1)
   if (isLinearSequence(values, jokers.length)) return true;
 
+  // 2. Check Ace as High (Ace as 14)
   if (values.includes(1)) {
     const aceHighValues = values.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
     if (isLinearSequence(aceHighValues, jokers.length)) return true;
+  }
+
+  // 3. Circular (Wrapping) Check:
+  // For Carioca, we check if the sequence wraps around King to Ace to 2.
+  // We can test this by trying all possible starting points (shifting values).
+  for (let shift = 1; shift < 13; shift++) {
+    const shiftedValues = values.map(v => {
+      let shifted = (v + shift) % 13;
+      return shifted === 0 ? 13 : shifted;
+    }).sort((a, b) => a - b);
+
+    if (isLinearSequence(shiftedValues, jokers.length)) return true;
   }
 
   return false;
