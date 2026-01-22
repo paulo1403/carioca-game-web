@@ -13,6 +13,7 @@ import { useStealableJokers } from "@/hooks/useStealableJokers";
 import { useDiscardHint } from "@/hooks/useDiscardHint";
 import { useHandManagement } from "@/hooks/useHandManagement";
 import { useGameSounds } from "@/hooks/useGameSounds";
+import { useDownValidation } from "@/hooks/useDownValidation";
 
 // Components
 import { PlayerBadge } from "./PlayerBadge";
@@ -125,8 +126,14 @@ export const Board: React.FC<BoardProps> = ({
   );
 
   // Sounds
-  const { playSelect, playDrop, playShuffle, playSuccess, playError, playYourTurn } =
-    useGameSounds();
+  const {
+    playSelect,
+    playDrop,
+    playShuffle,
+    playSuccess,
+    playError,
+    playYourTurn,
+  } = useGameSounds();
 
   // Highlight turn for human
   React.useEffect(() => {
@@ -255,23 +262,37 @@ export const Board: React.FC<BoardProps> = ({
     playSuccess();
   };
 
+  const { validateDown } = useDownValidation();
+  const [downError, setDownError] = useState<string | null>(null);
+  const [downWarning, setDownWarning] = useState<string | null>(null);
+
   const handleConfirmDown = () => {
     if (groupsToMeld.length === 0) return;
 
-    // Calculate total cards being melded
     const totalCardsToMeld = groupsToMeld.reduce(
       (sum, group) => sum + group.length,
       0,
     );
     const cardsInHand = myPlayer?.hand.length || 0;
-    const cardsRemaining = cardsInHand - totalCardsToMeld;
+    const alreadyMelded = (myPlayer?.melds?.length ?? 0) > 0;
 
-    // Validation: Must have at least 1 card left
-    if (cardsRemaining <= 0) {
+    // Validate using the new hook
+    const validation = validateDown(
+      groupsToMeld,
+      gameState.currentRound,
+      alreadyMelded,
+      cardsInHand,
+      totalCardsToMeld,
+    );
+
+    if (!validation.isValid) {
+      setDownError(validation.error || "Error al bajar");
       playError();
       return;
     }
 
+    setDownError(null);
+    setDownWarning(validation.handWarning || null);
     onDown(groupsToMeld);
     resetDownMode();
     playSuccess();
@@ -285,7 +306,7 @@ export const Board: React.FC<BoardProps> = ({
       canStealJoker(
         card,
         gameState.players.find((p) => p.id === sj.playerId)?.melds?.[
-        sj.meldIndex
+          sj.meldIndex
         ] || [],
         myPlayer.hand,
       ),
@@ -526,6 +547,7 @@ export const Board: React.FC<BoardProps> = ({
               ? gameState.discardPile[gameState.discardPile.length - 1]
               : undefined
           }
+          currentRound={gameState.currentRound}
           sortMode={sortMode}
           onToggleAutoSort={() =>
             setSortMode((prev) => (prev === "auto" ? "suit" : "auto"))
@@ -562,6 +584,7 @@ export const Board: React.FC<BoardProps> = ({
             onAddGroup={handleAddGroup}
             onConfirmDown={handleConfirmDown}
             onCancel={toggleDownMode}
+            error={downError}
             canAutoFill={canDownCheck.canDown && groupsToMeld.length === 0}
             onAutoFill={() => {
               setGroupsToMeld(canDownCheck.groups);
@@ -570,9 +593,9 @@ export const Board: React.FC<BoardProps> = ({
             canConfirmDown={
               myPlayer
                 ? myPlayer.hand.length -
-                (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
-                  tempGroup.length) >
-                0
+                    (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
+                      tempGroup.length) >
+                  0
                 : false
             }
           />

@@ -1,4 +1,10 @@
-import { Card, GameState, Player, BotDifficulty } from "@/types/game";
+import {
+  Card,
+  GameState,
+  Player,
+  BotDifficulty,
+  ROUND_CONTRACTS_DATA,
+} from "@/types/game";
 import {
   validateContract,
   validateAdditionalDown,
@@ -27,7 +33,7 @@ interface BotMove {
  */
 interface CardGroup {
   cards: Card[];
-  type: "TRIO" | "ESCALA";
+  type: "TRIO" | "ESCALA" | "DIFFERENT_SUIT";
 }
 
 /**
@@ -690,28 +696,8 @@ const findStealJokerMove = (
 /**
  * Get round requirements (trio count, escala count, sizes)
  */
-const getRoundRequirements = (
-  round: number,
-): {
-  trios: number;
-  escalas: number;
-  trioSize: number;
-  escalaSize: number;
-} | null => {
-  const requirements: Record<
-    number,
-    { trios: number; escalas: number; trioSize: number; escalaSize: number }
-  > = {
-    1: { trios: 1, escalas: 0, trioSize: 3, escalaSize: 0 },
-    2: { trios: 2, escalas: 0, trioSize: 3, escalaSize: 0 },
-    3: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 4 },
-    4: { trios: 0, escalas: 2, trioSize: 0, escalaSize: 4 },
-    5: { trios: 1, escalas: 0, trioSize: 5, escalaSize: 0 },
-    6: { trios: 2, escalas: 0, trioSize: 5, escalaSize: 0 },
-    7: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 6 },
-    8: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 7 },
-  };
-  return requirements[round] || null;
+const getRoundRequirements = (round: number) => {
+  return ROUND_CONTRACTS_DATA[round] || null;
 };
 
 /**
@@ -834,6 +820,60 @@ const findTrios = (hand: Card[]): CardGroup[] => {
 };
 
 /**
+ * Find all possible groups with different suits (Rondas 1-7)
+ */
+const findDifferentSuitGroups = (hand: Card[]): CardGroup[] => {
+  const groups: CardGroup[] = [];
+
+  // Group by suit
+  const bySuit: Record<string, Card[]> = {};
+  hand.forEach((c) => {
+    if (c.suit === "JOKER" || c.value === 0) return;
+    if (!bySuit[c.suit]) bySuit[c.suit] = [];
+    bySuit[c.suit].push(c);
+  });
+
+  // Get jokers for wildcards
+  const jokers = hand.filter((c) => c.suit === "JOKER" || c.value === 0);
+
+  // Generate combinations with different suits
+  const suits = Object.keys(bySuit);
+
+  // Find groups of 3+ suits
+  for (let suitCount = 3; suitCount <= suits.length; suitCount++) {
+    for (let i = 0; i < suits.length; i++) {
+      for (let j = i + 1; j < suits.length; j++) {
+        for (let k = j + 1; k < suits.length; k++) {
+          const selectedSuits = [suits[i], suits[j], suits[k]];
+          const cards = selectedSuits.map((s) => bySuit[s][0]).filter((c) => c);
+
+          if (cards.length === 3) {
+            groups.push({ cards, type: "DIFFERENT_SUIT" });
+          }
+
+          // Add jokers as wildcards for additional suits
+          if (jokers.length > 0) {
+            for (
+              let jokersToAdd = 1;
+              jokersToAdd <= jokers.length;
+              jokersToAdd++
+            ) {
+              const cardsWithJokers = [
+                ...cards,
+                ...jokers.slice(0, jokersToAdd),
+              ];
+              groups.push({ cards: cardsWithJokers, type: "DIFFERENT_SUIT" });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return groups;
+};
+
+/**
  * Find all possible escalas in hand
  */
 const findEscalas = (hand: Card[]): CardGroup[] => {
@@ -891,7 +931,7 @@ const findGroupCombinations = (
   difficulty: BotDifficulty,
 ): CardGroup[] => {
   if (round === -1) {
-    // Any valid group for additional down
+    // Any valid group for additional down (trios or escalas)
     const trios = findTrios(hand);
     const escalas = findEscalas(hand);
     return [...trios, ...escalas];
@@ -903,44 +943,30 @@ const findGroupCombinations = (
 
   let groups: CardGroup[] = [];
 
-  // EASY: Only find perfect groups
-  if (difficulty === "EASY") {
-    if (requirements.escalas > 0) {
-      groups = findEscalas(hand).filter((g) => g.cards.length >= 4);
-    } else {
-      groups = findTrios(hand).filter((g) => g.cards.length === 3);
-    }
+  // Round 8: Escaleras
+  if (requirements.escalas > 0) {
+    groups = findEscalas(hand).filter((g) => g.cards.length >= 7);
     return groups;
   }
 
-  // MEDIUM: Find standard groups
-  if (requirements.escalas > 0) {
-    groups = findEscalas(hand).filter((g) => g.cards.length >= 4);
-  } else {
-    groups = findTrios(hand).filter((g) => g.cards.length >= 3);
-  }
+  // Rounds 1-7: Different suit groups
+  if (requirements.differentSuitGroups > 0) {
+    groups = findDifferentSuitGroups(hand).filter((g) => g.cards.length >= 3);
 
-  // HARD: Be more aggressive - find larger groups to get bonus points
-  if (difficulty === "HARD") {
-    // Prefer larger groups (5+ instead of 3)
-    const largeGroups = groups.filter((g) => g.cards.length >= 5);
-    if (largeGroups.length > 0) {
-      return largeGroups;
+    // EASY: Only find perfect groups
+    if (difficulty === "EASY") {
+      return groups.filter((g) => g.cards.length === 3);
     }
 
-    // Also look for combinations of trios and escalas for required contracts
-    if (requirements.trios > 1) {
-      const trios = findTrios(hand).filter((g) => g.cards.length >= 3);
-      if (trios.length >= requirements.trios) {
-        return trios.slice(0, requirements.trios);
-      }
+    // MEDIUM: Find standard groups
+    if (difficulty === "MEDIUM") {
+      return groups.filter((g) => g.cards.length >= 3);
     }
 
-    if (requirements.escalas > 1) {
-      const escalas = findEscalas(hand).filter((g) => g.cards.length >= 4);
-      if (escalas.length >= requirements.escalas) {
-        return escalas.slice(0, requirements.escalas);
-      }
+    // HARD: Be more aggressive - find larger groups
+    if (difficulty === "HARD") {
+      const largeGroups = groups.filter((g) => g.cards.length >= 4);
+      return largeGroups.length > 0 ? largeGroups : groups;
     }
   }
 

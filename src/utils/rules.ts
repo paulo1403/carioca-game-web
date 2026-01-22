@@ -1,5 +1,44 @@
 import { Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
 
+/**
+ * Validates a group with cards of different suits (Rondas 1-7 in Carioca)
+ * At least minLength cards with different suits
+ * Jokers can be used as wildcards to complete different suits
+ */
+export const isDifferentSuitGroup = (
+  cards: Card[],
+  minLength: number = 3,
+): boolean => {
+  if (cards.length < minLength) return false;
+
+  const nonJokers = cards.filter((c) => c.suit !== "JOKER" && c.value !== 0);
+  const jokers = cards.filter((c) => c.suit === "JOKER" || c.value === 0);
+
+  if (nonJokers.length === 0) return true; // All Jokers
+
+  // Get unique suits from non-jokers
+  const uniqueSuits = new Set(nonJokers.map((c) => c.suit));
+  const suitCount = uniqueSuits.size;
+
+  // For a valid different-suit group:
+  // - Need at least minLength total cards
+  // - Need at least minLength different suits represented
+  // - Jokers can only make up the difference if we have some real cards with different suits
+  const totalCards = suitCount + jokers.length;
+
+  // Must have minimum different suits
+  if (suitCount < minLength) {
+    // Can use jokers to complete to minLength suits ONLY if we have at least some real cards
+    return suitCount > 0 && totalCards >= minLength;
+  }
+
+  return totalCards >= minLength;
+};
+
+/**
+ * DEPRECATED: Use isDifferentSuitGroup for Rondas 1-7
+ * Kept for backward compatibility with additional downs and melds
+ */
 export const isTrio = (cards: Card[], minLength: number = 3): boolean => {
   if (cards.length < minLength) return false;
 
@@ -74,13 +113,13 @@ export const validateContract = (
 
   // Create a copy of groups to process
   let remainingGroups = [...groups];
-  let requiredTrios = reqs.trios;
+  let requiredDifferentSuitGroups = reqs.differentSuitGroups;
   let requiredEscalas = reqs.escalas;
 
   // Track which groups were used to fulfill which part of the contract
   const usedIndices = new Set<number>();
 
-  // 1. Try to fulfill Escalas first (usually more restrictive)
+  // 1. Try to fulfill Escalas first (usually more restrictive) - Only for round 8
   if (requiredEscalas > 0) {
     for (let i = 0; i < remainingGroups.length; i++) {
       if (isEscala(remainingGroups[i], reqs.escalaSize)) {
@@ -91,33 +130,40 @@ export const validateContract = (
     }
   }
 
-  // 2. Try to fulfill Trios with remaining groups
-  if (requiredTrios > 0) {
+  // 2. Try to fulfill DifferentSuitGroups with remaining groups (Rondas 1-7)
+  if (requiredDifferentSuitGroups > 0) {
     for (let i = 0; i < remainingGroups.length; i++) {
       if (usedIndices.has(i)) continue;
-      if (isTrio(remainingGroups[i], reqs.trioSize)) {
-        requiredTrios--;
+      if (isDifferentSuitGroup(remainingGroups[i], reqs.differentSuitSize)) {
+        requiredDifferentSuitGroups--;
         usedIndices.add(i);
-        if (requiredTrios === 0) break;
+        if (requiredDifferentSuitGroups === 0) break;
       }
     }
   }
 
   // Check if minimum requirements reached
-  if (requiredTrios > 0 || requiredEscalas > 0) {
+  if (requiredDifferentSuitGroups > 0 || requiredEscalas > 0) {
     const errorMsg = [];
-    if (requiredTrios > 0) errorMsg.push(`${requiredTrios} trío(s) de ${reqs.trioSize}+`);
-    if (requiredEscalas > 0) errorMsg.push(`${requiredEscalas} escala(s) de ${reqs.escalaSize}+`);
+    if (requiredDifferentSuitGroups > 0)
+      errorMsg.push(
+        `${requiredDifferentSuitGroups} grupo(s) de ${reqs.differentSuitSize}+ palos diferentes`,
+      );
+    if (requiredEscalas > 0)
+      errorMsg.push(`${requiredEscalas} escala(s) de ${reqs.escalaSize}+`);
     return {
       valid: false,
       error: `No cumples el contrato. Falta: ${errorMsg.join(" y ")}.`,
     };
   }
 
-  // 3. All additional groups must be valid (at least trio/escala of 3)
+  // 3. All additional groups must be valid (at least different suit group/escala of 3)
   for (let i = 0; i < remainingGroups.length; i++) {
     if (usedIndices.has(i)) continue;
-    if (!isTrio(remainingGroups[i], 3) && !isEscala(remainingGroups[i], 3)) {
+    if (
+      !isDifferentSuitGroup(remainingGroups[i], 3) &&
+      !isEscala(remainingGroups[i], 3)
+    ) {
       return {
         valid: false,
         error: `El grupo adicional ${i + 1} no es válido.`,
