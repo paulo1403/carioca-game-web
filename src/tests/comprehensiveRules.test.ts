@@ -17,31 +17,40 @@ describe("Carioca Comprehensive Rules Verification", () => {
     });
 
     describe("Different Suit Groups (Rondas 1-7)", () => {
-        test("Should allow 3 cards with different suits", () => {
+        test("Should allow 3 cards with same value and different suits", () => {
             const group = [
-                createCard("SPADE", 2, "1"),
+                createCard("SPADE", 5, "1"),
                 createCard("HEART", 5, "2"),
-                createCard("CLUB", 9, "3"),
+                createCard("CLUB", 5, "3"),
             ];
             expect(isDifferentSuitGroup(group, 3)).toBe(true);
         });
 
-        test("Should reject if suits are repeated (even with different values)", () => {
+        test("Should reject if suits are repeated", () => {
             const group = [
                 createCard("SPADE", 2, "1"),
-                createCard("SPADE", 5, "2"), // Duplicate Spade
-                createCard("CLUB", 9, "3"),
+                createCard("HEART", 2, "2"),
+                createCard("SPADE", 2, "3"), // Duplicate Spade
             ];
             expect(isDifferentSuitGroup(group, 3)).toBe(false);
         });
 
-        test("Round 5 (Size 5): Should require Jokers since there are only 4 suits", () => {
+        test("Should reject if values are different", () => {
             const group = [
                 createCard("SPADE", 2, "1"),
-                createCard("HEART", 3, "2"),
-                createCard("CLUB", 4, "3"),
-                createCard("DIAMOND", 5, "4"),
-                createCard("JOKER", 0, "j1"), // 5th card must be Joker
+                createCard("HEART", 2, "2"),
+                createCard("CLUB", 3, "3"), // Different value
+            ];
+            expect(isDifferentSuitGroup(group, 3)).toBe(false);
+        });
+
+        test("Round 5 (Size 5): Should require same value and Jokers", () => {
+            const group = [
+                createCard("SPADE", 2, "1"),
+                createCard("HEART", 2, "2"),
+                createCard("CLUB", 2, "3"),
+                createCard("DIAMOND", 2, "4"),
+                createCard("JOKER", 0, "j1"), // Same value (effectively) and unique suits
             ];
             expect(isDifferentSuitGroup(group, 5)).toBe(true);
         });
@@ -91,11 +100,11 @@ describe("Carioca Comprehensive Rules Verification", () => {
         test("In Group: Can only steal if the new suit is unique", () => {
             const meld = [
                 createCard("SPADE", 10, "1"),
-                createCard("HEART", 11, "2"),
+                createCard("HEART", 10, "2"),
                 createCard("JOKER", 0, "j1"), // Joker is representing CLUB or DIAMOND
             ];
-            const clubCard = createCard("CLUB", 2, "3");
-            const spadeCard = createCard("SPADE", 3, "4");
+            const clubCard = createCard("CLUB", 10, "3");
+            const spadeCard = createCard("SPADE", 10, "4");
 
             expect(canStealJoker(clubCard, meld, [])).toBe(true);
             expect(canStealJoker(spadeCard, meld, [])).toBe(false); // Already has Spade

@@ -5,7 +5,7 @@ import {
   canFulfillContract,
   findAllValidGroups,
 } from "@/utils/handAnalyzer";
-import { getCardPoints } from "@/utils/rules";
+import { getCardPoints, canAddToMeld } from "@/utils/rules";
 
 export const useDiscardHint = (
   myPlayer: Player | undefined,
@@ -51,11 +51,25 @@ export const useDiscardHint = (
       ? findAllValidGroups(myPlayer.hand)
       : findPotentialContractGroups(myPlayer.hand, gameState.currentRound);
 
-    // Collect all cards that are part of valid groups
+    // Collect all cards that are part of valid groups in hand
     const usefulCardIds = new Set<string>();
     [...trios, ...escalas].forEach((group) => {
       group.forEach((card: Card) => {
         usefulCardIds.add(card.id);
+      });
+    });
+
+    // ALSO: Cards that can be added to melds on the table are useful
+    myPlayer.hand.forEach(card => {
+      // Check my melds
+      if (myPlayer.melds?.some(meld => canAddToMeld(card, meld))) {
+        usefulCardIds.add(card.id);
+      }
+      // Check others melds 
+      gameState.players.forEach(p => {
+        if (p.id !== myPlayer.id && p.melds?.some(meld => canAddToMeld(card, meld))) {
+          usefulCardIds.add(card.id);
+        }
       });
     });
 

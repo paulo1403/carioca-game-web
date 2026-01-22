@@ -1,5 +1,7 @@
 import { Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
 
+const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
+
 /**
  * Validates a group with cards of different suits (Rondas 1-7 in Carioca)
  * At least minLength cards with different suits
@@ -16,6 +18,10 @@ export const isDifferentSuitGroup = (
 
   if (nonJokers.length === 0) return true; // All Jokers
 
+  // NEW: All natural cards MUST have the same value
+  const firstValue = nonJokers[0].value;
+  if (!nonJokers.every((c) => c.value === firstValue)) return false;
+
   // Get unique suits from non-jokers
   const uniqueSuits = new Set(nonJokers.map((c) => c.suit));
 
@@ -27,8 +33,12 @@ export const isDifferentSuitGroup = (
   if (nonJokers.length > 4) return false;
 
   const suitCount = uniqueSuits.size;
-  const totalCards = suitCount + jokers.length;
+  const jokerCount = jokers.length;
 
+  // Rule: Natural cards must be >= Jokers
+  if (jokerCount > suitCount) return false;
+
+  const totalCards = suitCount + jokerCount;
   return totalCards >= minLength;
 };
 
@@ -185,9 +195,21 @@ export const validateAdditionalDown = (
 };
 
 export const canAddToMeld = (card: Card, meld: Card[]): boolean => {
+  const isJ = isJoker(card);
+  const nonJokersMeld = meld.filter(c => !isJoker(c));
+
+  // If it's a group (DifferentSuitGroup/Trio)
+  if (nonJokersMeld.length > 0 && nonJokersMeld.every(c => c.value === nonJokersMeld[0].value)) {
+    // If we're adding a Joker, it's always valid for a group
+    if (isJ) return true;
+    // If we're adding a natural card, it must have the same value
+    if (card.value === nonJokersMeld[0].value) return true;
+  }
+
+  // If it's an escala
   const newMeld = [...meld, card];
-  if (isDifferentSuitGroup(newMeld, 3)) return true;
   if (isEscala(newMeld, 3)) return true;
+
   return false;
 };
 

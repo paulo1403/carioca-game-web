@@ -162,34 +162,43 @@ export async function handleDrawDiscard(
         }
     }
 
+    const isCurrentPlayer = currentPlayer.id === playerId;
     const discardCard = discardPile.pop();
     if (!discardCard) return { success: false, error: "No hay cartas en el descarte.", status: 400 };
 
     const boughtCards: Card[] = [discardCard];
     buyingPlayer.hand.push(discardCard);
     buyingPlayer.boughtCards.push(discardCard);
-    buyingPlayer.hasDrawn = true;
 
-    const drawFromDeck = (): Card | undefined => {
-        let card = deck.pop();
-        if (!card && reshuffleCount < 3) {
-            deck.push(...shuffleDeck(discardPile.splice(0)));
-            discardPile.length = 0;
-            reshuffleCount++;
-            card = deck.pop();
+    // CURRENT PLAYER drawing from discard is a standard draw (1 card)
+    // OTHER PLAYER buying from discard gets 1 from discard + 2 from deck
+    if (!isCurrentPlayer) {
+        const drawFromDeck = (): Card | undefined => {
+            let card = deck.pop();
+            if (!card && reshuffleCount < 3) {
+                deck.push(...shuffleDeck(discardPile.splice(0)));
+                discardPile.length = 0;
+                reshuffleCount++;
+                card = deck.pop();
+            }
+            return card;
+        };
+
+        for (let i = 0; i < 2; i++) {
+            const extra = drawFromDeck();
+            if (!extra) break;
+            buyingPlayer.hand.push(extra);
+            buyingPlayer.boughtCards.push(extra);
+            boughtCards.push(extra);
         }
-        return card;
-    };
-
-    for (let i = 0; i < 2; i++) {
-        const extra = drawFromDeck();
-        if (!extra) break;
-        buyingPlayer.hand.push(extra);
-        buyingPlayer.boughtCards.push(extra);
-        boughtCards.push(extra);
+        buyingPlayer.buysUsed = (buyingPlayer.buysUsed || 0) + 1;
     }
 
-    buyingPlayer.buysUsed = (buyingPlayer.buysUsed || 0) + 1;
+    // Mark that the player has drawn (on their turn) 
+    // or just processed their buy (if it's not their turn, hasDrawn remains false for the currentPlayer)
+    if (isCurrentPlayer) {
+        buyingPlayer.hasDrawn = true;
+    }
 
     await prisma.$transaction([
         prisma.gameSession.update({
@@ -201,8 +210,10 @@ export async function handleDrawDiscard(
                 pendingBuyIntents: "[]",
                 lastAction: JSON.stringify({
                     playerId,
-                    type: "BUY",
-                    description: `${buyingPlayer.name} compró del descarte (${boughtCards.length} carta${boughtCards.length === 1 ? "" : "s"})`,
+                    type: isCurrentPlayer ? "DRAW_DISCARD" : "BUY",
+                    description: isCurrentPlayer
+                        ? `${buyingPlayer.name} robó del descarte`
+                        : `${buyingPlayer.name} compró del descarte (${boughtCards.length} cartas)`,
                     timestamp: Date.now(),
                 }),
             },
@@ -213,7 +224,7 @@ export async function handleDrawDiscard(
                 hand: JSON.stringify(buyingPlayer.hand),
                 boughtCards: JSON.stringify(buyingPlayer.boughtCards),
                 buysUsed: buyingPlayer.buysUsed,
-                hasDrawn: true,
+                hasDrawn: buyingPlayer.hasDrawn,
             },
         }),
     ]);

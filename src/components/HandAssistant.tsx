@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Eye, Layers, Sparkles, ArrowRight } from "lucide-react";
+import { Eye, Layers, Sparkles, ArrowRight, Zap } from "lucide-react";
 import { Card } from "@/types/game";
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +19,9 @@ interface HandAssistantProps {
   onAutoDown: () => void;
   disabled?: boolean;
   currentRound?: number;
+  allMelds?: Card[][];
+  onAddToMeld?: (cardId: string) => void;
+  haveMelded?: boolean;
 }
 
 const getSuitSymbol = (suit: string) => {
@@ -40,18 +43,26 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
   onAutoDown,
   disabled,
   currentRound,
+  allMelds = [],
+  onAddToMeld,
+  haveMelded,
 }) => {
   const data = useMemo(
-    () => getHandSuggestions(hand, topDiscard),
-    [hand, topDiscard],
+    () => getHandSuggestions(hand, topDiscard, allMelds),
+    [hand, topDiscard, allMelds],
   );
 
   const nearDifferentSuitGroups = data.nearDifferentSuitGroups.slice(0, 3);
   const nearEscalas = data.nearEscalas.slice(0, 2);
+  const addableToTable = haveMelded ? data.addableToTable : [];
   const watch = data.watch.slice(0, 8);
 
   if (disabled) return null;
-  if (nearDifferentSuitGroups.length === 0 && nearEscalas.length === 0)
+  if (
+    nearDifferentSuitGroups.length === 0 &&
+    nearEscalas.length === 0 &&
+    addableToTable.length === 0
+  )
     return null;
 
   // Determine which type of groups are relevant for current round
@@ -125,6 +136,27 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
       )}
 
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {addableToTable.length > 0 && (
+          <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest mb-2">
+              <Zap className="w-4 h-4 text-blue-400" />
+              ¡Puedes añadir estas a la mesa!
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {addableToTable.map((c, idx) => (
+                <button
+                  key={`addable-${idx}`}
+                  onClick={() => onAddToMeld && onAddToMeld(c.id)}
+                  className="text-sm font-bold bg-blue-600/40 hover:bg-blue-600/60 text-blue-100 border border-blue-500/60 px-3 py-1 rounded-lg transition-all active:scale-95 flex items-center gap-2 group"
+                >
+                  {formatCardShort(c)}
+                  <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {showDifferentSuitGroups && (
           <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
             <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">

@@ -14,6 +14,7 @@ interface PlayerBadgeProps {
   expandedPlayerId?: string | null;
   onExpandToggle?: (playerId: string | null) => void;
   onUpdateName?: (newName: string) => void;
+  onMeldClick?: (playerId: string, meldIndex: number) => void;
   gameStatus?: string;
 }
 
@@ -26,6 +27,7 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
   expandedPlayerId,
   onExpandToggle,
   onUpdateName,
+  onMeldClick,
   gameStatus,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -169,17 +171,18 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
 
               {/* Content */}
               <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 place-items-center">
+                <div className="flex flex-col gap-8 w-full">
                   {player.melds?.map((group: Card[], gIdx: number) => (
                     <div
                       key={gIdx}
-                      className="flex flex-col items-center bg-black/20 p-4 rounded-lg w-full border border-white/5 hover:border-white/10 transition-colors"
+                      className="bg-black/20 p-2 rounded-xl w-full border border-white/5"
                     >
                       <MeldGroup
                         group={group}
                         playerId={player.id}
                         meldIndex={gIdx}
                         size="large"
+                        onClick={() => onMeldClick && onMeldClick(player.id, gIdx)}
                       />
                     </div>
                   ))}

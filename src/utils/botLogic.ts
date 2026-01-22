@@ -14,6 +14,7 @@ import {
   calculateHandPoints,
   isTrio,
   isEscala,
+  isDifferentSuitGroup,
 } from "@/utils/rules";
 
 /**
@@ -38,937 +39,292 @@ interface CardGroup {
   type: "TRIO" | "ESCALA" | "DIFFERENT_SUIT";
 }
 
+const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
+
 /**
  * Calculate the next move for a bot player
- * @param gameState Current game state
- * @param botId The ID of the bot player
- * @param difficulty Bot difficulty level (EASY, MEDIUM, HARD)
- * @returns The next move to make, or null if no move can be decided
  */
 export const calculateBotMove = (
   gameState: GameState,
   botId: string,
   difficulty: BotDifficulty = "MEDIUM",
 ): BotMove | null => {
-  // Validate bot exists and it's their turn
   const botIndex = gameState.players.findIndex((p) => p.id === botId);
-  if (botIndex === -1) {
-    console.warn(`[Bot] Bot ${botId} not found in game state`);
-    return null;
-  }
+  if (botIndex === -1) return null;
 
   const bot = gameState.players[botIndex];
+  if (gameState.currentTurn !== botIndex) return null;
 
-  if (gameState.currentTurn !== botIndex) {
-    console.warn(
-      `[Bot] Not ${bot.name}'s turn. Current turn: ${gameState.currentTurn}`,
-    );
-    return null;
-  }
-
-  // Determine if bot has drawn this turn
-  const hasDrawn = checkIfBotHasDrawn(gameState, botId);
+  const hasDrawn = bot.hasDrawn;
 
   if (!hasDrawn) {
-    // PHASE 1: DRAW
     return decideDraw(gameState, bot, difficulty);
   } else {
-    // PHASE 2: ACTION & DISCARD
-    // Try to perform beneficial actions before discarding
-
-    // Priority 1: HARD bots should check if they're VERY close to losing - emergency down
-    if (difficulty === "HARD" && !hasPlayerMelded(bot)) {
-      const competitiveAnalysis = analyzeCompetitivePosition(gameState, bot.id);
-      if (competitiveAnalysis.hasLeader && competitiveAnalysis.leaderAnalysis) {
-        const handPoints = calculateHandPoints(bot.hand);
-
-        // If we have way too many points in hand, try emergency down
-        if (handPoints > 100 && !hasPlayerMelded(bot)) {
-          const downMove = findDownMove(gameState, bot, "HARD");
-          if (downMove) {
-            console.log(
-              `[Bot] ${bot.name} EMERGENCY DOWN - too many points in hand!`,
-            );
-            return downMove;
-          }
-        }
-      }
-    }
-
-    // Priority 2: Steal joker (if difficulty warrants it)
-    if (difficulty !== "EASY") {
-      const stealMove = findStealJokerMove(gameState, bot, difficulty);
-      if (stealMove) {
-        console.log(`[Bot] ${bot.name} stealing joker`);
-        return stealMove;
-      }
-    }
-
-    // Priority 3: Down initial contract (if haven't melded yet)
+    // Priority 1: Down initial contract
     if (!hasPlayerMelded(bot)) {
       const downMove = findDownMove(gameState, bot, difficulty);
-      if (downMove) {
-        console.log(`[Bot] ${bot.name} going down with initial contract`);
-        return downMove;
-      }
+      if (downMove) return downMove;
     }
-    // Priority 3: Add to existing melds or put down additional groups
-    else {
-      // Try adding to existing melds first
+
+    // Priority 2: Steal joker
+    if (difficulty !== "EASY") {
+      const stealMove = findStealJokerMove(gameState, bot, difficulty);
+      if (stealMove) return stealMove;
+    }
+
+    // Priority 3: Add to existing melds or additional downs
+    if (hasPlayerMelded(bot)) {
       const addMove = findAddToMeldMove(gameState, bot);
-      if (addMove) {
-        console.log(`[Bot] ${bot.name} adding to meld`);
-        return addMove;
-      }
+      if (addMove) return addMove;
 
-      // Try additional down (new groups)
       const additionalDown = findAdditionalDownMove(gameState, bot, difficulty);
-      if (additionalDown) {
-        console.log(`[Bot] ${bot.name} putting down additional groups`);
-        return additionalDown;
-      }
+      if (additionalDown) return additionalDown;
     }
 
-    // Priority 4: Discard
-    console.log(`[Bot] ${bot.name} discarding`);
     return decideDiscard(gameState, bot, difficulty);
   }
 };
 
-/**
- * Check if the bot has drawn a card this turn
- */
-const checkIfBotHasDrawn = (gameState: GameState, botId: string): boolean => {
-  const bot = gameState.players.find((p) => p.id === botId);
-  return bot ? bot.hasDrawn : false;
-};
-
-/**
- * Check if a player has already melded (gone down)
- */
 const hasPlayerMelded = (player: Player): boolean => {
   return player.melds !== undefined && player.melds.length > 0;
 };
 
-/**
- * Decide whether to draw from deck or buy from discard pile
- */
 const decideDraw = (
   gameState: GameState,
   bot: Player,
   difficulty: BotDifficulty,
 ): BotMove => {
   const discardPile = gameState.discardPile;
-  const topDiscard =
-    discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
+  const topDiscard = discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
 
-  // If no discard pile or already used max buys, draw deck
   if (!topDiscard || bot.buysUsed >= 7) {
     return { action: "DRAW_DECK" };
   }
 
-  // Analyze competitive situation
-  const competitiveAnalysis = analyzeCompetitivePosition(gameState, bot.id);
+  const isUseful = evaluateCardUsefulness(topDiscard, bot.hand, gameState.currentRound);
 
-  // EASY difficulty: Play dumb - mostly draw deck unless card is very useful
   if (difficulty === "EASY") {
-    // Only buy 5% of the time with good cards
-    const isExcellent =
-      topDiscard.suit === "JOKER" ||
-      topDiscard.value === 0 ||
-      countMatchingValues(bot.hand, topDiscard.value) >= 2;
-
-    const shouldBuy = isExcellent && Math.random() < 0.05;
-    return {
-      action: shouldBuy ? "DRAW_DISCARD" : "DRAW_DECK",
-    };
+    return { action: isUseful && Math.random() < 0.1 ? "DRAW_DISCARD" : "DRAW_DECK" };
   }
 
-  // MEDIUM difficulty: Balanced approach - smart buying
   if (difficulty === "MEDIUM") {
-    const isUseful = evaluateCardUsefulness(
-      topDiscard,
-      bot.hand,
-      gameState.currentRound,
-    );
-
-    if (isUseful) {
-      const handQuality = evaluateHandQuality(bot.hand, gameState.currentRound);
-      const shouldBuy = handQuality < 0.5 || Math.random() < 0.4;
-
-      // Also consider blocking leader
-      if (
-        !shouldBuy &&
-        competitiveAnalysis.hasLeader &&
-        countMatchingValues(
-          competitiveAnalysis.leaderAnalysis?.hand || [],
-          topDiscard.value,
-        ) > 0
-      ) {
-        return { action: "DRAW_DISCARD" };
-      }
-
-      return {
-        action: shouldBuy ? "DRAW_DISCARD" : "DRAW_DECK",
-      };
-    }
-
-    return { action: "DRAW_DECK" };
+    return { action: isUseful && Math.random() < 0.5 ? "DRAW_DISCARD" : "DRAW_DECK" };
   }
 
-  // HARD difficulty: VERY aggressive buying + strategic blocking
-  const isJoker = topDiscard.suit === "JOKER" || topDiscard.value === 0;
-  const isUseful = evaluateCardUsefulness(
-    topDiscard,
-    bot.hand,
-    gameState.currentRound,
-  );
+  // HARD: Aggressive but not suicidal. If we already have 20+ cards, stop buying unless it's a Joker.
+  const isJokerCard = isJoker(topDiscard);
+  if (isJokerCard) return { action: "DRAW_DISCARD" };
 
-  // JOKERS: ALWAYS BUY if possible (invaluable for any strategy)
-  if (isJoker) {
-    console.log(`[Bot] HARD difficulty: Buying joker from discard`);
-    return { action: "DRAW_DISCARD" };
-  }
+  if (bot.hand.length > 18 && !isUseful) return { action: "DRAW_DECK" };
 
-  // Other useful cards: Buy aggressively (80% chance)
-  if (isUseful) {
-    const handQuality = evaluateHandQuality(bot.hand, gameState.currentRound);
-    const shouldBuy = handQuality < 0.7 || Math.random() < 0.8;
-    if (shouldBuy) {
-      console.log(`[Bot] HARD difficulty: Buying useful card from discard`);
-      return { action: "DRAW_DISCARD" };
-    }
-  }
-
-  // Strategic blocking: Block leader or strong opponents
-  if (competitiveAnalysis.hasLeader && competitiveAnalysis.leaderAnalysis) {
-    const leaderHasMatching =
-      countMatchingValues(
-        competitiveAnalysis.leaderAnalysis.hand,
-        topDiscard.value,
-      ) > 0;
-
-    if (leaderHasMatching) {
-      // EXTREMELY aggressive blocking of leader (90% chance for HARD)
-      if (Math.random() < 0.9) {
-        console.log(
-          `[Bot] HARD difficulty: BLOCKING LEADER with card ${topDiscard.value}`,
-        );
-        return { action: "DRAW_DISCARD" };
-      }
-    }
-
-    // Also block other close competitors
-    const closeCompetitors = gameState.players.filter((p) => {
-      if (p.id === bot.id) return false;
-      const opponentScore = (p.score || 0) + calculateHandPoints(p.hand);
-      const botScore = (bot.score || 0) + calculateHandPoints(bot.hand);
-      return opponentScore <= botScore + 50; // Within 50 points
-    }).length;
-
-    if (closeCompetitors > 0 && Math.random() < 0.7) {
-      console.log(`[Bot] HARD difficulty: Blocking close competitor`);
-      return { action: "DRAW_DISCARD" };
-    }
-  }
-
-  // Defensive buying: Don't leave good cards for others
-  const opponentCards = countMatchingValues(bot.hand, topDiscard.value);
-  if (opponentCards === 0 && Math.random() < 0.6) {
-    console.log(`[Bot] HARD difficulty: Defensive buy to deny opponent`);
-    return { action: "DRAW_DISCARD" };
-  }
-
-  return { action: "DRAW_DECK" };
+  return { action: isUseful || Math.random() < 0.3 ? "DRAW_DISCARD" : "DRAW_DECK" };
 };
 
-/**
- * Decide which card to discard
- */
 const decideDiscard = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty,
+  _difficulty: BotDifficulty,
 ): BotMove => {
-  const hand = [...bot.hand];
+  const hand = bot.hand;
+  if (hand.length === 0) return { action: "DISCARD", payload: { cardId: "" } };
 
-  if (hand.length === 0) {
-    console.error(`[Bot] ${bot.name} has no cards to discard!`);
-    return { action: "DISCARD", payload: { cardId: "" } };
-  }
+  // Prioritize discarding cards that are NOT part of any group
+  const { trios, escalas } = findAllPotentialGroups(hand, gameState.currentRound);
+  const usefulIds = new Set<string>();
+  [...trios, ...escalas].forEach(g => g.cards.forEach(c => usefulIds.add(c.id)));
 
-  // EASY: Discard randomly (dumb strategy)
-  if (difficulty === "EASY") {
-    const randomCard = hand[Math.floor(Math.random() * hand.length)];
-    return { action: "DISCARD", payload: { cardId: randomCard.id } };
-  }
-
-  // MEDIUM & HARD: Smart discard strategy
-  // NEVER DISCARD JOKERS - they are invaluable
-  // Prioritize keeping: cards part of potential groups, then strategic low-value cards
-
-  // Find cards that are part of potential groups
-  const cardsInGroups = new Set<string>();
-
-  // Check for trios (3+ matching values)
-  const byValue: Record<number, Card[]> = {};
-  hand.forEach((c) => {
-    if (c.suit !== "JOKER" && c.value !== 0) {
-      if (!byValue[c.value]) byValue[c.value] = [];
-      byValue[c.value].push(c);
-    }
+  // Cards that can be added to table are also useful
+  gameState.players.forEach(p => {
+    p.melds?.forEach(meld => {
+      hand.forEach(card => {
+        if (canAddToMeld(card, meld)) usefulIds.add(card.id);
+      });
+    });
   });
 
-  for (const value in byValue) {
-    if (byValue[value].length >= 2) {
-      // At least pair potential
-      byValue[value].forEach((c) => cardsInGroups.add(c.id));
-    }
+  const candidates = hand.filter(c => !usefulIds.has(c.id) && !isJoker(c));
+  if (candidates.length > 0) {
+    // Discard highest points among non-useful
+    candidates.sort((a, b) => getCardPoints(b) - getCardPoints(a));
+    return { action: "DISCARD", payload: { cardId: candidates[0].id } };
   }
 
-  // Check for escalas
-  const bySuit: Record<string, Card[]> = {};
-  hand.forEach((c) => {
-    if (c.suit !== "JOKER" && c.value !== 0) {
-      if (!bySuit[c.suit]) bySuit[c.suit] = [];
-      bySuit[c.suit].push(c);
-    }
-  });
-
-  for (const suit in bySuit) {
-    const suitCards = bySuit[suit].sort((a, b) => a.value - b.value);
-    for (let i = 0; i < suitCards.length; i++) {
-      for (let len = 2; len <= 3; len++) {
-        const potential = suitCards.slice(i, i + len);
-        if (potential.length >= 2) {
-          const values = potential.map((c) => c.value);
-          let canForm = true;
-          for (let j = 0; j < values.length - 1; j++) {
-            if (values[j + 1] - values[j] > 2) {
-              canForm = false;
-              break;
-            }
-          }
-          if (canForm) {
-            potential.forEach((c) => cardsInGroups.add(c.id));
-          }
-        }
-      }
-    }
-  }
-
-  // Candidates for discard: cards NOT in groups, NOT jokers
-  const discardCandidates = hand.filter(
-    (c) => !cardsInGroups.has(c.id) && c.suit !== "JOKER" && c.value !== 0,
-  );
-
-  if (discardCandidates.length > 0) {
-    // For HARD: Be VERY strategic about discards
-    if (difficulty === "HARD") {
-      // Analyze competitive position for strategic discarding
-      analyzeCompetitivePosition(gameState, bot.id);
-
-      // STRATEGY 1: Discard cards that block opponents the LEAST
-      // Calculate "popularity" of each candidate (how many opponents want it)
-      const cardPopularity: Record<string, number> = {};
-
-      for (const card of discardCandidates) {
-        let popularity = 0;
-
-        // Check how many opponents have matching values
-        for (const opponent of gameState.players) {
-          if (opponent.id === bot.id || !opponent.hand) continue;
-
-          const matchingCount = countMatchingValues(opponent.hand, card.value);
-          popularity += matchingCount;
-        }
-
-        cardPopularity[card.id] = popularity;
-      }
-
-      // Sort candidates by popularity (ascending) - discard least wanted cards
-      discardCandidates.sort(
-        (a, b) => (cardPopularity[a.id] || 0) - (cardPopularity[b.id] || 0),
-      );
-
-      // Among least popular cards, prefer low-value cards
-      const leastPopularCards = discardCandidates.filter(
-        (c) => cardPopularity[c.id] === cardPopularity[discardCandidates[0].id],
-      );
-
-      leastPopularCards.sort((a, b) => getCardPoints(a) - getCardPoints(b));
-
-      return {
-        action: "DISCARD",
-        payload: { cardId: leastPopularCards[0].id },
-      };
-    }
-
-    // MEDIUM: Discard highest point card from candidates, prefer unpopular cards
-    discardCandidates.sort((a, b) => getCardPoints(b) - getCardPoints(a));
-    return { action: "DISCARD", payload: { cardId: discardCandidates[0].id } };
-  }
-
-  // Fallback: discard lowest value non-joker (last resort before jokers)
-  const nonJokers = hand.filter((c) => c.suit !== "JOKER" && c.value !== 0);
+  // Fallback: Discard highest points non-joker
+  const nonJokers = hand.filter(c => !isJoker(c));
   if (nonJokers.length > 0) {
-    nonJokers.sort((a, b) => getCardPoints(a) - getCardPoints(b));
+    nonJokers.sort((a, b) => getCardPoints(b) - getCardPoints(a));
     return { action: "DISCARD", payload: { cardId: nonJokers[0].id } };
   }
 
-  // EMERGENCY ONLY: If forced to discard a joker (hand full and can't do anything else)
-  // This should almost never happen in normal gameplay
-  console.warn(
-    `[Bot] ${bot.name} forced to discard a joker - emergency situation!`,
-  );
   return { action: "DISCARD", payload: { cardId: hand[0].id } };
 };
 
-/**
- * Find if a down move is possible for the initial contract
- */
 const findDownMove = (
   gameState: GameState,
   bot: Player,
-  difficulty: BotDifficulty,
-): BotMove | null => {
-  const round = gameState.currentRound;
-  const hand = bot.hand;
-
-  // Get requirements for this round
-  const requirements = getRoundRequirements(round);
-  if (!requirements) return null;
-
-  // Find possible groups that match requirements
-  const possibleGroups = findGroupCombinations(hand, round, difficulty);
-
-  if (possibleGroups.length === 0) return null;
-
-  // IMPORTANT: Filter possibleGroups to match EXACTLY what the contract needs.
-  // The bot should NOT try to put down more than the contract requires in the initial DOWN.
-  const contractGroups: Card[][] = [];
-  // Prioritize escalas as they are harder to form
-  let escalasNeeded = requirements.escalas || 0;
-  if (escalasNeeded > 0) {
-    const escalas = possibleGroups.filter(g => g.type === "ESCALA");
-    for (let i = 0; i < Math.min(escalas.length, escalasNeeded); i++) {
-      contractGroups.push(escalas[i].cards);
-    }
-    escalasNeeded -= contractGroups.length;
-  }
-
-  if (requirements.differentSuitGroups > 0) {
-    const diffGroups = possibleGroups.filter(g => g.type === "DIFFERENT_SUIT");
-    const usedCardIds = new Set(contractGroups.flat().map(c => c.id));
-    let diffAdded = 0;
-    for (const group of diffGroups) {
-      if (diffAdded >= requirements.differentSuitGroups) break;
-      if (group.cards.every(c => !usedCardIds.has(c.id))) {
-        contractGroups.push(group.cards);
-        group.cards.forEach(c => usedCardIds.add(c.id));
-        diffAdded++;
-      }
-    }
-    if (diffAdded < requirements.differentSuitGroups) return null;
-  }
-
-  // If we couldn't fulfill the contract, we can't go down
-  if (escalasNeeded > 0) return null;
-
-  const validation = validateContract(contractGroups, round);
-
-  if (!validation.valid) return null;
-
-  return {
-    action: "DOWN",
-    payload: { groups: contractGroups },
-  };
-};
-
-/**
- * Find if we can add a card to an existing meld
- */
-const findAddToMeldMove = (
-  gameState: GameState,
-  bot: Player,
-): BotMove | null => {
-  // Look through all melds on the table
-  // Priority: Own melds > opponent melds that would help us finish > random additions
-
-  const ownMelds: Array<{
-    meldIndex: number;
-    cards: Card[];
-    player: Player;
-  }> = [];
-  const otherMelds: Array<{
-    meldIndex: number;
-    cards: Card[];
-    player: Player;
-  }> = [];
-
-  // Collect all possible melds
-  for (const player of gameState.players) {
-    if (!player.melds || player.melds.length === 0) continue;
-
-    for (let meldIndex = 0; meldIndex < player.melds.length; meldIndex++) {
-      const meld = player.melds[meldIndex];
-      if (player.id === bot.id) {
-        ownMelds.push({ meldIndex, cards: meld, player });
-      } else {
-        otherMelds.push({ meldIndex, cards: meld, player });
-      }
-    }
-  }
-
-  // Try to find a matching card for OWN melds first (accumulate points)
-  for (const { meldIndex, cards, player } of ownMelds) {
-    for (const card of bot.hand) {
-      if (canAddToMeld(card, cards)) {
-        return {
-          action: "ADD_TO_MELD",
-          payload: {
-            cardId: card.id,
-            targetPlayerId: player.id,
-            meldIndex: meldIndex,
-          },
-        };
-      }
-    }
-  }
-
-  // Then try OTHER melds (but be strategic - only if we need space in hand)
-  const handSpace = 12 - bot.hand.length; // Assuming max hand size is 12
-  if (handSpace <= 2) {
-    // Need to free up space
-    for (const { meldIndex, cards, player } of otherMelds) {
-      for (const card of bot.hand) {
-        if (canAddToMeld(card, cards)) {
-          return {
-            action: "ADD_TO_MELD",
-            payload: {
-              cardId: card.id,
-              targetPlayerId: player.id,
-              meldIndex: meldIndex,
-            },
-          };
-        }
-      }
-    }
-  }
-
-  return null;
-};
-
-/**
- * Find additional groups the bot can put down (after initial down)
- */
-const findAdditionalDownMove = (
-  _gameState: GameState,
-  _bot: Player,
   _difficulty: BotDifficulty,
 ): BotMove | null => {
-  // Disabled as per user request to only use main cards (contract)
-  return null;
-};
+  const round = gameState.currentRound;
+  const reqs = ROUND_CONTRACTS_DATA[round];
+  if (!reqs) return null;
 
-/**
- * Find a move to steal a joker
- */
-const findStealJokerMove = (
-  gameState: GameState,
-  bot: Player,
-  difficulty: BotDifficulty,
-): BotMove | null => {
-  // Look through all melds on the table
-  // For HARD: Prioritize stealing from the leader or strong opponents
-  const players = gameState.players;
+  const { trios, escalas } = findAllPotentialGroups(bot.hand, round);
 
-  let targetPlayers = players;
-  if (difficulty === "HARD") {
-    const competitiveAnalysis = analyzeCompetitivePosition(gameState, bot.id);
-    if (competitiveAnalysis.leaderAnalysis) {
-      // Prioritize stealing from leader or high-score players
-      targetPlayers = players.sort((a, b) => {
-        const scoreA = (a.score || 0) + calculateHandPoints(a.hand);
-        const scoreB = (b.score || 0) + calculateHandPoints(b.hand);
-        return scoreB - scoreA; // Leader/high score first
-      });
+  if (trios.length >= reqs.differentSuitGroups && escalas.length >= reqs.escalas) {
+    const groups = [
+      ...trios.slice(0, reqs.differentSuitGroups).map(g => g.cards),
+      ...escalas.slice(0, reqs.escalas).map(g => g.cards)
+    ];
+    const validation = validateContract(groups, round);
+    if (validation.valid) {
+      return { action: "DOWN", payload: { groups } };
     }
   }
 
-  for (const player of targetPlayers) {
-    if (!player.melds || player.melds.length === 0) continue;
+  return null;
+};
 
-    for (let meldIndex = 0; meldIndex < player.melds.length; meldIndex++) {
-      const meld = player.melds[meldIndex];
-
-      // Check if meld has a joker
-      if (!meld.some((c) => c.suit === "JOKER" || c.value === 0)) continue;
-
-      // Try to find BEST card in hand that can steal it
-      const stealableCandidates = bot.hand.filter((card) =>
-        canStealJoker(card, meld, bot.hand),
-      );
-
-      if (stealableCandidates.length === 0) continue;
-
-      // HARD: Always steal jokers - they're too valuable
-      if (difficulty === "HARD") {
-        // Pick the LOWEST point card to minimize loss (best trade)
-        const bestCard = stealableCandidates.reduce((best, current) =>
-          getCardPoints(current) < getCardPoints(best) ? current : best,
-        );
-
-        return {
-          action: "STEAL_JOKER",
-          payload: {
-            cardId: bestCard.id,
-            targetPlayerId: player.id,
-            meldIndex: meldIndex,
-          },
-        };
-      }
-
-      // MEDIUM: Only steal if beneficial
-      for (const card of stealableCandidates) {
-        const cardPoints = getCardPoints(card);
-        const meldValue = meld.reduce((sum, c) => sum + getCardPoints(c), 0);
-
-        if (meldValue > cardPoints * 2) {
-          // Good trade
+const findAddToMeldMove = (gameState: GameState, bot: Player): BotMove | null => {
+  for (const player of gameState.players) {
+    if (!player.melds) continue;
+    for (let i = 0; i < player.melds.length; i++) {
+      for (const card of bot.hand) {
+        if (canAddToMeld(card, player.melds[i])) {
           return {
-            action: "STEAL_JOKER",
-            payload: {
-              cardId: card.id,
-              targetPlayerId: player.id,
-              meldIndex: meldIndex,
-            },
+            action: "ADD_TO_MELD",
+            payload: { cardId: card.id, targetPlayerId: player.id, meldIndex: i }
           };
         }
       }
     }
   }
-
   return null;
 };
 
-// ============ HELPER FUNCTIONS ============
+const findAdditionalDownMove = (gameState: GameState, bot: Player, _difficulty: BotDifficulty): BotMove | null => {
+  // Try to put down any remaining trios or escalas of size 3+
+  const hand = bot.hand;
+  const { trios, escalas } = findAllPotentialGroups(hand, -1); // -1 means any round/generic
 
-/**
- * Get round requirements (trio count, escala count, sizes)
- */
-const getRoundRequirements = (round: number) => {
-  return ROUND_CONTRACTS_DATA[round] || null;
-};
-
-/**
- * Evaluate if a single card is useful for the current round
- */
-const evaluateCardUsefulness = (
-  card: Card,
-  hand: Card[],
-  _round: number,
-): boolean => {
-  // Jokers are always useful
-  if (card.suit === "JOKER" || card.value === 0) return true;
-
-  // Check for matching values (trio potential)
-  const matchingCount = hand.filter(
-    (c) => c.value === card.value && c.suit !== "JOKER" && c.value !== 0,
-  ).length;
-
-  if (matchingCount >= 1) return true;
-
-  // Check for sequence potential (escala)
-  if (canFormSequence(hand, card)) return true;
-
-  return false;
-};
-
-/**
- * Evaluate overall quality of hand (0-1, higher is better)
- */
-const evaluateHandQuality = (hand: Card[], _round: number): number => {
-  const trios = findTrios(hand);
-  const escalas = findEscalas(hand);
-  const jokers = hand.filter((c) => c.suit === "JOKER" || c.value === 0).length;
-  const totalCards = hand.length;
-  const pointsInHand = calculateHandPoints(hand);
-
-  // Score individual components - weighted heavily toward groups
-  const trioScore = trios.length * 0.4;
-  const escalaScore = escalas.length * 0.5;
-  const jokerScore = jokers * 0.2;
-
-  // Penalty for too many points in hand (liability)
-  const pointsPenalty = Math.min(pointsInHand / 150, 0.5);
-
-  // Bonus for full hand
-  const sizeBonus = Math.min(totalCards / 11, 1) * 0.15;
-
-  const total =
-    trioScore + escalaScore + jokerScore + sizeBonus - pointsPenalty;
-
-  // Normalize to 0-1
-  const normalized = Math.max(0, Math.min(total, 1));
-
-  return normalized;
-};
-
-/**
- * Check if a card can form a sequence with others in hand
- */
-const canFormSequence = (hand: Card[], targetCard: Card): boolean => {
-  // Group by suit
-  const bySuit: Record<string, Card[]> = {};
-  hand.forEach((c) => {
-    if (c.suit !== "JOKER" && c.value !== 0) {
-      if (!bySuit[c.suit]) bySuit[c.suit] = [];
-      bySuit[c.suit].push(c);
-    }
-  });
-
-  // Check if target card's suit has neighbors
-  if (targetCard.suit !== "JOKER" && targetCard.value !== 0) {
-    const sameSuit = bySuit[targetCard.suit] || [];
-    const values = sameSuit.map((c) => c.value);
-
-    // Check for adjacent values
-    return (
-      values.includes(targetCard.value - 1) ||
-      values.includes(targetCard.value + 1)
-    );
-  }
-
-  return false;
-};
-
-/**
- * Count how many cards of a given value exist in hand
- */
-const countMatchingValues = (hand: Card[], value: number): number => {
-  return hand.filter(
-    (c) => c.value === value && c.suit !== "JOKER" && c.value !== 0,
-  ).length;
-};
-
-/**
- * Find all possible trios in hand
- */
-const findTrios = (hand: Card[], minSize: number = 3): CardGroup[] => {
-  const groups: CardGroup[] = [];
-  const usedIds = new Set<string>();
-
-  // Group by value
-  const byValue: Record<number, Card[]> = {};
-  hand.forEach((c) => {
-    if (c.suit === "JOKER" || c.value === 0) return;
-    if (!byValue[c.value]) byValue[c.value] = [];
-    byValue[c.value].push(c);
-  });
-
-  // Count jokers
-  const jokers = hand.filter((c) => c.suit === "JOKER" || c.value === 0);
-  let availableJokers = [...jokers];
-
-  // Find trios using values first
-  for (const value in byValue) {
-    const cards = byValue[value];
-    if (cards.length >= 2) { // At least a pair can become a trio with a joker
-      if (cards.length >= minSize) {
-        // Natural trio
-        const triCards = cards.slice(0, minSize);
-        groups.push({ cards: triCards, type: "TRIO" });
-      } else if (cards.length + availableJokers.length >= minSize) {
-        // Trio with jokers
-        const neededJokers = minSize - cards.length;
-        const trioWithJokers = [...cards, ...availableJokers.slice(0, neededJokers)];
-        groups.push({ cards: trioWithJokers, type: "TRIO" });
-        // availableJokers.splice(0, neededJokers); // Don't consume yet, combinations are complex
+  // We only put them down if they are 3+ and we have cards left for discard
+  const all = [...trios, ...escalas];
+  for (const g of all) {
+    if (g.cards.length >= 3 && hand.length - g.cards.length >= 1) {
+      const validation = validateAdditionalDown([g.cards]);
+      if (validation.valid) {
+        return { action: "DOWN", payload: { groups: [g.cards] } };
       }
     }
   }
-
-  return groups;
+  return null;
 };
 
-/**
- * Find all possible groups with different suits (Rondas 1-7)
- */
-const findDifferentSuitGroups = (hand: Card[]): CardGroup[] => {
-  const groups: CardGroup[] = [];
-
-  // Group by suit
-  const bySuit: Record<string, Card[]> = {};
-  hand.forEach((c) => {
-    if (c.suit === "JOKER" || c.value === 0) return;
-    if (!bySuit[c.suit]) bySuit[c.suit] = [];
-    bySuit[c.suit].push(c);
-  });
-
-  // Get jokers for wildcards
-  const jokers = hand.filter((c) => c.suit === "JOKER" || c.value === 0);
-
-  // Generate combinations with different suits
-  const suits = Object.keys(bySuit);
-
-  // Find groups of 3+ suits
-  for (let suitCount = 3; suitCount <= suits.length; suitCount++) {
-    for (let i = 0; i < suits.length; i++) {
-      for (let j = i + 1; j < suits.length; j++) {
-        for (let k = j + 1; k < suits.length; k++) {
-          const selectedSuits = [suits[i], suits[j], suits[k]];
-          const cards = selectedSuits.map((s) => bySuit[s][0]).filter((c) => c);
-
-          if (cards.length === 3) {
-            groups.push({ cards, type: "DIFFERENT_SUIT" });
-          }
-
-          // Add jokers as wildcards for additional suits
-          if (jokers.length > 0) {
-            for (
-              let jokersToAdd = 1;
-              jokersToAdd <= jokers.length;
-              jokersToAdd++
-            ) {
-              const cardsWithJokers = [
-                ...cards,
-                ...jokers.slice(0, jokersToAdd),
-              ];
-              groups.push({ cards: cardsWithJokers, type: "DIFFERENT_SUIT" });
-            }
-          }
+const findStealJokerMove = (gameState: GameState, bot: Player, _difficulty: BotDifficulty): BotMove | null => {
+  for (const player of gameState.players) {
+    if (!player.melds) continue;
+    for (let i = 0; i < player.melds.length; i++) {
+      const meld = player.melds[i];
+      if (!meld.some(isJoker)) continue;
+      for (const card of bot.hand) {
+        if (canStealJoker(card, meld, bot.hand)) {
+          return {
+            action: "STEAL_JOKER",
+            payload: { cardId: card.id, targetPlayerId: player.id, meldIndex: i }
+          };
         }
       }
     }
   }
-
-  return groups;
-};
-
-/**
- * Find all possible escalas in hand
- */
-const findEscalas = (hand: Card[], minSize: number = 4): CardGroup[] => {
-  const groups: CardGroup[] = [];
-
-  // Use the robust utility from rules
-  // Simple scan for now, but respecting minSize
-  const bySuit: Record<string, Card[]> = {};
-  hand.forEach((c) => {
-    if (c.suit === "JOKER" || c.value === 0) return;
-    if (!bySuit[c.suit]) bySuit[c.suit] = [];
-    bySuit[c.suit].push(c);
-  });
-
-  for (const suit in bySuit) {
-    const cards = bySuit[suit].sort((a, b) => a.value - b.value);
-
-    // Instead of custom logic, try every sub-sequence and validate with rules.isEscala
-    for (let i = 0; i < cards.length; i++) {
-      for (let len = minSize; len <= cards.length - i; len++) {
-        const potential = cards.slice(i, i + len);
-        if (isEscala(potential, minSize)) {
-          groups.push({ cards: potential, type: "ESCALA" });
-        }
-      }
-    }
-  }
-
-  return groups;
-};
-
-
-/**
- * Find valid group combinations based on difficulty and round
- */
-const findGroupCombinations = (
-  hand: Card[],
-  round: number,
-  difficulty: BotDifficulty,
-): CardGroup[] => {
-  if (round === -1) {
-    // Any valid group for additional down (trios or escalas)
-    const trios = findTrios(hand);
-    const escalas = findEscalas(hand);
-    return [...trios, ...escalas];
-  }
-
-  const requirements = getRoundRequirements(round);
-  if (!requirements) return [];
-
-  let groups: CardGroup[] = [];
-
-  // Round 8: Escaleras
-  if (requirements.escalas > 0 && round === 8) {
-    return findEscalas(hand, requirements.escalaSize);
-  }
-
-  // Rounds 1-7: Different suit groups
-  if (requirements.differentSuitGroups > 0) {
-    groups = findDifferentSuitGroups(hand).filter((g) => g.cards.length >= requirements.differentSuitSize);
-
-    // EASY: Only find perfect groups
-    if (difficulty === "EASY") {
-      return groups.filter((g) => g.cards.length === requirements.differentSuitSize);
-    }
-
-    // MEDIUM: Find standard groups
-    if (difficulty === "MEDIUM") {
-      return groups;
-    }
-
-    // HARD: Be more aggressive - find larger groups
-    if (difficulty === "HARD") {
-      const largeGroups = groups.filter((g) => g.cards.length >= requirements.differentSuitSize + 1);
-      return largeGroups.length > 0 ? largeGroups : groups;
-    }
-  }
-
-  return groups;
-};
-
-/**
- * Analyze the competitive position in the game
- * Returns information about leaders, threats, and strategic opportunities
- */
-interface CompetitiveAnalysis {
-  hasLeader: boolean;
-  leaderAnalysis?: {
-    playerId: string;
-    name: string;
-    hand: Card[];
-    melds: Card[][];
-    totalScore: number;
-    pointsInHand: number;
-  };
+  return null;
 }
 
-const analyzeCompetitivePosition = (
-  gameState: GameState,
-  _botId: string,
-): CompetitiveAnalysis => {
-  const players = gameState.players;
+// ============ UTILS ============
 
-  // Calculate score for each player (including points in hand)
-  const playerScores = players.map((p) => ({
-    playerId: p.id,
-    name: p.name,
-    hand: p.hand,
-    melds: p.melds || [],
-    totalScore: (p.score || 0) + calculateHandPoints(p.hand),
-    pointsInHand: calculateHandPoints(p.hand),
-  }));
+const findAllPotentialGroups = (hand: Card[], round: number): { trios: CardGroup[], escalas: CardGroup[] } => {
+  const nonJokers = hand.filter(c => !isJoker(c));
+  const jokers = hand.filter(isJoker);
+  // Default values for generic search (-1)
+  const reqs = round !== -1 ? ROUND_CONTRACTS_DATA[round] : { differentSuitGroups: 1, differentSuitSize: 3, escalas: 1, escalaSize: 3 };
 
-  // Sort by score (ascending) - lower scores are better in Carioca
-  playerScores.sort((a, b) => a.totalScore - b.totalScore);
+  const foundTrios: CardGroup[] = [];
+  const foundEscalas: CardGroup[] = [];
 
-  const leader = playerScores[0];
+  // Trios: same value, different suits
+  if (reqs.differentSuitSize >= 3) {
+    const byValue = new Map<number, Card[]>();
+    nonJokers.forEach(c => {
+      const list = byValue.get(c.value) ?? [];
+      list.push(c);
+      byValue.set(c.value, list);
+    });
 
-  return {
-    hasLeader:
-      leader.totalScore <
-      (playerScores[1]?.totalScore ?? leader.totalScore) - 20,
-    leaderAnalysis: leader,
-  };
+    for (const [val, cards] of byValue) {
+      const uniqueSuitsMap = new Map();
+      cards.forEach(c => uniqueSuitsMap.set(c.suit, c));
+      const uniqueCards = Array.from(uniqueSuitsMap.values()) as Card[];
+
+      const naturalCount = uniqueCards.length;
+      // Rule: Natural cards must be >= Jokers
+      const minNaturalNeeded = Math.ceil(reqs.differentSuitSize / 2);
+
+      if (naturalCount >= minNaturalNeeded) {
+        if (naturalCount >= reqs.differentSuitSize) {
+          foundTrios.push({ cards: uniqueCards.slice(0, reqs.differentSuitSize), type: "DIFFERENT_SUIT" });
+        } else if (naturalCount + jokers.length >= reqs.differentSuitSize) {
+          const neededJokers = reqs.differentSuitSize - naturalCount;
+          foundTrios.push({ cards: [...uniqueCards, ...jokers.slice(0, neededJokers)], type: "DIFFERENT_SUIT" });
+        }
+      }
+    }
+  }
+
+  // Escalas
+  if (reqs.escalaSize >= 3) {
+    const bySuit = new Map<string, Card[]>();
+    nonJokers.forEach(c => {
+      const list = bySuit.get(c.suit) ?? [];
+      list.push(c);
+      bySuit.set(c.suit, list);
+    });
+
+    for (const [suit, cards] of bySuit) {
+      for (let start = 1; start <= 13; start++) {
+        const len = reqs.escalaSize;
+        const window = Array.from({ length: len }, (_, i) => ((start + i - 1) % 13) + 1);
+        const cardsInHand = cards.filter(c => window.includes(c.value));
+
+        const naturalCount = cardsInHand.length;
+        // Rule: Natural cards must be >= Jokers
+        const minNaturalNeeded = Math.ceil(len / 2);
+
+        if (naturalCount >= minNaturalNeeded && naturalCount + jokers.length >= len) {
+          const resultGroup = [...cardsInHand];
+          const needed = len - resultGroup.length;
+          foundEscalas.push({ cards: [...resultGroup, ...jokers.slice(0, needed)], type: "ESCALA" });
+        }
+      }
+    }
+  }
+
+  return { trios: foundTrios, escalas: foundEscalas };
+};
+
+const evaluateCardUsefulness = (card: Card, hand: Card[], round: number): boolean => {
+  if (isJoker(card)) return true;
+
+  // Fast check for Trios (matching values)
+  if (hand.some(c => c.value === card.value && !isJoker(c))) return true;
+
+  // Fast check for Escalas (neighboring cards)
+  const reqs = round !== -1 ? ROUND_CONTRACTS_DATA[round] : { differentSuitGroups: 1, differentSuitSize: 3, escalas: 1, escalaSize: 3 };
+  if (reqs && reqs.escalaSize > 0) {
+    const neighbors = hand.filter(c =>
+      c.suit === card.suit &&
+      !isJoker(c) &&
+      (Math.abs(c.value - card.value) <= 2 || (card.value === 1 && c.value >= 12) || (card.value >= 12 && c.value === 1))
+    );
+    if (neighbors.length > 0) return true;
+  }
+
+  return false;
 };

@@ -12,29 +12,34 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
 
     const updates = [
         {
-            title: "Refuerzo de Reglas de Carioca",
-            description: "Se han blindado las validaciones: las Escaleras ahora requieren estrictamente el mismo palo y ser consecutivas (sin saltos).",
+            title: "Regla de Mayoría Natural",
+            description: "Los grupos ahora deben tener al menos la misma cantidad de cartas naturales que de Jokers, cumpliendo fielmente las reglas del Carioca.",
             type: "improvement",
         },
         {
-            title: "Control de Bajada Estricto",
-            description: "En la bajada inicial, ahora solo se permite bajar exactamente lo que pide el contrato, evitando el uso de grupos adicionales inválidos.",
-            type: "improvement",
-        },
-        {
-            title: "IA de Bots Optimizada",
-            description: "Los bots ahora son más inteligentes: analizan los requisitos exactos de la ronda y juegan de forma estratégica según su dificultad.",
+            title: "Enchife Manual Directo",
+            description: "¡Toma el control! Selecciona una carta y toca directamente cualquier juego de la mesa para añadirla, incluso los juegos de tus oponentes.",
             type: "feature",
         },
         {
-            title: "Detección de Fin de Ronda",
-            description: "Se corrigió el fallo donde la ronda no terminaba. Ahora el juego detecta instantáneamente cuando un jugador llega a 0 cartas al bajarse o añadir a juegos.",
+            title: "Asistente con Botones Rápidos",
+            description: "El asistente ahora permite añadir cartas a la mesa con un solo toque desde la sección '¡Puedes añadir estas a la mesa!'.",
+            type: "feature",
+        },
+        {
+            title: "IA de Bots Fluida",
+            description: "Se corrigieron los bloqueos de los bots y se optimizó su toma de decisiones para turnos mucho más rápidos y estratégicos.",
             type: "fix",
         },
         {
-            title: "Validación de Tríos",
-            description: "Los tríos ahora requieren un mínimo de 2 cartas naturales, evitando jugadas excesivas con Jokers.",
+            title: "Nueva Vista de Juegos",
+            description: "Rediseño completo de la ventana de juegos bajados con una lista vertical organizada, evitando que las cartas se amontonen.",
             type: "improvement",
+        },
+        {
+            title: "Corrección en Robo de Descarte",
+            description: "Robar del pozo de descarte en tu turno ya no cuenta como una compra de 3 cartas, tal como dictan las reglas oficiales.",
+            type: "fix",
         },
     ];
 
@@ -49,7 +54,7 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-white">Novedades</h2>
-                            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">Version 1.1.0 • Enero 2026</p>
+                            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">Version 0.5.0 • Enero 2026</p>
                         </div>
                     </div>
                     <button

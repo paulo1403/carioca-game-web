@@ -27,7 +27,7 @@ import { HandAssistant } from "./HandAssistant";
 import { GameHeader } from "./GameHeader";
 
 // Utils
-import { canStealJoker } from "@/utils/rules";
+import { canStealJoker, canAddToMeld } from "@/utils/rules";
 import { findBestCardMove } from "@/utils/cardMoveHelper";
 
 // Types and interfaces
@@ -191,19 +191,6 @@ export const Board: React.FC<BoardProps> = ({
   const handleCardClick = (cardId: string) => {
     if (!isMyTurn || !hasDrawn) return;
 
-    // Check if card is addable to existing melds
-    if (addableCards.includes(cardId) && !isDownMode) {
-      const card = myPlayer?.hand.find((c) => c.id === cardId);
-      if (card && myPlayer) {
-        const bestMove = findBestCardMove(card, myPlayer, otherPlayers);
-        if (bestMove) {
-          onAddToMeld(cardId, bestMove.targetPlayerId, bestMove.meldIndex);
-          playSuccess();
-          return;
-        }
-      }
-    }
-
     if (isDownMode) {
       const card = myPlayer?.hand.find((c) => c.id === cardId);
       if (!card) return;
@@ -298,6 +285,25 @@ export const Board: React.FC<BoardProps> = ({
     playSuccess();
   };
 
+  const handleMeldClick = (targetPlayerId: string, meldIndex: number) => {
+    if (!isMyTurn || !hasDrawn || !selectedCardId || isDownMode) return;
+
+    const card = myPlayer?.hand.find((c) => c.id === selectedCardId);
+    if (!card) return;
+
+    const player = gameState.players.find((p) => p.id === targetPlayerId);
+    if (!player || !player.melds) return;
+
+    const meld = player.melds[meldIndex];
+    if (canAddToMeld(card, meld)) {
+      onAddToMeld(selectedCardId, targetPlayerId, meldIndex);
+      setSelectedCardId(null);
+      playSuccess();
+    } else {
+      playError();
+    }
+  };
+
   const handleStealJoker = (index: number) => {
     if (index < 0 || index >= stealableJokers.length) return;
 
@@ -306,7 +312,7 @@ export const Board: React.FC<BoardProps> = ({
       canStealJoker(
         card,
         gameState.players.find((p) => p.id === sj.playerId)?.melds?.[
-          sj.meldIndex
+        sj.meldIndex
         ] || [],
         myPlayer.hand,
       ),
@@ -355,6 +361,7 @@ export const Board: React.FC<BoardProps> = ({
                     onExpandToggle={setExpandedPlayerId}
                     gameStatus={gameState.status}
                     onUpdateName={onUpdateName}
+                    onMeldClick={handleMeldClick}
                     className="w-full transform-none text-center"
                   />
                 </div>
@@ -380,6 +387,7 @@ export const Board: React.FC<BoardProps> = ({
               onExpandToggle={setExpandedPlayerId}
               gameStatus={gameState.status}
               onUpdateName={onUpdateName}
+              onMeldClick={handleMeldClick}
             />
           )}
 
@@ -398,6 +406,7 @@ export const Board: React.FC<BoardProps> = ({
               onExpandToggle={setExpandedPlayerId}
               gameStatus={gameState.status}
               onUpdateName={onUpdateName}
+              onMeldClick={handleMeldClick}
             />
           )}
 
@@ -416,6 +425,7 @@ export const Board: React.FC<BoardProps> = ({
               onExpandToggle={setExpandedPlayerId}
               gameStatus={gameState.status}
               onUpdateName={onUpdateName}
+              onMeldClick={handleMeldClick}
             />
           )}
         </div>
@@ -560,6 +570,19 @@ export const Board: React.FC<BoardProps> = ({
             setTempGroup(cards);
             playSelect();
           }}
+          allMelds={gameState.players.flatMap(p => p.melds || [])}
+          onAddToMeld={(cardId) => {
+            if (!myPlayer) return;
+            const card = myPlayer.hand.find(c => c.id === cardId);
+            if (card) {
+              const bestMove = findBestCardMove(card, myPlayer, otherPlayers);
+              if (bestMove) {
+                onAddToMeld(cardId, bestMove.targetPlayerId, bestMove.meldIndex);
+                playSuccess();
+              }
+            }
+          }}
+          haveMelded={haveMelded}
           canAutoDown={
             !!myPlayer &&
             canDownCheck.canDown &&
@@ -593,9 +616,9 @@ export const Board: React.FC<BoardProps> = ({
             canConfirmDown={
               myPlayer
                 ? myPlayer.hand.length -
-                    (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
-                      tempGroup.length) >
-                  0
+                (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
+                  tempGroup.length) >
+                0
                 : false
             }
           />

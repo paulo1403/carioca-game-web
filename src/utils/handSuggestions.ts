@@ -1,4 +1,5 @@
 import { Card, Suit } from "@/types/game";
+import { canAddToMeld } from "./rules";
 
 const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
 
@@ -38,6 +39,7 @@ export type EscalaSuggestion = {
 export type HandSuggestions = {
   nearDifferentSuitGroups: DifferentSuitSuggestion[];
   nearEscalas: EscalaSuggestion[];
+  addableToTable: Card[];
   watch: WatchCard[];
   topDiscardMatchesWatch: boolean;
 };
@@ -45,60 +47,56 @@ export type HandSuggestions = {
 export const getHandSuggestions = (
   hand: Card[],
   topDiscard?: Card,
+  boardMelds: Card[][] = [],
 ): HandSuggestions => {
-  const jokersCount = hand.filter(isJoker).length;
   const nonJokers = hand.filter((c) => !isJoker(c));
 
   // Find groups with different suits (Rondas 1-7 logic)
   const nearDifferentSuitGroups: DifferentSuitSuggestion[] = [];
 
-  // Group by suit
-  const bySuit = new Map<Exclude<Suit, "JOKER">, Card[]>();
+  // Group by VALUE first (because now they must have the same value)
+  const byValue = new Map<number, Card[]>();
   for (const c of nonJokers) {
-    const suit = c.suit as Exclude<Suit, "JOKER">;
-    const cards = bySuit.get(suit) ?? [];
+    const cards = byValue.get(c.value) ?? [];
     cards.push(c);
-    bySuit.set(suit, cards);
+    byValue.set(c.value, cards);
   }
 
-  // Find combinations of 2+ suits with at least 1 card each
-  const suits = Array.from(bySuit.keys());
-
-  // First, find all 2-suit combinations (need 1 joker)
-  for (let i = 0; i < suits.length; i++) {
-    for (let j = i + 1; j < suits.length; j++) {
-      const suit1 = suits[i];
-      const suit2 = suits[j];
-      const cards = [bySuit.get(suit1)![0], bySuit.get(suit2)![0]];
-      const uniqueSuits = 2;
-      const missingCount = 3 - uniqueSuits; // need 1 more
-
-      nearDifferentSuitGroups.push({
-        cards,
-        uniqueSuits,
-        missingCount,
-        missing: { kind: "DIFFERENT_SUIT", suits: [suit1, suit2] },
-      });
+  for (const [value, cardsOfSameValue] of byValue) {
+    // Unique suits for this value
+    const uniqueSuitsMap = new Map<Suit, Card>();
+    for (const c of cardsOfSameValue) {
+      if (!uniqueSuitsMap.has(c.suit)) {
+        uniqueSuitsMap.set(c.suit, c);
+      }
     }
-  }
 
-  // Then find all 3-suit combinations (complete groups)
-  for (let i = 0; i < suits.length; i++) {
-    for (let j = i + 1; j < suits.length; j++) {
-      for (let k = j + 1; k < suits.length; k++) {
-        const suit1 = suits[i];
-        const suit2 = suits[j];
-        const suit3 = suits[k];
-        const cardsThree = [
-          bySuit.get(suit1)![0],
-          bySuit.get(suit2)![0],
-          bySuit.get(suit3)![0],
-        ];
+    const uniqueSuits = Array.from(uniqueSuitsMap.keys());
+    const uniqueCards = Array.from(uniqueSuitsMap.values());
+    const jokers = hand.filter(isJoker);
+    let availableJokers = [...jokers];
+
+    if (uniqueCards.length >= 2 || (uniqueCards.length === 1 && availableJokers.length >= 2)) {
+      // Logic for Carioca: a group needs at least 3 cards total and Natural >= Jokers
+      // We check if we can reach 3 cards with available jokers
+      const naturalCount = uniqueCards.length;
+      let usedJokers = 0;
+
+      // If we have 2 natural, we can use 1 joker to make 3 (valid: 2 > 1)
+      // If we have 2 natural, we can use 2 jokers to make 4 (valid: 2 == 2)
+      // If we have 1 natural, we cannot make a valid 3+ group (needs at least 2 natural to use 1 joker)
+
+      const potentialTotal = naturalCount + availableJokers.length;
+      if (potentialTotal >= 3 && naturalCount >= Math.ceil(3 / 2)) {
+        // It's a valid potential group
+        const missingForThree = Math.max(0, 3 - naturalCount);
+        const totalValidWithJokers = naturalCount + Math.min(availableJokers.length, naturalCount);
+
         nearDifferentSuitGroups.push({
-          cards: cardsThree,
-          uniqueSuits: 3,
-          missingCount: 0,
-          missing: { kind: "DIFFERENT_SUIT", suits: [suit1, suit2, suit3] },
+          cards: [...uniqueCards, ...availableJokers.slice(0, Math.min(availableJokers.length, naturalCount))],
+          uniqueSuits: naturalCount,
+          missingCount: totalValidWithJokers >= 3 ? 0 : 3 - naturalCount,
+          missing: { kind: "DIFFERENT_SUIT", suits: uniqueSuits },
         });
       }
     }
@@ -170,9 +168,20 @@ export const getHandSuggestions = (
     });
   }
 
+  // Find cards addable to table
+  const addableToTable: Card[] = [];
+  if (boardMelds.length > 0) {
+    for (const card of hand) {
+      if (boardMelds.some(meld => canAddToMeld(card, meld))) {
+        addableToTable.push(card);
+      }
+    }
+  }
+
   return {
     nearDifferentSuitGroups: nearDifferentSuitGroups.slice(0, 6),
     nearEscalas: nearEscalas.slice(0, 3),
+    addableToTable,
     watch,
     topDiscardMatchesWatch: watch.length > 0,
   };
