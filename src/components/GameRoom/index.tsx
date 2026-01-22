@@ -10,6 +10,9 @@ import { useGameState } from "@/hooks/game/useGameState";
 import { useGameActions } from "@/hooks/game/useGameActions";
 import { useGameLobby } from "@/hooks/game/useGameLobby";
 import { useMyPlayerId } from "@/hooks/game/useMyPlayerId";
+import { Toaster } from "@/components/Toaster";
+import { Modal } from "@/components/Modal";
+
 
 interface GameRoomProps {
   roomId: string;
@@ -255,6 +258,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
       async () => {
         try {
           await lobbyActions.kickPlayer.mutateAsync(playerIdToKick);
+          closeModal();
           playClick();
         } catch {
           // Error handling already done in hook
@@ -479,53 +483,66 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     (isMyTurn && gameState.status === "PLAYING" && me && me.hasDrawn);
 
   // Render appropriate view based on game status
-  if (gameState.status === "WAITING") {
-    return (
-      <GameLobby
-        gameState={gameState}
-        roomId={roomId}
-        myPlayerId={myPlayerId}
-        isJoining={isJoining}
-        isAddingBot={isAddingBot}
-        playerName={playerName}
-        isCopied={isCopied}
-        isRoomIdCopied={isRoomIdCopied}
-        onJoin={handleJoin}
-        onAddBot={handleAddBot}
-        onKickPlayer={handleKickPlayer}
-        onStartGame={handleStartGame}
-        onLeaveGame={handleLeaveGame}
-        onCopyInviteLink={copyInviteLink}
-        onCopyRoomId={copyRoomId}
-        modalConfig={modalConfig}
-        onCloseModal={closeModal}
-      />
-    );
-  }
-
   return (
-    <GameBoard
-      gameState={gameState}
-      myPlayerId={myPlayerId!}
-      roomId={roomId}
-      hasDrawn={hasDrawn ?? false}
-      modalConfig={modalConfig}
-      roundWinnerModal={roundWinnerModal}
-      reshuffleBanner={reshuffleBanner}
-      onCloseModal={closeModal}
-      onCloseRoundWinner={closeRoundWinner}
-      onCloseReshuffleBanner={closeReshuffleBanner}
-      onDrawDeck={handleDrawDeck}
-      onDrawDiscard={handleDrawDiscard}
-      onDiscard={handleDiscard}
-      onDown={handleGoDown}
-      onAddToMeld={handleAddToMeld}
-      onStealJoker={handleStealJoker}
-      onReadyForNextRound={handleReadyForNextRound}
-      onStartNextRound={handleStartNextRound}
-      onEndGame={handleEndGame}
-      onSkipBotTurn={handleSkipBotTurn}
-      onUpdateName={handleUpdateName}
-    />
+    <div className="relative">
+      <Toaster />
+
+      {/* General Modal */}
+      <Modal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        onClose={closeModal}
+        onConfirm={modalConfig.onConfirm}
+        type={modalConfig.type}
+      >
+        {modalConfig.message}
+      </Modal>
+
+      {gameState.status === "WAITING" ? (
+        <GameLobby
+          gameState={gameState}
+          roomId={roomId}
+          myPlayerId={myPlayerId}
+          isJoining={isJoining}
+          isAddingBot={isAddingBot}
+          playerName={playerName}
+          isCopied={isCopied}
+          isRoomIdCopied={isRoomIdCopied}
+          onJoin={handleJoin}
+          onAddBot={handleAddBot}
+          onKickPlayer={handleKickPlayer}
+          onStartGame={handleStartGame}
+          onLeaveGame={handleLeaveGame}
+          onCopyInviteLink={copyInviteLink}
+          onCopyRoomId={copyRoomId}
+          modalConfig={modalConfig}
+          onCloseModal={closeModal}
+        />
+      ) : (
+        <GameBoard
+          gameState={gameState}
+          myPlayerId={myPlayerId!}
+          roomId={roomId}
+          hasDrawn={hasDrawn ?? false}
+          modalConfig={modalConfig}
+          roundWinnerModal={roundWinnerModal}
+          reshuffleBanner={reshuffleBanner}
+          onCloseModal={closeModal}
+          onCloseRoundWinner={closeRoundWinner}
+          onCloseReshuffleBanner={closeReshuffleBanner}
+          onDrawDeck={handleDrawDeck}
+          onDrawDiscard={handleDrawDiscard}
+          onDiscard={handleDiscard}
+          onDown={handleGoDown}
+          onAddToMeld={handleAddToMeld}
+          onStealJoker={handleStealJoker}
+          onReadyForNextRound={handleReadyForNextRound}
+          onStartNextRound={handleStartNextRound}
+          onEndGame={handleEndGame}
+          onSkipBotTurn={handleSkipBotTurn}
+          onUpdateName={handleUpdateName}
+        />
+      )}
+    </div>
   );
 };

@@ -12,28 +12,28 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
 
     const updates = [
         {
-            title: "Privacidad de Puntajes",
-            description: "Ahora los puntajes de los oponentes se mantienen ocultos mientras la ronda está en juego (Status: ???) para aumentar el suspenso.",
-            type: "feature",
-        },
-        {
-            title: "Control de Compras Dinámico",
-            description: "Se ha refinado la ventana de compra. Solo se puede comprar cartas del pozo antes de que el jugador del turno robe su carta.",
+            title: "Refuerzo de Reglas de Carioca",
+            description: "Se han blindado las validaciones: las Escaleras ahora requieren estrictamente el mismo palo y ser consecutivas (sin saltos).",
             type: "improvement",
         },
         {
-            title: "Tabla de Resultados Detallada",
-            description: "Al finalizar la partida, se mostrará una tabla con el desglose de puntajes de cada jugador por cada una de las 8 rondas.",
+            title: "Control de Bajada Estricto",
+            description: "En la bajada inicial, ahora solo se permite bajar exactamente lo que pide el contrato, evitando el uso de grupos adicionales inválidos.",
+            type: "improvement",
+        },
+        {
+            title: "IA de Bots Optimizada",
+            description: "Los bots ahora son más inteligentes: analizan los requisitos exactos de la ronda y juegan de forma estratégica según su dificultad.",
             type: "feature",
         },
         {
-            title: "Gestión de Identidad",
-            description: "¡Ahora puedes cambiar tu nombre durante la partida! Solo haz clic en el icono de edición junto a tu nombre en tu medalla de jugador.",
-            type: "feature",
+            title: "Detección de Fin de Ronda",
+            description: "Se corrigió el fallo donde la ronda no terminaba. Ahora el juego detecta instantáneamente cuando un jugador llega a 0 cartas al bajarse o añadir a juegos.",
+            type: "fix",
         },
         {
-            title: "Sincronización de Contratos",
-            description: "Se han actualizado y verificado todas las reglas de contratos para asegurar que coincidan perfectamente con las reglas oficiales.",
+            title: "Validación de Tríos",
+            description: "Los tríos ahora requieren un mínimo de 2 cartas naturales, evitando jugadas excesivas con Jokers.",
             type: "improvement",
         },
     ];

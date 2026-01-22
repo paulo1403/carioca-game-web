@@ -4,8 +4,6 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { GameState } from "@/types/game";
 import { Board } from "@/components/Board";
-import { Toaster } from "@/components/Toaster";
-import { Modal } from "@/components/Modal";
 import { ResultsModal } from "@/components/ResultsModal";
 import { Shuffle, Trophy, Star, Users, Clock, Bot, User } from "lucide-react";
 
@@ -102,7 +100,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <div className="relative">
-      <Toaster />
+
 
       {/* Reshuffle Banner */}
       {reshuffleBanner && (
@@ -135,16 +133,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
-      {/* General Modal */}
-      <Modal
-        isOpen={modalConfig.isOpen}
-        title={modalConfig.title}
-        onClose={onCloseModal}
-        onConfirm={modalConfig.onConfirm}
-        type={modalConfig.type}
-      >
-        {modalConfig.message}
-      </Modal>
+
+
 
       {/* Round Winner Modal */}
       {roundWinnerModal.isOpen && (

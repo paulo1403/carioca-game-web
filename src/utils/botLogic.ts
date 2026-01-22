@@ -6,19 +6,22 @@ import {
   canStealJoker,
   getCardPoints,
   calculateHandPoints,
+  isTrio,
+  isEscala,
 } from "@/utils/rules";
+import { ROUND_CONTRACTS_DATA } from "@/types/game";
 
 /**
  * Represents a move the bot wants to make
  */
 interface BotMove {
   action:
-    | "DRAW_DECK"
-    | "DRAW_DISCARD"
-    | "DOWN"
-    | "ADD_TO_MELD"
-    | "STEAL_JOKER"
-    | "DISCARD";
+  | "DRAW_DECK"
+  | "DRAW_DISCARD"
+  | "DOWN"
+  | "ADD_TO_MELD"
+  | "STEAL_JOKER"
+  | "DISCARD";
   payload?: Record<string, unknown>;
 }
 
@@ -436,68 +439,47 @@ const findDownMove = (
 
   if (possibleGroups.length === 0) return null;
 
-  // EASY difficulty: Be conservative - only down if perfect match
-  if (difficulty === "EASY") {
-    // Only down if we have exactly matching groups (not trying harder)
-    const strictGroups = possibleGroups.filter((g) => {
-      // Must be exact trio (3) or exact escala (4+)
-      if (g.type === "TRIO") return g.cards.length === 3;
-      return g.cards.length >= 4;
-    });
+  // IMPORTANT: Filter possibleGroups to match EXACTLY what the contract needs.
+  // The bot should NOT try to put down more than the contract requires in the initial DOWN.
+  const contractGroups: Card[][] = [];
+  let triosNeeded = requirements.trios;
+  let escalasNeeded = requirements.escalas;
 
-    if (strictGroups.length === 0) return null;
-
-    const groupCards = strictGroups.map((g) => g.cards);
-    const validation = validateContract(groupCards, round);
-
-    if (!validation.valid) {
-      return null;
+  // Prioritize escalas as they are harder to form
+  if (escalasNeeded > 0) {
+    const escalas = possibleGroups.filter(g => g.type === "ESCALA");
+    for (let i = 0; i < Math.min(escalas.length, escalasNeeded); i++) {
+      contractGroups.push(escalas[i].cards);
     }
-
-    return {
-      action: "DOWN",
-      payload: { groups: groupCards },
-    };
+    escalasNeeded -= contractGroups.length;
   }
 
-  // MEDIUM/HARD: Validate against contract
-  const groupCards = possibleGroups.map((g) => g.cards);
-  const validation = validateContract(groupCards, round);
-
-  if (!validation.valid) {
-    return null;
-  }
-
-  // For HARD: be aggressive - if close, try it
-  if (difficulty === "HARD") {
-    // Check competitive position - if leader is about to win, go down ASAP
-    const competitiveAnalysis = analyzeCompetitivePosition(gameState, bot.id);
-
-    if (competitiveAnalysis.hasLeader && competitiveAnalysis.leaderAnalysis) {
-      if (competitiveAnalysis.hasLeader) {
-        console.log(
-          `[Bot] HARD difficulty: Going down aggressively to pressure leader`,
-        );
-        return {
-          action: "DOWN",
-          payload: { groups: groupCards },
-        };
+  if (triosNeeded > 0) {
+    const trios = possibleGroups.filter(g => g.type === "TRIO");
+    // Ensure we don't reuse cards already picked for escalas
+    const usedCardIds = new Set(contractGroups.flat().map(c => c.id));
+    let triosAdded = 0;
+    for (const trio of trios) {
+      if (triosAdded >= triosNeeded) break;
+      if (trio.cards.every(c => !usedCardIds.has(c.id))) {
+        contractGroups.push(trio.cards);
+        trio.cards.forEach(c => usedCardIds.add(c.id));
+        triosAdded++;
       }
     }
-
-    // Try to down as soon as possible (don't wait for perfect hand)
-    if (!hasPlayerMelded(bot) && groupCards.length > 0) {
-      console.log(`[Bot] HARD difficulty going down aggressively`);
-      return {
-        action: "DOWN",
-        payload: { groups: groupCards },
-      };
-    }
+    triosNeeded -= triosAdded;
   }
+
+  // If we couldn't fulfill the contract, we can't go down
+  if (triosNeeded > 0 || escalasNeeded > 0) return null;
+
+  const validation = validateContract(contractGroups, round);
+
+  if (!validation.valid) return null;
 
   return {
     action: "DOWN",
-    payload: { groups: groupCards },
+    payload: { groups: contractGroups },
   };
 };
 
@@ -579,28 +561,11 @@ const findAddToMeldMove = (
  * Find additional groups the bot can put down (after initial down)
  */
 const findAdditionalDownMove = (
-  gameState: GameState,
-  bot: Player,
-  difficulty: BotDifficulty,
+  _gameState: GameState,
+  _bot: Player,
+  _difficulty: BotDifficulty,
 ): BotMove | null => {
-  const hand = bot.hand;
-
-  // Find trios or escalas in hand
-  const possibleGroups = findGroupCombinations(hand, -1, difficulty); // -1 means any valid group
-
-  if (possibleGroups.length > 0) {
-    const groupCards = [possibleGroups[0].cards];
-
-    // Validate with additional down rules
-    const validation = validateAdditionalDown(groupCards);
-    if (validation.valid) {
-      return {
-        action: "DOWN",
-        payload: { groups: groupCards },
-      };
-    }
-  }
-
+  // Disabled as per user request to only use main cards (contract)
   return null;
 };
 
@@ -698,20 +663,7 @@ const getRoundRequirements = (
   trioSize: number;
   escalaSize: number;
 } | null => {
-  const requirements: Record<
-    number,
-    { trios: number; escalas: number; trioSize: number; escalaSize: number }
-  > = {
-    1: { trios: 1, escalas: 0, trioSize: 3, escalaSize: 0 },
-    2: { trios: 2, escalas: 0, trioSize: 3, escalaSize: 0 },
-    3: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 4 },
-    4: { trios: 0, escalas: 2, trioSize: 0, escalaSize: 4 },
-    5: { trios: 1, escalas: 0, trioSize: 5, escalaSize: 0 },
-    6: { trios: 2, escalas: 0, trioSize: 5, escalaSize: 0 },
-    7: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 6 },
-    8: { trios: 0, escalas: 1, trioSize: 0, escalaSize: 7 },
-  };
-  return requirements[round] || null;
+  return ROUND_CONTRACTS_DATA[round] || null;
 };
 
 /**
@@ -808,7 +760,7 @@ const countMatchingValues = (hand: Card[], value: number): number => {
 /**
  * Find all possible trios in hand
  */
-const findTrios = (hand: Card[]): CardGroup[] => {
+const findTrios = (hand: Card[], minSize: number = 3): CardGroup[] => {
   const groups: CardGroup[] = [];
   const usedIds = new Set<string>();
 
@@ -820,13 +772,25 @@ const findTrios = (hand: Card[]): CardGroup[] => {
     byValue[c.value].push(c);
   });
 
-  // Find natural trios
+  // Count jokers
+  const jokers = hand.filter((c) => c.suit === "JOKER" || c.value === 0);
+  let availableJokers = [...jokers];
+
+  // Find trios using values first
   for (const value in byValue) {
     const cards = byValue[value];
-    if (cards.length >= 3) {
-      const triCards = cards.slice(0, 3);
-      groups.push({ cards: triCards, type: "TRIO" });
-      triCards.forEach((c) => usedIds.add(c.id));
+    if (cards.length >= 2) { // At least a pair can become a trio with a joker
+      if (cards.length >= minSize) {
+        // Natural trio
+        const triCards = cards.slice(0, minSize);
+        groups.push({ cards: triCards, type: "TRIO" });
+      } else if (cards.length + availableJokers.length >= minSize) {
+        // Trio with jokers
+        const neededJokers = minSize - cards.length;
+        const trioWithJokers = [...cards, ...availableJokers.slice(0, neededJokers)];
+        groups.push({ cards: trioWithJokers, type: "TRIO" });
+        // availableJokers.splice(0, neededJokers); // Don't consume yet, combinations are complex
+      }
     }
   }
 
@@ -836,10 +800,11 @@ const findTrios = (hand: Card[]): CardGroup[] => {
 /**
  * Find all possible escalas in hand
  */
-const findEscalas = (hand: Card[]): CardGroup[] => {
+const findEscalas = (hand: Card[], minSize: number = 4): CardGroup[] => {
   const groups: CardGroup[] = [];
 
-  // Group by suit
+  // Use the robust utility from rules
+  // Simple scan for now, but respecting minSize
   const bySuit: Record<string, Card[]> = {};
   hand.forEach((c) => {
     if (c.suit === "JOKER" || c.value === 0) return;
@@ -847,16 +812,15 @@ const findEscalas = (hand: Card[]): CardGroup[] => {
     bySuit[c.suit].push(c);
   });
 
-  // Find escalas for each suit
   for (const suit in bySuit) {
     const cards = bySuit[suit].sort((a, b) => a.value - b.value);
 
-    // Try to find sequences of 4+
+    // Instead of custom logic, try every sub-sequence and validate with rules.isEscala
     for (let i = 0; i < cards.length; i++) {
-      for (let len = 4; len <= cards.length - i; len++) {
-        const sequence = cards.slice(i, i + len);
-        if (isSequenceValid(sequence)) {
-          groups.push({ cards: sequence, type: "ESCALA" });
+      for (let len = minSize; len <= cards.length - i; len++) {
+        const potential = cards.slice(i, i + len);
+        if (isEscala(potential, minSize)) {
+          groups.push({ cards: potential, type: "ESCALA" });
         }
       }
     }
@@ -865,22 +829,6 @@ const findEscalas = (hand: Card[]): CardGroup[] => {
   return groups;
 };
 
-/**
- * Check if a sequence of cards forms a valid escala
- */
-const isSequenceValid = (cards: Card[]): boolean => {
-  if (cards.length < 4) return false;
-
-  const values = cards.map((c) => c.value).sort((a, b) => a - b);
-
-  // Check for gaps
-  let gaps = 0;
-  for (let i = 0; i < values.length - 1; i++) {
-    gaps += values[i + 1] - values[i] - 1;
-  }
-
-  return gaps === 0; // No gaps without jokers
-};
 
 /**
  * Find valid group combinations based on difficulty and round
@@ -891,60 +839,19 @@ const findGroupCombinations = (
   difficulty: BotDifficulty,
 ): CardGroup[] => {
   if (round === -1) {
-    // Any valid group for additional down
-    const trios = findTrios(hand);
-    const escalas = findEscalas(hand);
-    return [...trios, ...escalas];
+    // Additional down - in standard rules, this might be disabled
+    // For now returning empty to prevent the bot from creating new melds after going down
+    // which aligns with "solo puede bajar con cartas principales"
+    return [];
   }
 
-  // For specific rounds, prefer appropriate group types
   const requirements = getRoundRequirements(round);
   if (!requirements) return [];
 
-  let groups: CardGroup[] = [];
+  const trios = findTrios(hand, requirements.trioSize);
+  const escalas = findEscalas(hand, requirements.escalaSize);
 
-  // EASY: Only find perfect groups
-  if (difficulty === "EASY") {
-    if (requirements.escalas > 0) {
-      groups = findEscalas(hand).filter((g) => g.cards.length >= 4);
-    } else {
-      groups = findTrios(hand).filter((g) => g.cards.length === 3);
-    }
-    return groups;
-  }
-
-  // MEDIUM: Find standard groups
-  if (requirements.escalas > 0) {
-    groups = findEscalas(hand).filter((g) => g.cards.length >= 4);
-  } else {
-    groups = findTrios(hand).filter((g) => g.cards.length >= 3);
-  }
-
-  // HARD: Be more aggressive - find larger groups to get bonus points
-  if (difficulty === "HARD") {
-    // Prefer larger groups (5+ instead of 3)
-    const largeGroups = groups.filter((g) => g.cards.length >= 5);
-    if (largeGroups.length > 0) {
-      return largeGroups;
-    }
-
-    // Also look for combinations of trios and escalas for required contracts
-    if (requirements.trios > 1) {
-      const trios = findTrios(hand).filter((g) => g.cards.length >= 3);
-      if (trios.length >= requirements.trios) {
-        return trios.slice(0, requirements.trios);
-      }
-    }
-
-    if (requirements.escalas > 1) {
-      const escalas = findEscalas(hand).filter((g) => g.cards.length >= 4);
-      if (escalas.length >= requirements.escalas) {
-        return escalas.slice(0, requirements.escalas);
-      }
-    }
-  }
-
-  return groups;
+  return [...trios, ...escalas];
 };
 
 /**

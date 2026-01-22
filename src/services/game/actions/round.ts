@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { Player } from "@/types/game";
+import { Player, Card } from "@/types/game";
 import { shuffleDeck, createDeck } from "@/utils/deck";
+import { calculateHandPoints } from "@/utils/rules";
+import { autoReadyBots } from "../botActions";
 
 export async function handleReadyForNextRound(session: any, playerId: string, players: Player[]) {
     const readyPlayers = JSON.parse(session.readyForNextRound || "[]") as string[];
@@ -19,6 +21,7 @@ export async function handleReadyForNextRound(session: any, playerId: string, pl
 
     return { success: true };
 }
+
 
 export async function handleStartNextRound(session: any, playerId: string, players: Player[]) {
     if (session.creatorId !== playerId) return { success: false, error: "Only host can start", status: 403 };
@@ -58,4 +61,64 @@ export async function handleStartNextRound(session: any, playerId: string, playe
     ]);
 
     return { success: true, gameStatus: "PLAYING", nextRound };
+}
+
+export async function finishRound(
+    session: any,
+    players: Player[],
+    winnerId: string,
+    discardPile: Card[],
+    description?: string
+) {
+    const winner = players.find(p => p.id === winnerId);
+
+    players.forEach((p) => {
+        const handPoints = calculateHandPoints(p.hand);
+        p.score = (p.score || 0) + handPoints;
+        p.roundScores.push(p.id === winnerId ? 0 : handPoints);
+        p.roundBuys.push(p.buysUsed);
+    });
+
+    const isGameOver = session.currentRound >= 8;
+
+    if (isGameOver) {
+        await prisma.gameSession.update({
+            where: { id: session.id },
+            data: {
+                status: "FINISHED",
+                discardPile: JSON.stringify(discardPile),
+            },
+        });
+    } else {
+        await prisma.gameSession.update({
+            where: { id: session.id },
+            data: {
+                status: "ROUND_ENDED",
+                readyForNextRound: "[]",
+                discardPile: JSON.stringify(discardPile),
+                lastAction: JSON.stringify({
+                    playerId: "SYSTEM",
+                    type: "ROUND_ENDED",
+                    description: description || `¡${winner?.name || 'Alguien'} ganó la ronda!`,
+                    timestamp: Date.now(),
+                }),
+            },
+        });
+    }
+
+    const playerUpdates = players.map((p) =>
+        prisma.player.update({
+            where: { id: p.id },
+            data: {
+                score: p.score,
+                hand: JSON.stringify(p.hand),
+                boughtCards: "[]",
+                roundScores: JSON.stringify(p.roundScores),
+                roundBuys: JSON.stringify(p.roundBuys),
+            },
+        })
+    );
+    await Promise.all(playerUpdates);
+    await autoReadyBots(session.id);
+    return { success: true, gameStatus: isGameOver ? "FINISHED" : "ROUND_ENDED" };
 }

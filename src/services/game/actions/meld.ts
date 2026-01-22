@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, Player } from "@/types/game";
 import { validateContract, validateAdditionalDown, canAddToMeld } from "@/utils/rules";
 import { autoReadyBots } from "../botActions";
+import { finishRound } from "./round";
 
 export async function handleDown(
     session: any,
@@ -25,6 +26,10 @@ export async function handleDown(
 
     if (!currentPlayer.melds) currentPlayer.melds = [];
     currentPlayer.melds.push(...groups);
+
+    if (currentPlayer.hand.length === 0) {
+        return await finishRound(session, players, playerId, discardPile, `¡${currentPlayer.name} se bajó y ganó la ronda!`);
+    }
 
     await prisma.player.update({
         where: { id: playerId },
@@ -91,6 +96,13 @@ export async function handleAddToMeld(
             },
         }),
     ]);
+
+    if (currentPlayer.hand.length === 0) {
+        // We need the latest discard pile to finish the round. 
+        // handleAddToMeld doesn't usually change discard pile, but we need to pass it.
+        const discardPile = JSON.parse(session.discardPile);
+        return await finishRound(session, players, playerId, discardPile, `¡${currentPlayer.name} puso su última carta y ganó la ronda!`);
+    }
 
     return { success: true };
 }

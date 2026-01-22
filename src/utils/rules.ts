@@ -10,16 +10,18 @@ export const isTrio = (cards: Card[], minLength: number = 3): boolean => {
 
   // Check if all non-jokers have the same value
   const firstValue = nonJokers[0].value;
+  // In Carioca, you can't have a Trio of different values unless they are Jokers.
   if (!nonJokers.every((c) => c.value === firstValue)) return false;
 
-  // Count total cards of the same value (non-jokers + jokers as wildcards)
-  const totalCardsOfValue = nonJokers.length + jokers.length;
-  return totalCardsOfValue >= minLength;
+  // In Carioca, you usually need more natural cards than jokers in a trio? 
+  // Standard rule: at least 2 natural cards for a trio of 3.
+  if (nonJokers.length < 2 && cards.length >= 3) return false;
+
+  return true;
 };
 
 export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   if (cards.length < minLength) return false;
-  // Maximum length of a straight is 13 (no repeating values)
   if (cards.length > 13) return false;
 
   const nonJokers = cards.filter((c) => c.suit !== "JOKER" && c.value !== 0);
@@ -31,36 +33,28 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   const firstSuit = nonJokers[0].suit;
   if (!nonJokers.every((c) => c.suit === firstSuit)) return false;
 
-  // Check for duplicates
-  const values = nonJokers.map((c) => c.value);
+  // Values logic (Ace can be 1 or 14 for sequence purposes)
+  const values = nonJokers.map((c) => c.value).sort((a, b) => a - b);
   if (new Set(values).size !== values.length) return false;
 
-  if (nonJokers.length === 1) return true;
+  // Linear check (Ace-Low: 1, 2, 3... or Ace-High: ...Q, K, A)
+  // Try Ace as 1
+  const isLinearSequence = (vals: number[], jokerCount: number) => {
+    const range = vals[vals.length - 1] - vals[0] + 1;
+    const gaps = range - vals.length;
+    return gaps <= jokerCount;
+  };
 
-  // Circular straight logic:
-  // Sort values
-  const sorted = [...values].sort((a, b) => a - b);
+  // Standard Carioca: Ace can be Low (1) or High (after King - let's treat as 14)
+  if (isLinearSequence(values, jokers.length)) return true;
 
-  // Find the largest circular gap between adjacent cards
-  let maxGap = 0;
-  for (let i = 0; i < sorted.length; i++) {
-    let gap;
-    if (i === sorted.length - 1) {
-      // Gap between last and first card (circular)
-      gap = sorted[0] + 13 - sorted[i];
-    } else {
-      gap = sorted[i + 1] - sorted[i];
-    }
-    if (gap > maxGap) maxGap = gap;
+  // If there's an Ace (1), try it as 14
+  if (values.includes(1)) {
+    const aceHighValues = values.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+    if (isLinearSequence(aceHighValues, jokers.length)) return true;
   }
 
-  // The length of the smallest straight that contains all these cards is 13 - maxGap + 1
-  const minStraightLength = 13 - maxGap + 1;
-
-  // Count total cards (non-jokers + jokers as wildcards for gaps)
-  const totalCards = nonJokers.length + jokers.length;
-
-  return minStraightLength <= totalCards;
+  return false;
 };
 
 export const validateContract = (
@@ -72,15 +66,21 @@ export const validateContract = (
     return { valid: false, error: "Ronda desconocida o contrato no válido." };
   }
 
-  // Create a copy of groups to process
+  // Carioca Rule: On the first "down", you should ONLY be able to lower
+  // what the contract requires. No extra groups allowed yet.
+  if (groups.length > (reqs.trios + reqs.escalas)) {
+    return {
+      valid: false,
+      error: `Solo puedes bajar exactamente lo que pide el contrato (${reqs.trios} tríos y ${reqs.escalas} escalas).`
+    };
+  }
+
   let remainingGroups = [...groups];
   let requiredTrios = reqs.trios;
   let requiredEscalas = reqs.escalas;
-
-  // Track which groups were used to fulfill which part of the contract
   const usedIndices = new Set<number>();
 
-  // 1. Try to fulfill Escalas first (usually more restrictive)
+  // 1. Fulfill Escalas
   if (requiredEscalas > 0) {
     for (let i = 0; i < remainingGroups.length; i++) {
       if (isEscala(remainingGroups[i], reqs.escalaSize)) {
@@ -91,7 +91,7 @@ export const validateContract = (
     }
   }
 
-  // 2. Try to fulfill Trios with remaining groups
+  // 2. Fulfill Trios
   if (requiredTrios > 0) {
     for (let i = 0; i < remainingGroups.length; i++) {
       if (usedIndices.has(i)) continue;
@@ -103,7 +103,6 @@ export const validateContract = (
     }
   }
 
-  // Check if minimum requirements reached
   if (requiredTrios > 0 || requiredEscalas > 0) {
     const errorMsg = [];
     if (requiredTrios > 0) errorMsg.push(`${requiredTrios} trío(s) de ${reqs.trioSize}+`);
@@ -114,15 +113,12 @@ export const validateContract = (
     };
   }
 
-  // 3. All additional groups must be valid (at least trio/escala of 3)
-  for (let i = 0; i < remainingGroups.length; i++) {
-    if (usedIndices.has(i)) continue;
-    if (!isTrio(remainingGroups[i], 3) && !isEscala(remainingGroups[i], 3)) {
-      return {
-        valid: false,
-        error: `El grupo adicional ${i + 1} no es válido.`,
-      };
-    }
+  // Check if there are any unused groups (shouldn't happen with the length check above, but for safety)
+  if (usedIndices.size !== groups.length) {
+    return {
+      valid: false,
+      error: "Uno de los grupos enviados no es válido para cumplir el contrato."
+    };
   }
 
   return { valid: true };
@@ -140,6 +136,7 @@ export const validateAdditionalDown = (
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
+    // In Carioca, additional groups are usually at least 3 cards.
     if (group.length < 3) {
       return {
         valid: false,
@@ -147,10 +144,7 @@ export const validateAdditionalDown = (
       };
     }
 
-    const isValidTrio = isTrio(group, 3);
-    const isValidEscala = isEscala(group, 3);
-
-    if (!isValidTrio && !isValidEscala) {
+    if (!isTrio(group, 3) && !isEscala(group, 3)) {
       return {
         valid: false,
         error: `El grupo ${i + 1} no es un Trío ni una Escala válida.`,

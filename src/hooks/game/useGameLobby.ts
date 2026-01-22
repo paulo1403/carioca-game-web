@@ -77,11 +77,6 @@ export function useGameLobby({
     },
     onSuccess: () => {
       invalidateGameState();
-      toast({
-        title: "Bot añadido",
-        description: "El bot se unió a la partida",
-        type: "success",
-      });
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -121,11 +116,6 @@ export function useGameLobby({
     },
     onSuccess: () => {
       invalidateGameState();
-      toast({
-        title: "Jugador expulsado",
-        description: "El jugador fue expulsado de la sala",
-        type: "info",
-      });
       onSuccess?.();
     },
     onError: (error: Error) => {

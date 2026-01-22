@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, Player } from "@/types/game";
 import { calculateHandPoints } from "@/utils/rules";
 import { autoReadyBots } from "../botActions";
+import { finishRound } from "./round";
 
 export async function handleDiscard(
     session: any,
@@ -22,55 +23,7 @@ export async function handleDiscard(
     discardPile.push(card);
 
     if (currentPlayer.hand.length === 0) {
-        // End of round logic
-        players.forEach((p) => {
-            const handPoints = calculateHandPoints(p.hand);
-            p.score = (p.score || 0) + handPoints;
-            p.roundScores.push(p.id === currentPlayer.id ? 0 : handPoints);
-            p.roundBuys.push(p.buysUsed);
-        });
-
-        if (session.currentRound >= 8) {
-            // GAME FINISHED
-            await prisma.gameSession.update({
-                where: { id: session.id },
-                data: {
-                    status: "FINISHED",
-                    discardPile: JSON.stringify(discardPile),
-                },
-            });
-            // Further history recording logic...
-        } else {
-            await prisma.gameSession.update({
-                where: { id: session.id },
-                data: {
-                    status: "ROUND_ENDED",
-                    readyForNextRound: "[]",
-                    lastAction: JSON.stringify({
-                        playerId: "SYSTEM",
-                        type: "DISCARD",
-                        description: `¡${currentPlayer.name} ganó la ronda!`,
-                        timestamp: Date.now(),
-                    }),
-                },
-            });
-        }
-
-        const playerUpdates = players.map((p) =>
-            prisma.player.update({
-                where: { id: p.id },
-                data: {
-                    score: p.score,
-                    hand: JSON.stringify(p.hand),
-                    boughtCards: "[]",
-                    roundScores: JSON.stringify(p.roundScores),
-                    roundBuys: JSON.stringify(p.roundBuys),
-                },
-            })
-        );
-        await Promise.all(playerUpdates);
-        await autoReadyBots(session.id);
-        return { success: true, gameStatus: session.currentRound >= 8 ? "FINISHED" : "ROUND_ENDED" };
+        return await finishRound(session, players, playerId, discardPile);
     }
 
     const direction = session.direction === "clockwise" ? 1 : -1;
