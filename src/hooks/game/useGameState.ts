@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GameState } from "@/types/game";
 import { useEffect, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 interface UseGameStateOptions {
   roomId: string;
@@ -30,6 +31,32 @@ export function useGameState({
 }: UseGameStateOptions) {
   const queryClient = useQueryClient();
 
+  // Suscripción Realtime a cambios en la base de datos
+  useEffect(() => {
+    if (!roomId || !enabled) return;
+
+    const channel = supabase
+      .channel(`game:${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "GameSession",
+          filter: `id=eq.${roomId}`,
+        },
+        () => {
+          // Invalida el cache inmediatamente al detectar un cambio en DB
+          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, enabled, queryClient]);
+
   // Track previous state for notifications
   const prevPlayersRef = useRef<any[]>([]);
   const lastActionTimestampRef = useRef<number>(0);
@@ -51,37 +78,13 @@ export function useGameState({
       return data.gameState as GameState;
     },
     enabled: enabled && !!roomId,
-    // Polling adaptativo basado en estado del juego
-    refetchInterval: (query) => {
-      const state = query.state.data;
-      if (!state) return false;
-
-      // Polling durante el juego activo
-      if (state.status === "PLAYING") {
-        return 3000; // 3 segundos durante juego activo
-      }
-
-      // Polling en lobby - más frecuente para feedback rápido
-      if (state.status === "WAITING") {
-        return 2000; // 2 segundos en lobby
-      }
-
-      // Polling muy lento en estados terminados
-      if (state.status === "ROUND_ENDED") {
-        return 15000; // 15 segundos esperando siguiente ronda
-      }
-
-      if (state.status === "FINISHED") {
-        return false; // Sin polling en juego terminado
-      }
-
-      return false; // Sin polling por defecto
-    },
-    staleTime: 1000, // Considerar datos frescos por 1 segundo
-    gcTime: 5 * 60 * 1000, // Mantener en cache 5 minutos
+    // Polling de seguridad muy lento (heartbeat) ya que usamos Realtime
+    refetchInterval: 60000,
+    staleTime: 1000,
+    gcTime: 5 * 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
-    refetchOnReconnect: true, // Sí refetch al reconectar
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
   });
 
   // Effect para detectar cambios y notificar
@@ -126,14 +129,6 @@ export function useGameState({
           roundBuys: p.roundBuys || [],
         })),
       });
-    }
-
-    // Check if player was kicked
-    if (myPlayerId) {
-      const amIInGame = gameState.players.some((p: any) => p.id === myPlayerId);
-      if (!amIInGame && prevPlayersRef.current.length > 0) {
-        // Player was kicked - handled by parent component
-      }
     }
 
     // Handle game actions and notifications
@@ -198,7 +193,6 @@ export function useGameState({
     onReshuffle,
   ]);
 
-  // Mutation helper para invalidar el cache después de acciones
   const invalidateGameState = () => {
     queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
   };

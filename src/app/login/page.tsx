@@ -2,27 +2,66 @@
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { LucideShieldCheck, LucideGamepad2, Loader2, Mail } from "lucide-react"
+import { LucideShieldCheck, LucideGamepad2, Loader2, Mail, Lock, UserPlus } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
     const router = useRouter()
     const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
 
-    const handleEmailSignIn = async (e: React.FormEvent) => {
+    const handleCredentialsAuth = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email) return;
+        if (!email || !password) return;
         setIsLoading(true);
+
         try {
-            await signIn("nodemailer", {
+            if (isRegistering) {
+                const res = await fetch("/api/auth/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password, name })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Error al registrarse");
+                }
+
+                toast({
+                    title: "¡Éxito!",
+                    description: "Cuenta creada. Iniciando sesión...",
+                    type: "success"
+                });
+            }
+
+            const result = await signIn("credentials", {
                 email,
-                callbackUrl: "/",
-                redirect: false
+                password,
+                redirect: false,
             });
-            // Redirect to custom verify page
-            router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`);
-        } catch (error) {
-            console.error(error);
+
+            if (result?.error) {
+                toast({
+                    title: "Error de autenticación",
+                    description: isRegistering ? "Error al entrar tras el registro." : "Correo o contraseña incorrectos.",
+                    type: "error"
+                });
+            } else {
+                router.push("/");
+                router.refresh();
+            }
+        } catch (error: any) {
+            toast({
+                title: "Atención",
+                description: error.message,
+                type: "error"
+            });
+        } finally {
             setIsLoading(false);
         }
     };
@@ -41,14 +80,28 @@ export default function LoginPage() {
                 </div>
 
                 <h1 className="text-3xl font-bold text-white mb-2 text-center">
-                    ¡Bienvenido!
+                    {isRegistering ? "Crear Cuenta" : "¡Bienvenido!"}
                 </h1>
                 <p className="text-slate-400 mb-8 text-center text-sm">
-                    Ingresa tu email para acceder o crear tu cuenta
+                    {isRegistering
+                        ? "Regístrate para guardar tu progreso"
+                        : "Ingresa para jugar a la Carioca"}
                 </p>
 
                 <div className="w-full space-y-4">
-                    <form onSubmit={handleEmailSignIn} className="flex flex-col gap-3">
+                    <form onSubmit={handleCredentialsAuth} className="flex flex-col gap-3">
+                        {isRegistering && (
+                            <div className="relative group">
+                                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Tu nombre (opcional)"
+                                    className="w-full bg-slate-950/50 border border-slate-700 text-white py-3 pl-11 pr-4 rounded-xl outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-600 text-sm"
+                                />
+                            </div>
+                        )}
                         <div className="relative group">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
                             <input
@@ -60,6 +113,17 @@ export default function LoginPage() {
                                 className="w-full bg-slate-950/50 border border-slate-700 text-white py-3 pl-11 pr-4 rounded-xl outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-600 text-sm"
                             />
                         </div>
+                        <div className="relative group">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Contraseña"
+                                required
+                                className="w-full bg-slate-950/50 border border-slate-700 text-white py-3 pl-11 pr-4 rounded-xl outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-600 text-sm"
+                            />
+                        </div>
                         <button
                             type="submit"
                             disabled={isLoading}
@@ -67,37 +131,23 @@ export default function LoginPage() {
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : isRegistering ? (
+                                "Crear cuenta"
                             ) : (
-                                "Enviar Magic Link"
+                                "Iniciar Sesión"
                             )}
                         </button>
-                        <p className="text-[10px] text-slate-600 text-center">
-                            Te enviaremos un enlace seguro a tu correo
-                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsRegistering(!isRegistering)}
+                            className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors font-medium text-center mt-1"
+                        >
+                            {isRegistering
+                                ? "¿Ya tienes cuenta? Inicia sesión"
+                                : "¿No tienes cuenta? Regístrate aquí"}
+                        </button>
                     </form>
-
-                    <div className="flex items-center gap-4 my-2">
-                        <div className="h-px flex-1 bg-slate-800"></div>
-                        <span className="text-slate-600 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">O continúa con</span>
-                        <div className="h-px flex-1 bg-slate-800"></div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            disabled
-                            className="flex items-center justify-center gap-3 bg-slate-800/20 text-slate-500 font-semibold py-3 px-4 rounded-xl border border-slate-700/30 text-sm cursor-not-allowed"
-                        >
-                            <img src="https://authjs.dev/img/providers/google.svg" className="w-4 h-4 opacity-50" alt="Google" />
-                            Google (WIP)
-                        </button>
-                        <button
-                            disabled
-                            className="flex items-center justify-center gap-3 bg-slate-800/20 text-slate-500 font-semibold py-3 px-4 rounded-xl border border-slate-700/30 text-sm cursor-not-allowed"
-                        >
-                            <img src="https://authjs.dev/img/providers/github.svg" className="w-4 h-4 invert opacity-50" alt="GitHub" />
-                            GitHub (WIP)
-                        </button>
-                    </div>
                 </div>
 
                 <div className="mt-8 flex items-center gap-2 text-slate-600 text-[10px] font-medium uppercase tracking-tight">

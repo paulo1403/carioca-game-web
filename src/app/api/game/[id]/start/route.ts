@@ -70,6 +70,10 @@ export async function POST(
 
     await prisma.$transaction([...updates, updateSession]);
 
+    // Check if the first player is a bot and process its turn
+    const { checkAndProcessBotTurns } = await import("@/services/gameService");
+    await checkAndProcessBotTurns(id);
+
     return NextResponse.json({ success: true });
 
   } catch (error) {

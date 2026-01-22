@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, User, Loader2, Save, Trophy, TrendingUp, Target, Calendar } from "lucide-react"
+import { X, User, Loader2, Save, Trophy, Lock, Key } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 
 interface ProfileModalProps {
     isOpen: boolean
@@ -30,6 +30,7 @@ interface UserStats {
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { data: session, update } = useSession()
     const [name, setName] = useState(session?.user?.name || "")
+    const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [stats, setStats] = useState<UserStats | null>(null)
     const [loadingStats, setLoadingStats] = useState(false)
@@ -50,27 +51,51 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
     const handleSave = async () => {
         if (name.length < 2) {
-            toast.error("El nombre debe tener al menos 2 caracteres")
+            toast({ title: "Atención", description: "El nombre debe tener al menos 2 caracteres", type: "warning" })
             return
         }
 
         setIsLoading(true)
         try {
-            const response = await fetch("/api/user/update", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name }),
-            })
+            // Update Name
+            if (name !== session?.user?.name) {
+                const response = await fetch("/api/user/update", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name }),
+                })
+                if (!response.ok) throw new Error("Error al actualizar nombre")
+            }
 
-            if (!response.ok) throw new Error("Error al actualizar")
+            // Update Password if provided
+            if (password) {
+                if (password.length < 6) {
+                    throw new Error("La contraseña debe tener al menos 6 caracteres")
+                }
+                const passResponse = await fetch("/api/user/set-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password }),
+                })
+                if (!passResponse.ok) throw new Error("Error al actualizar contraseña")
+
+                setPassword("")
+            }
 
             // Update session client-side
-            await update({ ...session, user: { ...session?.user, name } })
+            await update({
+                ...session,
+                user: {
+                    ...session?.user,
+                    name,
+                    hasPassword: password ? true : session?.user?.hasPassword
+                }
+            })
 
-            toast.success("Perfil actualizado")
+            toast({ title: "¡Éxito!", description: "Perfil actualizado correctamente", type: "success" })
             onClose()
-        } catch (error) {
-            toast.error("Hubo un problema al guardar los cambios")
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Hubo un problema al guardar los cambios", type: "error" })
         } finally {
             setIsLoading(false)
         }
@@ -94,7 +119,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                     </button>
                 </div>
 
-                <div className="p-8 space-y-6">
+                <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
                             Nombre Público
@@ -108,6 +133,25 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         />
                         <p className="text-[10px] text-slate-600 ml-1">
                             Este nombre será visible para otros jugadores.
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                            <Lock className="w-3 h-3" />
+                            {session?.user?.hasPassword ? "Cambiar Contraseña" : "Establecer Contraseña"}
+                        </label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Nueva contraseña..."
+                            className="w-full bg-slate-950/50 border border-slate-700 text-white p-4 rounded-xl outline-none focus:border-blue-500 transition-all shadow-inner"
+                        />
+                        <p className="text-[10px] text-slate-600 ml-1">
+                            {session?.user?.hasPassword
+                                ? "Deja en blanco para no cambiarla."
+                                : "Añade una contraseña para no depender de correos."}
                         </p>
                     </div>
 

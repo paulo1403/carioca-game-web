@@ -4,6 +4,11 @@ declare module "next-auth" {
     interface Session {
         user: {
             id: string
+            hasPassword?: boolean
         } & DefaultSession["user"]
+    }
+
+    interface User {
+        hasPassword?: boolean
     }
 }
