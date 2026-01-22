@@ -23,7 +23,10 @@ export const isValidTrio = (cards: Card[]): boolean => {
 };
 
 // Check if a set of cards is a valid Escala (4+ cards of same suit in sequence)
-export const isValidEscala = (cards: Card[], minLength: number = 4): boolean => {
+export const isValidEscala = (
+  cards: Card[],
+  minLength: number = 4,
+): boolean => {
   if (cards.length < minLength) return false;
   if (cards.length > 13) return false;
 
@@ -45,23 +48,30 @@ export const isValidEscala = (cards: Card[], minLength: number = 4): boolean => 
   for (let i = 0; i < sorted.length; i++) {
     let gap;
     if (i === sorted.length - 1) {
-      gap = (sorted[0] + 13) - sorted[i];
+      gap = sorted[0] + 13 - sorted[i];
     } else {
       gap = sorted[i + 1] - sorted[i];
     }
     if (gap > maxGap) maxGap = gap;
   }
 
-  return (13 - maxGap + 1) <= cards.length;
+  return 13 - maxGap + 1 <= cards.length;
 };
 
 export const getContractRequirements = (round: number) => {
-  return ROUND_CONTRACTS_DATA[round] || { trios: 0, escalas: 0, trioSize: 0, escalaSize: 0 };
+  return (
+    ROUND_CONTRACTS_DATA[round] || {
+      differentSuitGroups: 0,
+      escalas: 0,
+      differentSuitSize: 0,
+      escalaSize: 0,
+    }
+  );
 };
 
 // Find all potential groups in a hand
 export const findGroupsInHand = (
-  hand: Card[]
+  hand: Card[],
 ): { trios: Card[][]; escalas: Card[][] } => {
   const trios: Card[][] = [];
   const escalas: Card[][] = [];
@@ -126,7 +136,7 @@ export const findGroupsInHand = (
 export const checkDiscardHint = (
   discardCard: Card | undefined,
   hand: Card[],
-  currentRound: number
+  currentRound: number,
 ): boolean => {
   if (!discardCard) return false;
   const combined = [...hand, discardCard];
@@ -139,7 +149,7 @@ export const checkDiscardHint = (
   const reqs = getContractRequirements(currentRound);
   const { trios, escalas } = findPotentialContractGroups(
     combined,
-    currentRound
+    currentRound,
   );
 
   // If this card helps complete a group we NEED, it's useful.
@@ -148,7 +158,7 @@ export const checkDiscardHint = (
   const inEscala = escalas.some((g) => g.some((c) => c.id === discardCard.id));
 
   // Prioritize based on needs
-  if (reqs.trios > 0 && inTrio) return true;
+  if (reqs.differentSuitGroups > 0 && inTrio) return true;
   if (reqs.escalas > 0 && inEscala) return true;
 
   // If we can go down with it, definitely yes
@@ -161,25 +171,33 @@ export const checkDiscardHint = (
 export const canFulfillContract = (
   hand: Card[],
   round: number,
-  alreadyMelded: boolean = false
+  alreadyMelded: boolean = false,
 ): { canDown: boolean; groups: Card[][] } => {
   if (alreadyMelded) {
     return canAdditionalDown(hand);
   }
 
   const reqs = getContractRequirements(round);
-  const { trios, escalas } = findPotentialContractGroups(hand, round);
+  const { trios: differentSuitGroups, escalas } = findPotentialContractGroups(
+    hand,
+    round,
+  );
 
   // Filter groups by minimum size requirements
-  const validTrios = trios.filter((t) => t.length >= reqs.trioSize);
+  const validDifferentSuitGroups = differentSuitGroups.filter(
+    (g) => g.length >= reqs.differentSuitSize,
+  );
   const validEscalas = escalas.filter((e) => e.length >= reqs.escalaSize);
 
   // Check if we have at least the required number of groups
-  if (validTrios.length >= reqs.trios && validEscalas.length >= reqs.escalas) {
+  if (
+    validDifferentSuitGroups.length >= reqs.differentSuitGroups &&
+    validEscalas.length >= reqs.escalas
+  ) {
     return {
       canDown: true,
       groups: [
-        ...validTrios.slice(0, reqs.trios),
+        ...validDifferentSuitGroups.slice(0, reqs.differentSuitGroups),
         ...validEscalas.slice(0, reqs.escalas),
       ],
     };
@@ -190,53 +208,91 @@ export const canFulfillContract = (
 
 export const findPotentialContractGroups = (
   hand: Card[],
-  round: number
+  round: number,
 ): { trios: Card[][]; escalas: Card[][] } => {
   const reqs = getContractRequirements(round);
-  const usedCardIds = new Set<string>();
-  const jokers = hand.filter(isJoker);
-  let availableJokers = jokers.length;
   const nonJokers = hand.filter((c) => !isJoker(c));
 
-  let foundTrios: Card[][] = [];
+  let foundDifferentSuitGroups: Card[][] = [];
   let foundEscalas: Card[][] = [];
 
-  const findTrios = (targetSize: number) => {
-    const byValue: Record<number, Card[]> = {};
-    nonJokers.forEach((c) => {
-      if (usedCardIds.has(c.id)) return;
-      if (!byValue[c.value]) byValue[c.value] = [];
-      byValue[c.value].push(c);
-    });
-
-    const res: Card[][] = [];
-    Object.values(byValue).forEach((group) => {
-      if (group.length >= targetSize) {
-        res.push(group);
-        group.forEach((c) => usedCardIds.add(c.id));
-      } else if (group.length === targetSize - 1 && availableJokers > 0) {
-        availableJokers--;
-        const joker = jokers[availableJokers];
-        res.push([...group, joker]);
-        group.forEach((c) => usedCardIds.add(c.id));
-        usedCardIds.add(joker.id);
-      }
-    });
-    return res;
-  };
-
-  const findEscalas = (targetSize: number) => {
+  // For rounds 1-7: Find groups with DIFFERENT SUITS
+  if (reqs.differentSuitGroups > 0) {
+    // Group cards by suit
     const bySuit: Record<string, Card[]> = {};
     nonJokers.forEach((c) => {
-      if (usedCardIds.has(c.id)) return;
       if (!bySuit[c.suit]) bySuit[c.suit] = [];
       bySuit[c.suit].push(c);
     });
 
-    const res: Card[][] = [];
+    const suits = Object.keys(bySuit);
+    const targetSuits = reqs.differentSuitSize;
+
+    // Find all combinations of n suits where n = targetSuits
+    if (targetSuits === 3 && suits.length >= 3) {
+      // 3 different suits
+      for (let i = 0; i < suits.length; i++) {
+        for (let j = i + 1; j < suits.length; j++) {
+          for (let k = j + 1; k < suits.length; k++) {
+            const suit1 = suits[i];
+            const suit2 = suits[j];
+            const suit3 = suits[k];
+            const group = [
+              bySuit[suit1][0],
+              bySuit[suit2][0],
+              bySuit[suit3][0],
+            ];
+            foundDifferentSuitGroups.push(group);
+          }
+        }
+      }
+    } else if (targetSuits === 4 && suits.length >= 4) {
+      // 4 different suits
+      for (let i = 0; i < suits.length; i++) {
+        for (let j = i + 1; j < suits.length; j++) {
+          for (let k = j + 1; k < suits.length; k++) {
+            for (let l = k + 1; l < suits.length; l++) {
+              const suit1 = suits[i];
+              const suit2 = suits[j];
+              const suit3 = suits[k];
+              const suit4 = suits[l];
+              const group = [
+                bySuit[suit1][0],
+                bySuit[suit2][0],
+                bySuit[suit3][0],
+                bySuit[suit4][0],
+              ];
+              foundDifferentSuitGroups.push(group);
+            }
+          }
+        }
+      }
+    } else if (targetSuits === 5 && suits.length >= 5) {
+      // 5 different suits - take first 5 suits available
+      const group = suits.slice(0, 5).map((suit) => bySuit[suit][0]);
+      foundDifferentSuitGroups.push(group);
+    } else if (targetSuits === 6 && suits.length >= 6) {
+      // 6 different suits - take first 6 suits available
+      const group = suits.slice(0, 6).map((suit) => bySuit[suit][0]);
+      foundDifferentSuitGroups.push(group);
+    }
+  }
+
+  // For round 8: Find escalas
+  if (reqs.escalas > 0) {
+    const usedCardIds = new Set<string>();
+    const jokers = hand.filter(isJoker);
+    let availableJokers = jokers.length;
+
+    const bySuit: Record<string, Card[]> = {};
+    nonJokers.forEach((c) => {
+      if (!bySuit[c.suit]) bySuit[c.suit] = [];
+      bySuit[c.suit].push(c);
+    });
+
     Object.entries(bySuit).forEach(([suit, suitCards]) => {
       const valuesInSuit = new Map<number, Card>();
-      suitCards.forEach(c => valuesInSuit.set(c.value, c));
+      suitCards.forEach((c) => valuesInSuit.set(c.value, c));
 
       // Try all 13 starting positions
       for (let s = 1; s <= 13; s++) {
@@ -253,20 +309,21 @@ export const findPotentialContractGroups = (
             tempUsedIds.add(card.id);
           } else if (availableJokers - jokersNeeded > 0) {
             jokersNeeded++;
-            // We use a placeholder joker for now
-            currentGroup.push({ id: `TEMP-JOKER-${jokersNeeded}`, suit: 'JOKER', value: 0, displayValue: 'Joker' });
+            currentGroup.push({
+              id: `TEMP-JOKER-${jokersNeeded}`,
+              suit: "JOKER",
+              value: 0,
+              displayValue: "Joker",
+            });
           } else {
             break;
           }
 
-          if (currentGroup.length >= targetSize) {
-            // Found a valid straight!
-            // Realize this straight (use real jokers)
+          if (currentGroup.length >= reqs.escalaSize) {
+            // Found a valid straight
             const realizedGroup: Card[] = [];
-            let jIndex = jokers.length - availableJokers;
-
             for (const c of currentGroup) {
-              if (c.suit === 'JOKER') {
+              if (c.suit === "JOKER") {
                 const realJoker = jokers[jokers.length - availableJokers];
                 realizedGroup.push(realJoker);
                 usedCardIds.add(realJoker.id);
@@ -276,38 +333,24 @@ export const findPotentialContractGroups = (
                 usedCardIds.add(c.id);
               }
             }
-            res.push(realizedGroup);
+            foundEscalas.push(realizedGroup);
 
-            // Re-map suit cards to remove used ones for this suit
-            suitCards = suitCards.filter(c => !usedCardIds.has(c.id));
-            valuesInSuit.clear();
-            suitCards.forEach(c => valuesInSuit.set(c.value, c));
-
-            // Move to next possible straight starting further ahead
-            s = (s + i); // Skip current segment
+            // Move to next possible straight
+            s = s + currentGroup.length - 1;
             break;
           }
         }
       }
     });
-    return res;
-  };
-
-  // Find groups based on round requirements
-  if (reqs.trios > 0) {
-    foundTrios = findTrios(reqs.trioSize);
-  }
-  if (reqs.escalas > 0) {
-    foundEscalas = findEscalas(reqs.escalaSize);
   }
 
-  return { trios: foundTrios, escalas: foundEscalas };
+  return { trios: foundDifferentSuitGroups, escalas: foundEscalas };
 };
 
 export const organizeHandAuto = (
   hand: Card[],
   round: number,
-  alreadyMelded: boolean = false
+  alreadyMelded: boolean = false,
 ): Card[] => {
   const { trios, escalas } = alreadyMelded
     ? findAllValidGroups(hand)
@@ -335,7 +378,7 @@ export const organizeHandAuto = (
 // Suggest a card to discard: prefer cards not in potential groups, then highest value
 // Find all possible valid groups (for additional downs)
 export const findAllValidGroups = (
-  hand: Card[]
+  hand: Card[],
 ): { trios: Card[][]; escalas: Card[][] } => {
   const usedCardIds = new Set<string>();
   const jokers = hand.filter(isJoker);
@@ -376,7 +419,7 @@ export const findAllValidGroups = (
 
   Object.entries(bySuit).forEach(([suit, suitCards]) => {
     const valuesInSuit = new Map<number, Card>();
-    suitCards.forEach(c => valuesInSuit.set(c.value, c));
+    suitCards.forEach((c) => valuesInSuit.set(c.value, c));
 
     // Try all 13 starting positions
     for (let s = 1; s <= 13; s++) {
@@ -391,7 +434,12 @@ export const findAllValidGroups = (
           currentGroup.push(card);
         } else if (availableJokers - jokersNeeded > 0) {
           jokersNeeded++;
-          currentGroup.push({ id: `TEMP-JOKER-${jokersNeeded}`, suit: 'JOKER', value: 0, displayValue: 'Joker' });
+          currentGroup.push({
+            id: `TEMP-JOKER-${jokersNeeded}`,
+            suit: "JOKER",
+            value: 0,
+            displayValue: "Joker",
+          });
         } else {
           break;
         }
@@ -400,17 +448,18 @@ export const findAllValidGroups = (
         if (currentGroup.length >= 3) {
           // If we found a valid one, let's see if we can make it longer
           // but for find all valid groups, we can just take the current one and mark as used
-          // or ideally take the longest possible. 
+          // or ideally take the longest possible.
           // Let's peek ahead to see if next card is also available
           const nextVal = ((s + currentGroup.length - 1) % 13) + 1;
           const nextCard = valuesInSuit.get(nextVal);
           if (nextCard && !usedCardIds.has(nextCard.id)) continue;
-          if (availableJokers - jokersNeeded > 0 && currentGroup.length < 13) continue;
+          if (availableJokers - jokersNeeded > 0 && currentGroup.length < 13)
+            continue;
 
           // Realize the group
           const realizedGroup: Card[] = [];
           for (const c of currentGroup) {
-            if (c.suit === 'JOKER') {
+            if (c.suit === "JOKER") {
               const realJoker = jokers[jokers.length - availableJokers];
               realizedGroup.push(realJoker);
               usedCardIds.add(realJoker.id);
@@ -423,7 +472,7 @@ export const findAllValidGroups = (
           foundEscalas.push(realizedGroup);
 
           // Move s forward
-          s = (s + currentGroup.length - 1);
+          s = s + currentGroup.length - 1;
           break;
         }
       }
@@ -434,7 +483,7 @@ export const findAllValidGroups = (
 };
 
 export const canAdditionalDown = (
-  hand: Card[]
+  hand: Card[],
 ): { canDown: boolean; groups: Card[][] } => {
   const { trios, escalas } = findAllValidGroups(hand);
 

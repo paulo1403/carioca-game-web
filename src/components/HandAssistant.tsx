@@ -18,7 +18,16 @@ interface HandAssistantProps {
   canAutoDown: boolean;
   onAutoDown: () => void;
   disabled?: boolean;
+  currentRound?: number;
 }
+
+const getSuitSymbol = (suit: string) => {
+  if (suit === "HEART") return "♥";
+  if (suit === "DIAMOND") return "♦";
+  if (suit === "CLUB") return "♣";
+  if (suit === "SPADE") return "♠";
+  return "🃏";
+};
 
 export const HandAssistant: React.FC<HandAssistantProps> = ({
   hand,
@@ -30,18 +39,24 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
   canAutoDown,
   onAutoDown,
   disabled,
+  currentRound,
 }) => {
   const data = useMemo(
     () => getHandSuggestions(hand, topDiscard),
-    [hand, topDiscard]
+    [hand, topDiscard],
   );
 
-  const nearTrios = data.nearTrios.slice(0, 3);
-  const nearEscalas = data.nearEscalas.slice(0, 3);
+  const nearDifferentSuitGroups = data.nearDifferentSuitGroups.slice(0, 3);
+  const nearEscalas = data.nearEscalas.slice(0, 2);
   const watch = data.watch.slice(0, 8);
 
   if (disabled) return null;
-  if (nearTrios.length === 0 && nearEscalas.length === 0) return null;
+  if (nearDifferentSuitGroups.length === 0 && nearEscalas.length === 0)
+    return null;
+
+  // Determine which type of groups are relevant for current round
+  const showDifferentSuitGroups = currentRound !== 8;
+  const showEscalas = currentRound === 8;
 
   return (
     <div
@@ -49,7 +64,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
         "w-full max-w-4xl mx-auto mb-3 rounded-2xl border bg-slate-950/35 backdrop-blur-sm px-4 py-3",
         data.topDiscardMatchesWatch
           ? "border-amber-500/40 shadow-lg shadow-amber-500/10"
-          : "border-slate-800"
+          : "border-slate-800",
       )}
     >
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -77,7 +92,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                 "text-xs font-bold px-3 py-1.5 rounded-full border transition-colors",
                 canInteract
                   ? "border-green-500/30 bg-green-500/10 text-green-200 hover:bg-green-500/15"
-                  : "border-slate-700 bg-slate-900/40 text-slate-500"
+                  : "border-slate-700 bg-slate-900/40 text-slate-500",
               )}
               disabled={!canInteract}
               title={
@@ -100,7 +115,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
           </div>
           {watch.map((w, idx) => (
             <span
-              key={`${w.kind}-${"value" in w ? w.value : ""}-${"suit" in w ? w.suit : ""}-${idx}`}
+              key={`${w.kind}-${idx}`}
               className="text-xs font-semibold px-2 py-1 rounded-full border border-slate-700 bg-slate-900/60 text-slate-200"
             >
               {formatWatchCard(w)}
@@ -110,60 +125,117 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
       )}
 
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-            <Layers className="w-4 h-4" />
-            Posibles trios (casi)
-          </div>
-          {nearTrios.length === 0 ? (
-            <div className="text-sm text-slate-500">Sin pares útiles ahora.</div>
-          ) : (
-            <div className="space-y-2">
-              {nearTrios.map((t) => (
-                <button
-                  key={`trio-${t.value}`}
-                  className={cn(
-                    "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
-                    canInteract
-                      ? "text-slate-200 hover:bg-white/5"
-                      : "text-slate-500"
-                  )}
-                  onClick={() => onPrefillDownMode(t.cards)}
-                  disabled={!canInteract}
-                  title={
-                    canInteract
-                      ? "Preseleccionar estas cartas en modo bajarse"
-                      : "Solo disponible en tu turno después de robar"
-                  }
-                >
-                  <span className="font-bold">{t.cards.map(formatCardShort).join(" ")}</span>
-                  <ArrowRight className="w-4 h-4 text-slate-500" />
-                  <span className="text-slate-300">
-                    Falta {formatWatchCard(t.missing)}
-                  </span>
-                </button>
-              ))}
+        {showDifferentSuitGroups && (
+          <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              <Layers className="w-4 h-4" />
+              Grupos con diferentes palos
             </div>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-            <Layers className="w-4 h-4" />
-            Posibles escaleras (casi)
+            {nearDifferentSuitGroups.length === 0 ? (
+              <div className="text-sm text-slate-500">
+                Sin grupos de diferentes palos.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {nearDifferentSuitGroups.map((g, idx) => (
+                  <button
+                    key={`group-${idx}`}
+                    className={cn(
+                      "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
+                      canInteract
+                        ? "text-slate-200 hover:bg-white/5"
+                        : "text-slate-500",
+                    )}
+                    onClick={() => onPrefillDownMode(g.cards)}
+                    disabled={!canInteract}
+                    title={
+                      canInteract
+                        ? "Preseleccionar estas cartas en modo bajarse"
+                        : "Solo disponible en tu turno después de robar"
+                    }
+                  >
+                    <span className="font-bold">
+                      {g.cards.map(formatCardShort).join(" ")}
+                    </span>
+                    {g.missingCount > 0 && (
+                      <>
+                        <ArrowRight className="w-4 h-4 text-slate-500" />
+                        <span className="text-slate-300 text-xs">
+                          +{g.missingCount} palo
+                          {g.missingCount !== 1 ? "s" : ""}
+                        </span>
+                      </>
+                    )}
+                    {g.missingCount === 0 && (
+                      <span className="text-green-400 text-xs font-bold">
+                        ✓ Completo
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {nearEscalas.length === 0 ? (
-            <div className="text-sm text-slate-500">Sin escaleras casi listas.</div>
-          ) : (
+        )}
+
+        {showEscalas && (
+          <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              <Layers className="w-4 h-4" />
+              Escaleras (casi)
+            </div>
+            {nearEscalas.length === 0 ? (
+              <div className="text-sm text-slate-500">
+                Sin escaleras casi listas.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {nearEscalas.map((e, idx) => (
+                  <button
+                    key={`escala-${idx}`}
+                    className={cn(
+                      "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
+                      canInteract
+                        ? "text-slate-200 hover:bg-white/5"
+                        : "text-slate-500",
+                    )}
+                    onClick={() => onPrefillDownMode(e.cards)}
+                    disabled={!canInteract}
+                    title={
+                      canInteract
+                        ? "Preseleccionar estas cartas en modo bajarse"
+                        : "Solo disponible en tu turno después de robar"
+                    }
+                  >
+                    <span className="font-bold">
+                      {e.cards.map(formatCardShort).join(" ")}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-slate-500" />
+                    <span className="text-slate-300">
+                      Falta {formatWatchCard(e.missing)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!showEscalas && nearEscalas.length > 0 && (
+          <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              <Layers className="w-4 h-4" />
+              Escaleras (casi)
+            </div>
             <div className="space-y-2">
-              {nearEscalas.map((e) => (
+              {nearEscalas.slice(0, 2).map((e, idx) => (
                 <button
-                  key={`escala-${e.suit}-${e.missing.value}-${e.cards.map((c) => c.value).join(",")}`}
+                  key={`escala-${idx}`}
                   className={cn(
                     "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
                     canInteract
                       ? "text-slate-200 hover:bg-white/5"
-                      : "text-slate-500"
+                      : "text-slate-500",
                   )}
                   onClick={() => onPrefillDownMode(e.cards)}
                   disabled={!canInteract}
@@ -173,7 +245,9 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                       : "Solo disponible en tu turno después de robar"
                   }
                 >
-                  <span className="font-bold">{e.cards.map(formatCardShort).join(" ")}</span>
+                  <span className="font-bold">
+                    {e.cards.map(formatCardShort).join(" ")}
+                  </span>
                   <ArrowRight className="w-4 h-4 text-slate-500" />
                   <span className="text-slate-300">
                     Falta {formatWatchCard(e.missing)}
@@ -181,8 +255,8 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

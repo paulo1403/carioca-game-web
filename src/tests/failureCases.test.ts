@@ -1,5 +1,5 @@
 import { Card } from "@/types/game";
-import { isTrio, isEscala, validateContract, canAddToMeld, canStealJoker } from "@/utils/rules";
+import { isDifferentSuitGroup, isEscala, validateContract, canAddToMeld, canStealJoker } from "@/utils/rules";
 
 describe("Carioca Rule Validation: Failure Cases", () => {
     const createCard = (suit: string, value: number, id: string): Card => ({
@@ -9,24 +9,23 @@ describe("Carioca Rule Validation: Failure Cases", () => {
         displayValue: String(value)
     });
 
-    describe("isTrio Failure Cases", () => {
-        test("Should reject trio with different values", () => {
+    describe("isDifferentSuitGroup Failure Cases", () => {
+        test("Should reject group with same suits", () => {
             const group = [
                 createCard("SPADE", 2, "1"),
-                createCard("HEART", 2, "2"),
-                createCard("CLUB", 3, "3"), // Different value
+                createCard("SPADE", 3, "2"),
+                createCard("CLUB", 4, "3"),
             ];
-            expect(isTrio(group)).toBe(false);
+            // Only 2 unique suits (SPADE, CLUB) but requires 3
+            expect(isDifferentSuitGroup(group, 3)).toBe(false);
         });
 
-        test("Should reject trio with too many Jokers (needs 2 natural cards)", () => {
+        test("Should reject group too short", () => {
             const group = [
                 createCard("SPADE", 10, "1"),
-                createCard("JOKER", 0, "j1"),
-                createCard("JOKER", 0, "j2"),
+                createCard("HEART", 11, "2"),
             ];
-            // Rule implemented: nonJokers.length < 2 && cards.length >= 3 => false
-            expect(isTrio(group, 3)).toBe(false);
+            expect(isDifferentSuitGroup(group, 3)).toBe(false);
         });
     });
 
@@ -63,52 +62,29 @@ describe("Carioca Rule Validation: Failure Cases", () => {
     });
 
     describe("validateContract Failure Cases", () => {
-        test("Round 1 (1/3): Should reject if lowering 2 trios (Only main groups allowed)", () => {
-            const trio1 = [createCard("SPADE", 2, "s2"), createCard("HEART", 2, "h2"), createCard("CLUB", 2, "c2")];
-            const trio2 = [createCard("DIAMOND", 5, "d5"), createCard("HEART", 5, "h5"), createCard("CLUB", 5, "c5")];
+        test("Round 1 (1/3): Should reject if lowering 2 groups (Only exactly contract allowed)", () => {
+            const g1 = [createCard("SPADE", 2, "s2"), createCard("HEART", 3, "h2"), createCard("CLUB", 4, "c2")];
+            const g2 = [createCard("DIAMOND", 5, "d5"), createCard("HEART", 5, "h5"), createCard("CLUB", 5, "c5")];
 
-            const result = validateContract([trio1, trio2], 1);
+            const result = validateContract([g1, g2], 1);
             expect(result.valid).toBe(false);
             expect(result.error).toContain("Solo puedes bajar exactamente");
         });
 
-        test("Round 3 (1/4): Should reject if trio only has 3 cards", () => {
-            const trioOf3 = [createCard("SPADE", 2, "s2"), createCard("HEART", 2, "h2"), createCard("CLUB", 2, "c2")];
+        test("Round 3 (1/4): Should reject if group only has 3 cards", () => {
+            const groupOf3 = [createCard("SPADE", 2, "s2"), createCard("HEART", 3, "h3"), createCard("CLUB", 4, "c4")];
 
-            const result = validateContract([trioOf3], 3);
+            const result = validateContract([groupOf3], 3);
             expect(result.valid).toBe(false);
-            expect(result.error).toContain("Falta: 1 trío(s) de 4+");
+            expect(result.error).toContain("grupo(s) de 4+ palos diferentes");
         });
     });
 
     describe("canAddToMeld Failure Cases", () => {
-        test("Should reject adding a non-matching card to a trio", () => {
-            const trio = [createCard("SPADE", 10, "1"), createCard("HEART", 10, "2"), createCard("CLUB", 10, "3")];
-            const invalidCard = createCard("DIAMOND", 11, "4");
-            expect(canAddToMeld(invalidCard, trio)).toBe(false);
-        });
-    });
-
-    describe("canStealJoker Failure Cases", () => {
-        test("Should reject stealing Joker if candidate card value doesn't match trio", () => {
-            const trioWithJoker = [
-                createCard("SPADE", 5, "1"),
-                createCard("HEART", 5, "2"),
-                createCard("JOKER", 0, "j1")
-            ];
-            const thiefCard = createCard("CLUB", 6, "3"); // Doesn't match 5
-            expect(canStealJoker(thiefCard, trioWithJoker, [])).toBe(false);
-        });
-
-        test("Should reject stealing Joker from trio if there's only 1 natural card", () => {
-            const trioWithTooManyJokers = [
-                createCard("SPADE", 5, "1"),
-                createCard("JOKER", 0, "j1"),
-                createCard("JOKER", 0, "j2")
-            ];
-            const thiefCard = createCard("HEART", 5, "3");
-            // Rule: Requires at least 2 natural cards in the meld to allow theft
-            expect(canStealJoker(thiefCard, trioWithTooManyJokers, [])).toBe(false);
+        test("Should reject adding a duplicate suit to a different-suit group", () => {
+            const group = [createCard("SPADE", 10, "1"), createCard("HEART", 11, "2"), createCard("CLUB", 12, "3")];
+            const invalidCard = createCard("SPADE", 1, "4"); // Suit already exists
+            expect(canAddToMeld(invalidCard, group)).toBe(false);
         });
     });
 });

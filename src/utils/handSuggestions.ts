@@ -10,14 +10,23 @@ const displayValue = (value: number) => {
   return String(value);
 };
 
+const getSuitSymbol = (suit: Suit) => {
+  if (suit === "HEART") return "♥";
+  if (suit === "DIAMOND") return "♦";
+  if (suit === "CLUB") return "♣";
+  if (suit === "SPADE") return "♠";
+  return "🃏";
+};
+
 export type WatchCard =
-  | { kind: "TRIO_VALUE"; value: number }
+  | { kind: "DIFFERENT_SUIT"; suits: Suit[] }
   | { kind: "ESCALA_CARD"; value: number; suit: Exclude<Suit, "JOKER"> };
 
-export type TrioSuggestion = {
-  value: number;
+export type DifferentSuitSuggestion = {
   cards: Card[];
-  missing: { kind: "TRIO_VALUE"; value: number };
+  uniqueSuits: number;
+  missingCount: number;
+  missing: { kind: "DIFFERENT_SUIT"; suits: Suit[] };
 };
 
 export type EscalaSuggestion = {
@@ -27,7 +36,7 @@ export type EscalaSuggestion = {
 };
 
 export type HandSuggestions = {
-  nearTrios: TrioSuggestion[];
+  nearDifferentSuitGroups: DifferentSuitSuggestion[];
   nearEscalas: EscalaSuggestion[];
   watch: WatchCard[];
   topDiscardMatchesWatch: boolean;
@@ -35,123 +44,149 @@ export type HandSuggestions = {
 
 export const getHandSuggestions = (
   hand: Card[],
-  topDiscard?: Card
+  topDiscard?: Card,
 ): HandSuggestions => {
   const jokersCount = hand.filter(isJoker).length;
   const nonJokers = hand.filter((c) => !isJoker(c));
 
-  const byValue = new Map<number, Card[]>();
+  // Find groups with different suits (Rondas 1-7 logic)
+  const nearDifferentSuitGroups: DifferentSuitSuggestion[] = [];
+
+  // Group by suit
+  const bySuit = new Map<Exclude<Suit, "JOKER">, Card[]>();
   for (const c of nonJokers) {
-    const arr = byValue.get(c.value) ?? [];
-    arr.push(c);
-    byValue.set(c.value, arr);
+    const suit = c.suit as Exclude<Suit, "JOKER">;
+    const cards = bySuit.get(suit) ?? [];
+    cards.push(c);
+    bySuit.set(suit, cards);
   }
 
-  const nearTrios: TrioSuggestion[] = [];
-  for (const [value, cards] of byValue.entries()) {
-    if (cards.length === 2 && jokersCount === 0) {
-      nearTrios.push({
-        value,
+  // Find combinations of 2+ suits with at least 1 card each
+  const suits = Array.from(bySuit.keys());
+
+  // First, find all 2-suit combinations (need 1 joker)
+  for (let i = 0; i < suits.length; i++) {
+    for (let j = i + 1; j < suits.length; j++) {
+      const suit1 = suits[i];
+      const suit2 = suits[j];
+      const cards = [bySuit.get(suit1)![0], bySuit.get(suit2)![0]];
+      const uniqueSuits = 2;
+      const missingCount = 3 - uniqueSuits; // need 1 more
+
+      nearDifferentSuitGroups.push({
         cards,
-        missing: { kind: "TRIO_VALUE", value },
+        uniqueSuits,
+        missingCount,
+        missing: { kind: "DIFFERENT_SUIT", suits: [suit1, suit2] },
       });
     }
   }
 
-  const bySuit = new Map<Exclude<Suit, "JOKER">, Map<number, Card>>();
+  // Then find all 3-suit combinations (complete groups)
+  for (let i = 0; i < suits.length; i++) {
+    for (let j = i + 1; j < suits.length; j++) {
+      for (let k = j + 1; k < suits.length; k++) {
+        const suit1 = suits[i];
+        const suit2 = suits[j];
+        const suit3 = suits[k];
+        const cardsThree = [
+          bySuit.get(suit1)![0],
+          bySuit.get(suit2)![0],
+          bySuit.get(suit3)![0],
+        ];
+        nearDifferentSuitGroups.push({
+          cards: cardsThree,
+          uniqueSuits: 3,
+          missingCount: 0,
+          missing: { kind: "DIFFERENT_SUIT", suits: [suit1, suit2, suit3] },
+        });
+      }
+    }
+  }
+
+  // Sort: complete groups first, then by missing count
+  nearDifferentSuitGroups.sort((a, b) => {
+    if (a.missingCount !== b.missingCount) {
+      return a.missingCount - b.missingCount;
+    }
+    return b.uniqueSuits - a.uniqueSuits;
+  });
+
+  // Find escalas (Ronda 8 logic)
+  const bySuitEscala = new Map<Exclude<Suit, "JOKER">, Map<number, Card>>();
   for (const c of nonJokers) {
     const suit = c.suit as Exclude<Suit, "JOKER">;
-    const map = bySuit.get(suit) ?? new Map<number, Card>();
+    const map = bySuitEscala.get(suit) ?? new Map<number, Card>();
     if (!map.has(c.value)) map.set(c.value, c);
-    bySuit.set(suit, map);
+    bySuitEscala.set(suit, map);
   }
 
   const nearEscalas: EscalaSuggestion[] = [];
-  const suits: Array<Exclude<Suit, "JOKER">> = ["HEART", "DIAMOND", "CLUB", "SPADE"];
-  for (const suit of suits) {
-    const valuesToCard = bySuit.get(suit) ?? new Map<number, Card>();
+  const suitsArray: Array<Exclude<Suit, "JOKER">> = [
+    "HEART",
+    "DIAMOND",
+    "CLUB",
+    "SPADE",
+  ];
+  for (const suit of suitsArray) {
+    const valuesToCard = bySuitEscala.get(suit) ?? new Map<number, Card>();
     if (valuesToCard.size < 3) continue;
 
     // Try all 13 starting positions for a 4-card window
     for (let start = 1; start <= 13; start++) {
       const window = [
         start,
-        ((start) % 13) + 1,
+        (start % 13) + 1,
         ((start + 1) % 13) + 1,
-        ((start + 2) % 13) + 1
+        ((start + 2) % 13) + 1,
       ];
-      const present = window.filter((v) => valuesToCard.has(v));
-      if (present.length !== 3) continue;
-      if (jokersCount > 0) continue;
+      const found = window
+        .map((v) => valuesToCard.get(v))
+        .filter((c) => c !== undefined) as Card[];
 
-      const missingValue = window.find((v) => !valuesToCard.has(v));
-      if (!missingValue) continue;
-
-      const cards = present
-        .map((v) => valuesToCard.get(v)!)
-        .sort((a, b) => {
-          // Special sort for circular display: if it's a wrap-around, 
-          // we want to maintain the visual order. 
-          // But for now, simple sort is fine as it's just for displayValue.
-          return a.value - b.value;
+      if (found.length === 3) {
+        const missing = window.find((v) => !valuesToCard.has(v))!;
+        nearEscalas.push({
+          suit,
+          cards: found.sort((a, b) => a.value - b.value),
+          missing: {
+            kind: "ESCALA_CARD",
+            value: missing,
+            suit,
+          },
         });
-
-      const key = `${suit}:${missingValue}:${cards.map((c) => c.value).join(",")}`;
-      if (nearEscalas.some((e) => `${e.suit}:${e.missing.value}:${e.cards.map((c) => c.value).join(",")}` === key)) {
-        continue;
       }
-
-      nearEscalas.push({
-        suit,
-        cards,
-        missing: { kind: "ESCALA_CARD", suit, value: missingValue },
-      });
     }
   }
-
-  nearTrios.sort((a, b) => a.value - b.value);
-  nearEscalas.sort((a, b) => (a.suit + a.missing.value).localeCompare(b.suit + b.missing.value));
 
   const watch: WatchCard[] = [];
-  for (const t of nearTrios) {
-    if (!watch.some((w) => w.kind === "TRIO_VALUE" && w.value === t.value)) {
-      watch.push({ kind: "TRIO_VALUE", value: t.value });
-    }
-  }
-  for (const e of nearEscalas) {
-    if (
-      !watch.some(
-        (w) => w.kind === "ESCALA_CARD" && w.value === e.missing.value && w.suit === e.missing.suit
-      )
-    ) {
-      watch.push({ kind: "ESCALA_CARD", value: e.missing.value, suit: e.missing.suit });
-    }
-  }
-
-  const topDiscardMatchesWatch = (() => {
-    if (!topDiscard) return false;
-    if (isJoker(topDiscard)) return watch.length > 0;
-    const suit = topDiscard.suit as Exclude<Suit, "JOKER">;
-    return watch.some((w) => {
-      if (w.kind === "TRIO_VALUE") return w.value === topDiscard.value;
-      return w.value === topDiscard.value && w.suit === suit;
+  if (topDiscard && !isJoker(topDiscard)) {
+    const discardSuit = topDiscard.suit as Exclude<Suit, "JOKER">;
+    watch.push({ kind: "DIFFERENT_SUIT", suits: [discardSuit] });
+    watch.push({
+      kind: "ESCALA_CARD",
+      value: topDiscard.value,
+      suit: discardSuit,
     });
-  })();
+  }
 
-  return { nearTrios, nearEscalas, watch, topDiscardMatchesWatch };
+  return {
+    nearDifferentSuitGroups: nearDifferentSuitGroups.slice(0, 6),
+    nearEscalas: nearEscalas.slice(0, 3),
+    watch,
+    topDiscardMatchesWatch: watch.length > 0,
+  };
 };
 
 export const formatWatchCard = (w: WatchCard) => {
-  if (w.kind === "TRIO_VALUE") return `${displayValue(w.value)} (cualquiera)`;
-  const suitChar =
-    w.suit === "HEART" ? "♥" : w.suit === "DIAMOND" ? "♦" : w.suit === "CLUB" ? "♣" : "♠";
-  return `${displayValue(w.value)}${suitChar}`;
+  if (w.kind === "DIFFERENT_SUIT") {
+    const suitSymbols = w.suits.map(getSuitSymbol).join("");
+    return `Palos: ${suitSymbols}`;
+  }
+  return `${displayValue(w.value)}${getSuitSymbol(w.suit)}`;
 };
 
 export const formatCardShort = (c: Card) => {
   if (isJoker(c)) return "Joker";
-  const suitChar =
-    c.suit === "HEART" ? "♥" : c.suit === "DIAMOND" ? "♦" : c.suit === "CLUB" ? "♣" : "♠";
-  return `${c.displayValue || displayValue(c.value)}${suitChar}`;
+  return `${c.displayValue || displayValue(c.value)}${getSuitSymbol(c.suit)}`;
 };
-
