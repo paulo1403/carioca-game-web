@@ -306,7 +306,28 @@ export function useGameLobby({
 
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data) => {
+      // Optimistically remove self from cache so host and others update immediately
+      const leavingId = myPlayerId;
+      if (leavingId) {
+        queryClient.setQueryData(["gameState", roomId], (old: any) => {
+          if (!old) return old;
+          return { ...old, players: old.players.filter((p: any) => p.id !== leavingId) };
+        });
+
+        // Broadcast leave so other clients can update instantly
+        try {
+          supabase.channel(`game:${roomId}`).send({
+            type: "broadcast",
+            event: "player_change",
+            payload: { action: "leave", playerId: leavingId },
+          });
+          console.debug("[useGameLobby] Broadcast leave sent", { roomId, playerId: leavingId });
+        } catch (err) {
+          console.debug("[useGameLobby] Failed sending leave broadcast", err);
+        }
+      }
+
       // Clear localStorage and redirect handled by component
       if (typeof window !== "undefined") {
         localStorage.removeItem(`carioca_player_id_${roomId}`);
