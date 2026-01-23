@@ -141,6 +141,28 @@ export function useGameState({
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
       )
+      // Listen for game_started broadcast
+      .on(
+        "broadcast",
+        { event: "game_started" },
+        (payload) => {
+          console.debug("[useGameState] Broadcast game_started received", payload);
+          // Immediately invalidate and refetch the game state
+          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
+      // Listen for game_ended broadcast
+      .on(
+        "broadcast",
+        { event: "game_ended" },
+        (payload) => {
+          console.debug("[useGameState] Broadcast game_ended received", payload);
+          // Immediately invalidate and refetch the game state
+          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
       .subscribe();
 
     return () => {

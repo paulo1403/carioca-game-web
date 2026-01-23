@@ -228,6 +228,21 @@ export function useGameLobby({
     },
     onSuccess: () => {
       invalidateGameState();
+      // Refetch inmediatamente para que todos vean el juego iniciado
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+      
+      // Broadcast a otros jugadores que el juego inició
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "game_started",
+          payload: { roomId },
+        });
+        console.debug("[useGameLobby] Broadcast game_started sent", { roomId });
+      } catch (err) {
+        console.debug("[useGameLobby] Failed sending game_started broadcast", err);
+      }
+      
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -263,6 +278,22 @@ export function useGameLobby({
       return res.json();
     },
     onSuccess: () => {
+      invalidateGameState();
+      // Refetch inmediatamente para que todos vean que el juego terminó
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+      
+      // Broadcast a otros jugadores que el juego terminó
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "game_ended",
+          payload: { roomId },
+        });
+        console.debug("[useGameLobby] Broadcast game_ended sent", { roomId });
+      } catch (err) {
+        console.debug("[useGameLobby] Failed sending game_ended broadcast", err);
+      }
+      
       // Clear localStorage and redirect handled by component
       localStorage.removeItem(`carioca_player_id_${roomId}`);
 
