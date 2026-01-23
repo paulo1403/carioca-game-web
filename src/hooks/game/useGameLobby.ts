@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 interface UseGameLobbyOptions {
   roomId: string;
@@ -41,12 +42,46 @@ export function useGameLobby({
     },
     onSuccess: (data) => {
       // Store player ID in localStorage IMMEDIATELY
-      if (typeof window !== "undefined" && data.playerId) {
-        localStorage.setItem(`carioca_player_id_${roomId}`, data.playerId);
+      const createdPlayer = data.player;
+      if (typeof window !== "undefined" && createdPlayer?.id) {
+        localStorage.setItem(`carioca_player_id_${roomId}`, createdPlayer.id);
       }
+
+      // Optimistically append new player to cache so UI updates immediately
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        const exists = old.players.some((p: any) => p.id === createdPlayer.id);
+        if (exists) return old;
+        const parsedPlayer = {
+          ...createdPlayer,
+          hand: JSON.parse(createdPlayer.hand || "[]"),
+          melds: JSON.parse(createdPlayer.melds || "[]"),
+          boughtCards: JSON.parse(createdPlayer.boughtCards || "[]"),
+          roundScores: JSON.parse(createdPlayer.roundScores || "[]"),
+          roundBuys: JSON.parse(createdPlayer.roundBuys || "[]"),
+        };
+        return { ...old, players: [...old.players, parsedPlayer] };
+      });
+
       invalidateGameState();
-      // Force refetch right away for instant UI update
+      // Force refetch right away for authoritative state
       queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+
+      // Broadcast full player object so other clients can update instantly
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: {
+            action: "join",
+            player: createdPlayer,
+          },
+        });
+        console.debug("[useGameLobby] Broadcast player_change sent", { roomId, player: createdPlayer.id });
+      } catch (err) {
+        console.debug("[useGameLobby] Failed sending broadcast", err);
+      }
+
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -75,10 +110,40 @@ export function useGameLobby({
 
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const createdBot = data.bot;
+      // Optimistic append
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        const exists = old.players.some((p: any) => p.id === createdBot.id);
+        if (exists) return old;
+        const parsed = {
+          ...createdBot,
+          hand: JSON.parse(createdBot.hand || "[]"),
+          melds: JSON.parse(createdBot.melds || "[]"),
+          boughtCards: JSON.parse(createdBot.boughtCards || "[]"),
+          roundScores: JSON.parse(createdBot.roundScores || "[]"),
+          roundBuys: JSON.parse(createdBot.roundBuys || "[]"),
+        };
+        return { ...old, players: [...old.players, parsed] };
+      });
+
       invalidateGameState();
+
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: { action: "join", player: createdBot },
+        });
+        console.debug("[useGameLobby] Broadcast bot join sent", { roomId, botId: createdBot.id });
+      } catch (err) {
+        console.debug("[useGameLobby] Failed sending bot broadcast", err);
+      }
+
       onSuccess?.();
     },
+
     onError: (error: Error) => {
       toast({
         title: "Error al añadir bot",
@@ -114,10 +179,29 @@ export function useGameLobby({
 
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, playerIdToKick) => {
+      // Optimistically remove
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        return { ...old, players: old.players.filter((p: any) => p.id !== playerIdToKick) };
+      });
+
       invalidateGameState();
+      // Broadcast player removal so hosts see the leave immediately
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: { action: "leave", playerId: playerIdToKick },
+        });
+        console.debug("[useGameLobby] Broadcast player_leave sent", { roomId, playerIdToKick });
+      } catch (err) {
+        console.debug("[useGameLobby] Failed sending player_leave broadcast", err);
+      }
+
       onSuccess?.();
     },
+
     onError: (error: Error) => {
       toast({
         title: "Error al expulsar",

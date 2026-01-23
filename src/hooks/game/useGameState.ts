@@ -37,6 +37,7 @@ export function useGameState({
 
     const channel = supabase
       .channel(`game:${roomId}`)
+      // GameSession updates (existing behavior)
       .on(
         "postgres_changes",
         {
@@ -45,9 +46,99 @@ export function useGameState({
           table: "GameSession",
           filter: `id=eq.${roomId}`,
         },
-        () => {
+        (payload) => {
           // Invalida el cache inmediatamente al detectar un cambio en DB
+          console.debug("[useGameState] Realtime GameSession UPDATE received", payload);
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          // Force immediate refetch to avoid waiting for stale timers
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
+      // Also listen to Player table changes so inserts/deletes are received
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "Player",
+          filter: `gameSessionId=eq.${roomId}`,
+        },
+        (payload) => {
+          console.debug("[useGameState] Realtime Player INSERT received", payload);
+          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "Player",
+          filter: `gameSessionId=eq.${roomId}`,
+        },
+        (payload) => {
+          console.debug("[useGameState] Realtime Player DELETE received", payload);
+          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
+      // Also handle player updates (e.g., rename)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "Player",
+          filter: `gameSessionId=eq.${roomId}`,
+        },
+        (payload) => {
+          console.debug("[useGameState] Realtime Player UPDATE received", payload);
+          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }
+      )
+      // Fallback: listen for custom broadcasts (player_change) sent by clients when they join
+      .on(
+        "broadcast",
+        { event: "player_change" },
+        (payload) => {
+          console.debug("[useGameState] Broadcast player_change received", payload);          const msg = payload?.payload ?? payload;
+
+          // Handle join with full player object for immediate optimistic update
+          if (msg?.action === "join" && msg?.player) {
+            const createdPlayer = msg.player;
+            queryClient.setQueryData(["gameState", roomId], (old: any) => {
+              if (!old) return old;
+              const exists = old.players.some((p: any) => p.id === createdPlayer.id);
+              if (exists) return old;
+              const parsedPlayer = {
+                ...createdPlayer,
+                hand: JSON.parse(createdPlayer.hand || "[]"),
+                melds: JSON.parse(createdPlayer.melds || "[]"),
+                boughtCards: JSON.parse(createdPlayer.boughtCards || "[]"),
+                roundScores: JSON.parse(createdPlayer.roundScores || "[]"),
+                roundBuys: JSON.parse(createdPlayer.roundBuys || "[]"),
+              };
+              return { ...old, players: [...old.players, parsedPlayer] };
+            });
+            // Also trigger authoritative refetch
+            queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+            return;
+          }
+
+          // Handle leave
+          if (msg?.action === "leave" && msg?.playerId) {
+            queryClient.setQueryData(["gameState", roomId], (old: any) => {
+              if (!old) return old;
+              return { ...old, players: old.players.filter((p: any) => p.id !== msg.playerId) };
+            });
+            queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+            return;
+          }
+
+          // Fallback: invalidate + refetch          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
       )
       .subscribe();

@@ -52,7 +52,7 @@ export async function POST(
     // If we support joining mid-game, we'd need to deal cards.
     // For now, hand is empty until Start.
 
-    await prisma.player.create({
+    const createdBot = await prisma.player.create({
       data: {
         id: botId,
         name: botName,
@@ -67,7 +67,20 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ success: true, botId });
+    // Touch GameSession to trigger Realtime UPDATE for other clients
+    await prisma.gameSession.update({
+      where: { id },
+      data: {
+        lastAction: JSON.stringify({
+          playerId: botId,
+          type: "JOIN",
+          description: `${botName} se unió a la partida`,
+          timestamp: Date.now(),
+        }),
+      },
+    });
+
+    return NextResponse.json({ bot: createdBot });
   } catch (error) {
     console.error("Error adding bot:", error);
     return NextResponse.json({ error: "Failed to add bot" }, { status: 500 });
