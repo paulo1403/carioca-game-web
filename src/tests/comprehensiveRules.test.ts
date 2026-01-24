@@ -1,6 +1,6 @@
 import { Card, ROUND_CONTRACTS_DATA } from "@/types/game";
 import {
-    isDifferentSuitGroup,
+    isTrio,
     isEscala,
     canStealJoker,
     calculateHandPoints,
@@ -16,23 +16,14 @@ describe("Carioca Comprehensive Rules Verification", () => {
         displayValue: String(value)
     });
 
-    describe("Different Suit Groups (Rondas 1-7)", () => {
-        test("Should allow 3 cards with same value and different suits", () => {
+    describe("Trio Groups (Rondas 1-7)", () => {
+        test("Should allow 3 cards with same value (suits may repeat)", () => {
             const group = [
                 createCard("SPADE", 5, "1"),
                 createCard("HEART", 5, "2"),
-                createCard("CLUB", 5, "3"),
+                createCard("SPADE", 5, "3"), // Duplicate Spade is OK under new rules
             ];
-            expect(isDifferentSuitGroup(group, 3)).toBe(true);
-        });
-
-        test("Should reject if suits are repeated", () => {
-            const group = [
-                createCard("SPADE", 2, "1"),
-                createCard("HEART", 2, "2"),
-                createCard("SPADE", 2, "3"), // Duplicate Spade
-            ];
-            expect(isDifferentSuitGroup(group, 3)).toBe(false);
+            expect(isTrio(group, 3)).toBe(true);
         });
 
         test("Should reject if values are different", () => {
@@ -41,18 +32,18 @@ describe("Carioca Comprehensive Rules Verification", () => {
                 createCard("HEART", 2, "2"),
                 createCard("CLUB", 3, "3"), // Different value
             ];
-            expect(isDifferentSuitGroup(group, 3)).toBe(false);
+            expect(isTrio(group, 3)).toBe(false);
         });
 
-        test("Round 5 (Size 5): Should require same value and Jokers", () => {
+        test("Round 5 (Size 5): Should require enough natural cards and Jokers", () => {
             const group = [
                 createCard("SPADE", 2, "1"),
                 createCard("HEART", 2, "2"),
                 createCard("CLUB", 2, "3"),
                 createCard("DIAMOND", 2, "4"),
-                createCard("JOKER", 0, "j1"), // Same value (effectively) and unique suits
+                createCard("JOKER", 0, "j1"),
             ];
-            expect(isDifferentSuitGroup(group, 5)).toBe(true);
+            expect(isTrio(group, 5)).toBe(true);
         });
     });
 

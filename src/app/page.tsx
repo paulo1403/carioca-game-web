@@ -305,7 +305,7 @@ export default function Home() {
                       handleScan(result[0].rawValue);
                     }
                   }}
-                  onError={(error) => console.log(error)}
+                  onError={(error) => console.error(error)}
                   components={{
                     onOff: false,
                     torch: false,

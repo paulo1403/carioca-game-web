@@ -63,8 +63,8 @@ export async function POST(
 
     const playerId = uuidv4();
 
-    // Add new player
-    await prisma.player.create({
+    // Add new player and return it
+    const createdPlayer = await prisma.player.create({
       data: {
         id: playerId,
         userId: userId, // Vinculamos el jugador al usuario de Auth si existe
@@ -79,7 +79,21 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ playerId });
+    // Touch GameSession to trigger Realtime UPDATE so other clients (host) get notified
+    // and immediately refetch the game state (this prevents needing a manual refresh)
+    await prisma.gameSession.update({
+      where: { id },
+      data: {
+        lastAction: JSON.stringify({
+          playerId,
+          type: "JOIN",
+          description: `${name} se unió a la partida`,
+          timestamp: Date.now(),
+        }),
+      },
+    });
+
+    return NextResponse.json({ player: createdPlayer });
   } catch (error) {
     console.error("Error joining game:", error);
     return NextResponse.json({ error: "Failed to join game" }, { status: 500 });

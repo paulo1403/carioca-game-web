@@ -37,8 +37,6 @@ export async function updateUserStats(sessionId: string, winnerId: string) {
         });
 
         await Promise.all(statsUpdates);
-
-        console.log(`[STATS_UPDATE] Updated stats for ${playerRecords.length} users in game ${sessionId}`);
     } catch (error) {
         console.error('[STATS_UPDATE_ERROR]', error);
         // Don't throw - we don't want to fail the game completion if stats update fails

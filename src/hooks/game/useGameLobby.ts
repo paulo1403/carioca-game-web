@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 interface UseGameLobbyOptions {
   roomId: string;
@@ -41,12 +42,44 @@ export function useGameLobby({
     },
     onSuccess: (data) => {
       // Store player ID in localStorage IMMEDIATELY
-      if (typeof window !== "undefined" && data.playerId) {
-        localStorage.setItem(`carioca_player_id_${roomId}`, data.playerId);
+      const createdPlayer = data.player;
+      if (typeof window !== "undefined" && createdPlayer?.id) {
+        localStorage.setItem(`carioca_player_id_${roomId}`, createdPlayer.id);
       }
+
+      // Optimistically append new player to cache so UI updates immediately
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        const exists = old.players.some((p: any) => p.id === createdPlayer.id);
+        if (exists) return old;
+        const parsedPlayer = {
+          ...createdPlayer,
+          hand: JSON.parse(createdPlayer.hand || "[]"),
+          melds: JSON.parse(createdPlayer.melds || "[]"),
+          boughtCards: JSON.parse(createdPlayer.boughtCards || "[]"),
+          roundScores: JSON.parse(createdPlayer.roundScores || "[]"),
+          roundBuys: JSON.parse(createdPlayer.roundBuys || "[]"),
+        };
+        return { ...old, players: [...old.players, parsedPlayer] };
+      });
+
       invalidateGameState();
-      // Force refetch right away for instant UI update
+      // Force refetch right away for authoritative state
       queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+
+      // Broadcast full player object so other clients can update instantly
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: {
+            action: "join",
+            player: createdPlayer,
+          },
+        });
+      } catch (err) {
+      }
+
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -75,17 +108,36 @@ export function useGameLobby({
 
       return res.json();
     },
-    onSuccess: () => {
-      invalidateGameState();
-      onSuccess?.();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error al añadir bot",
-        description: error.message,
-        type: "error",
+    onSuccess: (data) => {
+      const createdBot = data.bot;
+      // Optimistic append
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        const exists = old.players.some((p: any) => p.id === createdBot.id);
+        if (exists) return old;
+        const parsed = {
+          ...createdBot,
+          hand: JSON.parse(createdBot.hand || "[]"),
+          melds: JSON.parse(createdBot.melds || "[]"),
+          boughtCards: JSON.parse(createdBot.boughtCards || "[]"),
+          roundScores: JSON.parse(createdBot.roundScores || "[]"),
+          roundBuys: JSON.parse(createdBot.roundBuys || "[]"),
+        };
+        return { ...old, players: [...old.players, parsed] };
       });
-      onError?.(error);
+
+      invalidateGameState();
+
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: { action: "join", player: createdBot },
+        });
+      } catch (err) {
+      }
+
+      onSuccess?.();
     },
   });
 
@@ -114,10 +166,27 @@ export function useGameLobby({
 
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, playerIdToKick) => {
+      // Optimistically remove
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        return { ...old, players: old.players.filter((p: any) => p.id !== playerIdToKick) };
+      });
+
       invalidateGameState();
+      // Broadcast player removal so hosts see the leave immediately
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: { action: "leave", playerId: playerIdToKick },
+        });
+      } catch (err) {
+      }
+
       onSuccess?.();
     },
+
     onError: (error: Error) => {
       toast({
         title: "Error al expulsar",
@@ -144,6 +213,23 @@ export function useGameLobby({
     },
     onSuccess: () => {
       invalidateGameState();
+      // Refetch inmediatamente para que todos vean el juego iniciado
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+      
+      // Broadcast a otros jugadores que el juego inició
+      try {
+        supabase.channel(`game:${roomId}`).subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            supabase.channel(`game:${roomId}`).send({
+              type: "broadcast",
+              event: "game_started",
+              payload: { roomId },
+            });
+          }
+        });
+      } catch (err) {
+      }
+      
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -179,6 +265,24 @@ export function useGameLobby({
       return res.json();
     },
     onSuccess: () => {
+      invalidateGameState();
+      // Refetch inmediatamente para que todos vean que el juego terminó
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+      
+      // Broadcast a otros jugadores que el juego terminó
+      try {
+        supabase.channel(`game:${roomId}`).subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            supabase.channel(`game:${roomId}`).send({
+              type: "broadcast",
+              event: "game_ended",
+              payload: { roomId },
+            });
+          }
+        });
+      } catch (err) {
+      }
+      
       // Clear localStorage and redirect handled by component
       localStorage.removeItem(`carioca_player_id_${roomId}`);
 
@@ -222,7 +326,26 @@ export function useGameLobby({
 
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data) => {
+      // Optimistically remove self from cache so host and others update immediately
+      const leavingId = myPlayerId;
+      if (leavingId) {
+        queryClient.setQueryData(["gameState", roomId], (old: any) => {
+          if (!old) return old;
+          return { ...old, players: old.players.filter((p: any) => p.id !== leavingId) };
+        });
+
+        // Broadcast leave so other clients can update instantly
+        try {
+          supabase.channel(`game:${roomId}`).send({
+            type: "broadcast",
+            event: "player_change",
+            payload: { action: "leave", playerId: leavingId },
+          });
+        } catch (err) {
+        }
+      }
+
       // Clear localStorage and redirect handled by component
       if (typeof window !== "undefined") {
         localStorage.removeItem(`carioca_player_id_${roomId}`);

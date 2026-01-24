@@ -145,11 +145,12 @@ export const validateContract = (
     }
   }
 
-  // 2. Fulfill DifferentSuitGroups
+  // 2. Fulfill DifferentSuitGroups (deprecated name: these are now trios of same value)
   if (requiredDifferentSuitGroups > 0) {
     for (let i = 0; i < remainingGroups.length; i++) {
       if (usedIndices.has(i)) continue;
-      if (isDifferentSuitGroup(remainingGroups[i], reqs.differentSuitSize)) {
+      // Accept any trio (same value, jokers allowed)
+      if (isTrio(remainingGroups[i], reqs.differentSuitSize)) {
         requiredDifferentSuitGroups--;
         usedIndices.add(i);
         if (requiredDifferentSuitGroups === 0) break;
@@ -160,7 +161,7 @@ export const validateContract = (
   if (requiredDifferentSuitGroups > 0 || requiredEscalas > 0) {
     const errorMsg = [];
     if (requiredDifferentSuitGroups > 0)
-      errorMsg.push(`${requiredDifferentSuitGroups} grupo(s) de ${reqs.differentSuitSize}+ palos diferentes`);
+      errorMsg.push(`${requiredDifferentSuitGroups} grupo(s) de ${reqs.differentSuitSize}+ cartas del mismo valor`);
     if (requiredEscalas > 0)
       errorMsg.push(`${requiredEscalas} escala(s) de ${reqs.escalaSize}+`);
     return {
@@ -187,7 +188,12 @@ export const validateAdditionalDown = (
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     if (group.length < 3) return { valid: false, error: `El grupo ${i + 1} debe tener al menos 3 cartas.` };
-    if (!isDifferentSuitGroup(group, 3) && !isEscala(group, 3)) {
+    
+    // For additional downs: accept ANY valid group
+    // - isTrio: 3+ cards of same value (any suits allowed)
+    // - isEscala: cards in sequence (same suit)
+    // - isDifferentSuitGroup: 3+ cards of same value with different suits
+    if (!isTrio(group, 3) && !isEscala(group, 3)) {
       return { valid: false, error: `El grupo ${i + 1} no es válido.` };
     }
   }

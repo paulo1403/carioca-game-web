@@ -42,11 +42,29 @@ export async function POST(
       return NextResponse.json({ error: 'Only host can remove other players' }, { status: 403 });
     }
 
+    // Get removed player's name (for notification), then delete
+    const playerToRemove = await prisma.player.findUnique({ where: { id: playerIdToRemove } });
+
     await prisma.player.delete({
       where: { id: playerIdToRemove }
     });
 
-    return NextResponse.json({ success: true });
+    // Touch GameSession to trigger Realtime UPDATE so other clients get notified
+    if (playerToRemove) {
+      await prisma.gameSession.update({
+        where: { id },
+        data: {
+          lastAction: JSON.stringify({
+            playerId: playerIdToRemove,
+            type: "LEAVE",
+            description: `${playerToRemove.name} abandonó la partida`,
+            timestamp: Date.now(),
+          }),
+        },
+      });
+    }
+
+    return NextResponse.json({ success: true, removedPlayer: playerToRemove });
 
   } catch (error) {
     console.error('Error removing player:', error);
