@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createDeck, shuffleDeck } from "@/utils/deck";
 import { v4 as uuidv4 } from "uuid";
 import { GameState, Player } from "@/types/game";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 import { createGameSchema, validateRequest } from "@/lib/validations";
 import { auth } from "@/auth";
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
     isBot: false,
     buysUsed: 0,
     hasDrawn: false,
+    turnOrder: 0,
   };
 
   try {
@@ -69,12 +71,13 @@ export async function POST(request: Request) {
             score: hostPlayer.score,
             isBot: hostPlayer.isBot,
             buysUsed: hostPlayer.buysUsed,
+            turnOrder: hostPlayer.turnOrder,
           },
         },
       },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });

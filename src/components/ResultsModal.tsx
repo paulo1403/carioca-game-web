@@ -3,20 +3,23 @@ import { Player } from '@/types/game';
 import { Modal } from './Modal';
 import { Trophy, Star, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFinalResults } from '@/hooks/useFinalResults';
+import { MAX_BUYS } from '@/utils/buys';
 
 interface ResultsModalProps {
     isOpen: boolean;
     players: Player[];
     onClose: () => void;
+    roomId?: string;
 }
 
 export const ResultsModal: React.FC<ResultsModalProps> = ({
     isOpen,
     players,
-    onClose
+    onClose,
+    roomId
 }) => {
-    // Sort players by total score (ascending, lowest score wins)
-    const sortedPlayers = [...players].sort((a, b) => a.score - b.score);
+    const { sortedPlayers } = useFinalResults(players, roomId);
     const winner = sortedPlayers[0];
 
     return (
@@ -37,7 +40,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                         ¡Victoria para <span className="text-yellow-400">{winner.name}</span>!
                     </h3>
                     <p className="text-slate-400 mt-2 font-medium">
-                        Con un puntaje total de {winner.score} puntos.
+                        Con un puntaje total de {winner.finalScore} puntos.
                     </p>
                 </div>
 
@@ -50,6 +53,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(r => (
                                     <th key={r} className="p-4 text-center border-r border-white/10">R{r}</th>
                                 ))}
+                                <th className="p-4 text-center border-r border-white/10">Compras</th>
                                 <th className="p-4 text-center bg-blue-600/30">Total</th>
                             </tr>
                         </thead>
@@ -80,8 +84,12 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                                             </td>
                                         );
                                     })}
+                                    <td className="p-4 text-center border-r border-white/10">
+                                        <div className="text-xs text-slate-400">Usadas {player.buysUsed}/{MAX_BUYS}</div>
+                                        <div className={cn("text-sm font-bold", player.remainingBuys > 0 ? "text-red-400" : "text-green-400")}>Restantes {player.remainingBuys}</div>
+                                    </td>
                                     <td className="p-4 text-center bg-blue-600/10 font-black text-white border-l border-white/10">
-                                        {player.score}
+                                        {player.finalScore}
                                     </td>
                                 </tr>
                             ))}
@@ -97,7 +105,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                         </div>
                         <div>
                             <p className="text-xs text-red-300/60 font-bold uppercase tracking-wider">Mayor Puntaje</p>
-                            <p className="text-lg font-black text-red-100">{sortedPlayers[sortedPlayers.length - 1].name} ({sortedPlayers[sortedPlayers.length - 1].score} pts)</p>
+                            <p className="text-lg font-black text-red-100">{sortedPlayers[sortedPlayers.length - 1].name} ({sortedPlayers[sortedPlayers.length - 1].finalScore} pts)</p>
                         </div>
                     </div>
                     <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-center gap-4">
@@ -107,7 +115,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                         <div>
                             <p className="text-xs text-blue-300/60 font-bold uppercase tracking-wider">Promedio de Sala</p>
                             <p className="text-lg font-black text-blue-100">
-                                {(players.reduce((sum, p) => sum + p.score, 0) / players.length).toFixed(1)} pts
+                                {(sortedPlayers.reduce((sum, p) => sum + p.finalScore, 0) / sortedPlayers.length).toFixed(1)} pts
                             </p>
                         </div>
                     </div>

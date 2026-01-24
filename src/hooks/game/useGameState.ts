@@ -18,6 +18,8 @@ interface UseGameStateOptions {
     scores: any[];
   }) => void;
   onReshuffle?: (count: number) => void;
+  onBuyIntent?: (data: { playerId: string; playerName?: string; timestamp: number }) => void;
+  onEmojiReaction?: (data: { playerId: string; emoji: string; timestamp: number }) => void;
 }
 
 export function useGameState({
@@ -28,9 +30,12 @@ export function useGameState({
   onPlayerLeft,
   onRoundWinner,
   onReshuffle,
+  onBuyIntent,
+  onEmojiReaction,
 }: UseGameStateOptions) {
   const queryClient = useQueryClient();
   const realtimeFailedRef = useRef(false);
+  const channelRef = useRef<any>(null);
 
   // Suscripción Realtime a cambios en la base de datos
   useEffect(() => {
@@ -163,6 +168,34 @@ export function useGameState({
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
       )
+      .on(
+        "broadcast",
+        { event: "buy_intent" },
+        (payload) => {
+          const data = payload?.payload ?? payload;
+          if (data?.playerId) {
+            onBuyIntent?.({
+              playerId: data.playerId,
+              playerName: data.playerName,
+              timestamp: data.timestamp || Date.now(),
+            });
+          }
+        }
+      )
+      .on(
+        "broadcast",
+        { event: "emoji_reaction" },
+        (payload) => {
+          const data = payload?.payload ?? payload;
+          if (data?.playerId && data?.emoji) {
+            onEmojiReaction?.({
+              playerId: data.playerId,
+              emoji: data.emoji,
+              timestamp: data.timestamp || Date.now(),
+            });
+          }
+        }
+      )
       .subscribe((status) => {
         if (status !== "SUBSCRIBED") {
           console.warn("[useGameState] Realtime subscription failed, using polling fallback", status);
@@ -173,6 +206,7 @@ export function useGameState({
       });
 
         subscription = channel;
+        channelRef.current = channel;
       } catch (error) {
         console.warn("[useGameState] Failed to setup Realtime, using polling fallback", error);
         realtimeFailedRef.current = true;
@@ -195,8 +229,9 @@ export function useGameState({
       if (subscription) {
         supabase.removeChannel(subscription);
       }
+      channelRef.current = null;
     };
-  }, [roomId, enabled, queryClient]);
+  }, [roomId, enabled, queryClient, onBuyIntent, onEmojiReaction]);
 
   // Track previous state for notifications
   const prevPlayersRef = useRef<any[]>([]);
@@ -338,11 +373,33 @@ export function useGameState({
     queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
   };
 
+  const sendBuyIntent = async (playerId: string, playerName?: string) => {
+    const channel = channelRef.current;
+    if (!channel) return;
+    await channel.send({
+      type: "broadcast",
+      event: "buy_intent",
+      payload: { playerId, playerName, timestamp: Date.now() },
+    });
+  };
+
+  const sendEmojiReaction = async (playerId: string, emoji: string) => {
+    const channel = channelRef.current;
+    if (!channel) return;
+    await channel.send({
+      type: "broadcast",
+      event: "emoji_reaction",
+      payload: { playerId, emoji, timestamp: Date.now() },
+    });
+  };
+
   return {
     gameState,
     isLoading,
     error,
     refetch,
     invalidateGameState,
+    sendBuyIntent,
+    sendEmojiReaction,
   };
 }

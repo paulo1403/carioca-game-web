@@ -7,11 +7,12 @@ import {
   formatWatchCard,
   getHandSuggestions,
 } from "@/utils/handSuggestions";
+import { SortMode } from "@/hooks/useHandManagement";
 
 interface HandAssistantProps {
   hand: Card[];
   topDiscard?: Card;
-  sortMode: "rank" | "suit" | "auto";
+  sortMode: SortMode;
   onToggleAutoSort: () => void;
   canInteract: boolean;
   onPrefillDownMode: (cards: Card[]) => void;
@@ -109,13 +110,13 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
             title={
               sortMode === "auto"
                 ? "Ordenar la mano por palo (las cartas se mostrarán por palo). Pulsa para cambiar."
-                : "Agrupar la mano por valor (muestra grupos por valor). Pulsa para cambiar."
+                : "Cambiar modo de orden (auto/manual/palo/valor). Pulsa para cambiar."
             }
             aria-pressed={sortMode !== "auto"}
             aria-label={
               sortMode === "auto"
                 ? "Cambiar a: Ordenar por palo"
-                : "Cambiar a: Agrupar mano"
+                : "Cambiar a: Modo auto"
             }
           >
             {sortMode === "auto" ? "Cambiar a: Ordenar por palo" : "Cambiar a: Agrupar mano"}

@@ -96,9 +96,10 @@ describe("Carioca Comprehensive Rules Verification", () => {
             ];
             const clubCard = createCard("CLUB", 10, "3");
             const spadeCard = createCard("SPADE", 10, "4");
+            const extraTen = createCard("DIAMOND", 10, "5");
 
-            expect(canStealJoker(clubCard, meld, [])).toBe(true);
-            expect(canStealJoker(spadeCard, meld, [])).toBe(false); // Already has Spade
+            expect(canStealJoker(clubCard, meld, [clubCard, extraTen])).toBe(true);
+            expect(canStealJoker(spadeCard, meld, [spadeCard, extraTen])).toBe(false); // Already has Spade
         });
 
         test("In Escala: Can only steal if value and suit match exactly", () => {
@@ -110,8 +111,20 @@ describe("Carioca Comprehensive Rules Verification", () => {
             const correctCard = createCard("DIAMOND", 5, "5");
             const wrongCard = createCard("HEART", 5, "h5");
 
-            expect(canStealJoker(correctCard, meld, [])).toBe(true);
-            expect(canStealJoker(wrongCard, meld, [])).toBe(false); // Wrong suit
+            expect(canStealJoker(correctCard, meld, [correctCard])).toBe(true);
+            expect(canStealJoker(wrongCard, meld, [wrongCard])).toBe(false); // Wrong suit
+        });
+
+        test("In Group: Requires two matching naturals in hand", () => {
+            const meld = [
+                createCard("SPADE", 7, "1"),
+                createCard("HEART", 7, "2"),
+                createCard("JOKER", 0, "j1"),
+            ];
+            const sevenClub = createCard("CLUB", 7, "3");
+
+            expect(canStealJoker(sevenClub, meld, [sevenClub])).toBe(false);
+            expect(canStealJoker(sevenClub, meld, [sevenClub, createCard("DIAMOND", 7, "4")])).toBe(true);
         });
     });
 

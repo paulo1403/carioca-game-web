@@ -12,34 +12,54 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
 
     const updates = [
         {
-            title: "Regla de Mayoría Natural",
-            description: "Los grupos ahora deben tener al menos la misma cantidad de cartas naturales que de Jokers, cumpliendo fielmente las reglas del Carioca.",
-            type: "improvement",
-        },
-        {
-            title: "Enchife Manual Directo",
-            description: "¡Toma el control! Selecciona una carta y toca directamente cualquier juego de la mesa para añadirla, incluso los juegos de tus oponentes.",
-            type: "feature",
-        },
-        {
-            title: "Asistente con Botones Rápidos",
-            description: "El asistente ahora permite añadir cartas a la mesa con un solo toque desde la sección '¡Puedes añadir estas a la mesa!'.",
-            type: "feature",
-        },
-        {
-            title: "IA de Bots Fluida",
-            description: "Se corrigieron los bloqueos de los bots y se optimizó su toma de decisiones para turnos mucho más rápidos y estratégicos.",
+            title: "Compras ajustadas y penalizaciones finales",
+            description: "Se corrigió el conteo de compras, las reglas de cartas extra según turno y la penalización por compras restantes en el resumen final.",
             type: "fix",
         },
         {
-            title: "Nueva Vista de Juegos",
-            description: "Rediseño completo de la ventana de juegos bajados con una lista vertical organizada, evitando que las cartas se amontonen.",
+            title: "Inicio de ronda sin descarte inicial",
+            description: "El descarte ahora inicia vacío, respetando la regla original de la ronda.",
+            type: "fix",
+        },
+        {
+            title: "Reglas de robo de Joker actualizadas",
+            description: "Escalas requieren carta exacta y grupos exigen 2 naturales en mano para poder robar joker.",
+            type: "fix",
+        },
+        {
+            title: "Orden de mano sin drag & drop",
+            description: "Nuevo orden manual con botones, persistente por jugador, y auto/valor/palo en desktop y mobile.",
+            type: "feature",
+        },
+        {
+            title: "¡COMPRO! + prioridad de compra",
+            description: "Aviso en tiempo real, badge en jugadores, sonido y cooldown para coordinar compras.",
+            type: "feature",
+        },
+        {
+            title: "Reacciones con emojis",
+            description: "Emojis en tiempo real con cooldown y burbuja visible para tu propio emoji.",
+            type: "feature",
+        },
+        {
+            title: "Orden de turnos en lobby",
+            description: "Asignación manual de turnos con botones y persistencia en base de datos.",
             type: "improvement",
         },
         {
-            title: "Corrección en Robo de Descarte",
-            description: "Robar del pozo de descarte en tu turno ya no cuenta como una compra de 3 cartas, tal como dictan las reglas oficiales.",
-            type: "fix",
+            title: "Panel de acciones renovado",
+            description: "Rediseño del tablero con panel fijo inferior, mejor legibilidad y accesos rápidos.",
+            type: "improvement",
+        },
+        {
+            title: "Agregar a juegos más claro",
+            description: "Al seleccionar carta azul puedes elegir entre descartar o agregar a un juego desde un panel dedicado.",
+            type: "improvement",
+        },
+        {
+            title: "Resultados por ronda",
+            description: "Al finalizar la ronda se muestran puntos de esa ronda; el total solo en la última ronda.",
+            type: "feature",
         },
     ];
 
@@ -54,7 +74,7 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-white">Novedades</h2>
-                            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">Version 0.5.0 • Enero 2026</p>
+                            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">Version 0.6.0 • Enero 2026</p>
                         </div>
                     </div>
                     <button

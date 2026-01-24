@@ -41,7 +41,8 @@ describe("Carioca Game Simulation", () => {
             roundScores: [],
             roundBuys: [],
             buysUsed: 0,
-            hasDrawn: true
+            hasDrawn: true,
+            turnOrder: 0
         };
 
         const gameState = setupGameState(1, [bot1]);
@@ -83,7 +84,8 @@ describe("Carioca Game Simulation", () => {
             roundScores: [],
             roundBuys: [],
             buysUsed: 0,
-            hasDrawn: true
+            hasDrawn: true,
+            turnOrder: 0
         };
 
         const gameState = setupGameState(8, [bot1]);

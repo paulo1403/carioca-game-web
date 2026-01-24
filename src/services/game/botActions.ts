@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 export async function autoReadyBots(sessionId: string) {
     const session = await prisma.gameSession.findUnique({
         where: { id: sessionId },
         include: {
-            players: { orderBy: { createdAt: "asc" } },
+            players: { orderBy: orderPlayersByTurn },
         },
     });
 

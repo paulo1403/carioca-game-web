@@ -8,6 +8,7 @@ import { handleReadyForNextRound, handleStartNextRound } from "./actions/round";
 import { getGameState } from "./GameState";
 import { autoReadyBots } from "./botActions";
 import { calculateBotMove } from "@/utils/botLogic";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 import { getCardPoints } from "./utils";
 
@@ -93,7 +94,7 @@ export async function processMove(
         const session = await prisma.gameSession.findUnique({
             where: { id: sessionId },
             include: {
-                players: { orderBy: { createdAt: "asc" } },
+                players: { orderBy: orderPlayersByTurn },
             },
         });
 

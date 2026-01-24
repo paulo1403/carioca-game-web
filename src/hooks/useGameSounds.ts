@@ -13,7 +13,8 @@ export const SOUNDS = {
     SHUFFLE: `${BASE_URL}/switch_002.wav`, // Assuming switch_002 exists
     POP: `${BASE_URL}/drop_001.wav`,
     START: `${BASE_URL}/confirmation_002.wav`,
-    YOUR_TURN: `${BASE_URL}/sharp_echo.wav`
+    YOUR_TURN: `${BASE_URL}/confirmation_003.wav`,
+    BUY_INTENT: `${BASE_URL}/notification_001.wav`
 };
 
 export const useGameSounds = () => {
@@ -64,5 +65,6 @@ export const useGameSounds = () => {
         playPop: () => playSound(SOUNDS.POP, 0.4),
         playStart: () => playSound(SOUNDS.START, 0.5),
         playYourTurn: () => playSound(SOUNDS.YOUR_TURN, 0.6),
+        playBuyIntent: () => playSound(SOUNDS.BUY_INTENT, 0.45),
     };
 };

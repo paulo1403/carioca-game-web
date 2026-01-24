@@ -3,6 +3,7 @@ import { Player, Card } from "@/types/game";
 import { Check, X, AlertTriangle } from "lucide-react";
 import { Modal } from "./Modal";
 import { findPotentialContractGroups, canFulfillContract } from "@/utils/handAnalyzer";
+import { MAX_BUYS, getRemainingBuys } from "@/utils/buys";
 
 interface BuyConfirmDialogProps {
   show: boolean;
@@ -25,7 +26,7 @@ export const BuyConfirmDialog: React.FC<BuyConfirmDialogProps> = ({
 
   if (!show) return null;
 
-  const remainingBuys = 7 - (myPlayer?.buysUsed ?? 0);
+  const remainingBuys = getRemainingBuys(myPlayer?.buysUsed ?? 0);
 
   // Compute before/after analysis for the discard card if available
   const analysis = (() => {
@@ -81,7 +82,7 @@ export const BuyConfirmDialog: React.FC<BuyConfirmDialogProps> = ({
           <div className="font-semibold text-slate-100">Confirmar compra</div>
         </div>
         <p className="text-sm text-slate-200">Solo tienes <span className="font-bold text-yellow-400">{remainingBuys} compras</span> disponibles en toda la partida.</p>
-        <p className="text-sm text-slate-200">Una vez que uses todas tus 7 compras, no podrás robar más cartas del descarte hasta el final del juego.</p>
+        <p className="text-sm text-slate-200">Una vez que uses todas tus {MAX_BUYS} compras, no podrás robar más cartas del descarte hasta el final del juego.</p>
         <p className="text-sm font-semibold text-slate-100">¿Estás seguro de que quieres comprar la carta del descarte?</p>
 
         {analysis && (

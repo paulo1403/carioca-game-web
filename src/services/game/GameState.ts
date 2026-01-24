@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { GameState, Card, Player } from "@/types/game";
 import { parsePlayer } from "./utils";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 export async function getGameState(
     sessionId: string,
@@ -9,7 +10,7 @@ export async function getGameState(
         where: { id: sessionId },
         include: {
             players: {
-                orderBy: { createdAt: "asc" },
+                orderBy: orderPlayersByTurn,
             },
         },
     });

@@ -16,6 +16,7 @@ import {
   isEscala,
   isDifferentSuitGroup,
 } from "@/utils/rules";
+import { MAX_BUYS } from "@/utils/buys";
 
 /**
  * Represents a move the bot wants to make
@@ -97,7 +98,7 @@ const decideDraw = (
   const discardPile = gameState.discardPile;
   const topDiscard = discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
 
-  if (!topDiscard || bot.buysUsed >= 7) {
+  if (!topDiscard || bot.buysUsed >= MAX_BUYS) {
     return { action: "DRAW_DECK" };
   }
 

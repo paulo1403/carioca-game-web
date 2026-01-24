@@ -229,8 +229,26 @@ export const canStealJoker = (card: Card, meld: Card[], hand: Card[]): boolean =
   const remainingJokers = jokers.slice(1);
   const newMeld = [...nonJokers, card, ...remainingJokers];
 
-  // It must be at least as valid as it was before
-  return isDifferentSuitGroup(newMeld, meld.length) || isEscala(newMeld, meld.length);
+  const meldIsEscala = isEscala(meld, meld.length);
+  if (meldIsEscala) {
+    return isEscala(newMeld, meld.length);
+  }
+
+  const meldIsDifferentSuit = isDifferentSuitGroup(meld, meld.length);
+  const meldIsTrio = isTrio(meld, meld.length);
+  if (!meldIsDifferentSuit && !meldIsTrio) return false;
+
+  if (isJoker(card)) return false;
+  const groupValue = nonJokers[0].value;
+  if (card.value !== groupValue) return false;
+
+  const matchingNaturals = hand.filter(
+    (c) => !isJoker(c) && c.value === groupValue
+  ).length;
+  if (matchingNaturals < 2) return false;
+
+  if (meldIsDifferentSuit) return isDifferentSuitGroup(newMeld, meld.length);
+  return isTrio(newMeld, meld.length);
 };
 
 export const calculateHandPoints = (hand: Card[]): number => {

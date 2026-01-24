@@ -16,6 +16,8 @@ interface PlayerBadgeProps {
   onUpdateName?: (newName: string) => void;
   onMeldClick?: (playerId: string, meldIndex: number) => void;
   gameStatus?: string;
+  buyIntentActive?: boolean;
+  reactionEmoji?: string;
 }
 
 export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
@@ -29,6 +31,8 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
   onUpdateName,
   onMeldClick,
   gameStatus,
+  buyIntentActive = false,
+  reactionEmoji,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
@@ -128,6 +132,18 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
         {isCurrentTurn && (
           <div className="absolute -top-2 -right-2 z-10 animate-bounce">
             <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+          </div>
+        )}
+
+        {buyIntentActive && (
+          <div className="absolute -top-1.5 -left-1.5 z-10 bg-amber-400 text-slate-900 text-[8px] md:text-[9px] font-semibold px-1.5 py-0.5 rounded-full shadow-md border border-amber-200">
+            ¡COMPRO!
+          </div>
+        )}
+
+        {reactionEmoji && (
+          <div className="absolute -top-6 right-0 text-xl drop-shadow-lg animate-bounce">
+            {reactionEmoji}
           </div>
         )}
 

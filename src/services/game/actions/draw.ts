@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, Player } from "@/types/game";
 import { shuffleDeck } from "@/utils/deck";
 import { calculateHandPoints } from "@/utils/rules";
+import { MAX_BUYS, getBuyExtrasCount } from "@/utils/buys";
 import { autoReadyBots } from "../botActions";
 
 export async function handleDrawDeck(
@@ -128,7 +129,7 @@ export async function handleDrawDiscard(
         };
     }
 
-    if (buyingPlayer.buysUsed >= 7) {
+    if (buyingPlayer.buysUsed >= MAX_BUYS) {
         return {
             success: false,
             error: "Ya has realizado las 7 compras permitidas en esta partida.",
@@ -170,7 +171,8 @@ export async function handleDrawDiscard(
     buyingPlayer.hand.push(discardCard);
     buyingPlayer.boughtCards.push(discardCard);
 
-    // ALL players who buy from discard get: 1 from discard + 2 from deck
+    const extrasToDraw = getBuyExtrasCount(isCurrentPlayer);
+
     const drawFromDeck = (): Card | undefined => {
         let card = deck.pop();
         if (!card && reshuffleCount < 3) {
@@ -182,7 +184,7 @@ export async function handleDrawDiscard(
         return card;
     };
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < extrasToDraw; i++) {
         const extra = drawFromDeck();
         if (!extra) break;
         buyingPlayer.hand.push(extra);
@@ -190,10 +192,9 @@ export async function handleDrawDiscard(
         boughtCards.push(extra);
     }
 
-    // Track buy usage (only for non-current players)
-    if (!isCurrentPlayer) {
-        buyingPlayer.buysUsed = (buyingPlayer.buysUsed || 0) + 1;
-    } else {
+    // Track buy usage (all discard buys consume a buy)
+    buyingPlayer.buysUsed = (buyingPlayer.buysUsed || 0) + 1;
+    if (isCurrentPlayer) {
         // Current player also counts as having used their draw
         buyingPlayer.hasDrawn = true;
     }

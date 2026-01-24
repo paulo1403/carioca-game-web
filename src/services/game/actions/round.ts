@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { Player, Card } from "@/types/game";
 import { shuffleDeck, createDeck } from "@/utils/deck";
 import { calculateHandPoints } from "@/utils/rules";
+import { applyRemainingBuysPenalty } from "@/utils/buys";
 import { autoReadyBots } from "../botActions";
+import { getInitialDiscardPile } from "@/utils/gameSetup";
 
 export async function handleReadyForNextRound(session: any, playerId: string, players: Player[]) {
     const readyPlayers = JSON.parse(session.readyForNextRound || "[]") as string[];
@@ -34,7 +36,7 @@ export async function handleStartNextRound(session: any, playerId: string, playe
     }
 
     const newDeck = shuffleDeck(createDeck());
-    const newDiscardPile = [newDeck.pop()!];
+    const newDiscardPile = getInitialDiscardPile();
 
     const playerUpdates = players.map((p) => {
         const newHand = newDeck.splice(0, 11);
@@ -97,6 +99,12 @@ export async function finishRound(
     });
 
     const isGameOver = session.currentRound >= 8;
+
+    if (isGameOver) {
+        players.forEach((p) => {
+            p.score = applyRemainingBuysPenalty(p.score || 0, p.buysUsed || 0);
+        });
+    }
 
     if (isGameOver) {
         await prisma.gameSession.update({

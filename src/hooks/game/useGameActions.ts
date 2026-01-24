@@ -117,12 +117,12 @@ export function useGameActions({
           const card = newState.discardPile.pop();
           player.hand.push(card);
 
-          // Optimistic: mark as drawn and, if not the current turn player, increment buysUsed
-          player.hasDrawn = true;
-
           const currentTurnIndex = newState.currentTurn;
           const playerIndex = newState.players.findIndex((p: any) => p.id === myPlayerId);
-          if (playerIndex !== -1 && playerIndex !== currentTurnIndex) {
+          if (playerIndex === currentTurnIndex) {
+            player.hasDrawn = true;
+          }
+          if (playerIndex !== -1) {
             player.buysUsed = (player.buysUsed || 0) + 1;
           }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 import { processMove } from "@/services/gameService";
 
 /**
@@ -20,7 +21,7 @@ export async function POST(
       where: { id },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });

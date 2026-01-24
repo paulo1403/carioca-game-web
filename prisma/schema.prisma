@@ -53,6 +53,7 @@ model Player {
   isBot         Boolean     @default(false)
   difficulty    String? // 'EASY', 'MEDIUM', 'HARD'
   hasDrawn      Boolean     @default(false)
+  turnOrder     Int         @default(0)
   createdAt     DateTime    @default(now())
   gameSessionId String
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)

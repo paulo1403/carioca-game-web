@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import { Card, GameState, Player } from "@/types/game";
 import { canAddToMeld } from "@/utils/rules";
 
@@ -10,12 +10,9 @@ export const useAddableCards = (
   otherPlayers: Player[],
   haveMelded: boolean
 ) => {
-  const [addableCards, setAddableCards] = useState<string[]>([]);
-
-  useEffect(() => {
+  return useMemo(() => {
     if (!isMyTurn || !hasDrawn || isDownMode || !myPlayer || !haveMelded) {
-      setAddableCards([]);
-      return;
+      return [] as string[];
     }
 
     const newAddable: string[] = [];
@@ -24,26 +21,23 @@ export const useAddableCards = (
 
       // Check my melds
       if (myPlayer.melds) {
-        if (myPlayer.melds.some((meld: Card[]) => canAddToMeld(card, meld)))
+        if (myPlayer.melds.some((meld: Card[]) => canAddToMeld(card, meld))) {
           canAdd = true;
+        }
       }
 
       // Check other players melds
       if (!canAdd) {
         otherPlayers.forEach((p) => {
-          if (
-            p.melds &&
-            p.melds.some((meld: Card[]) => canAddToMeld(card, meld))
-          )
+          if (p.melds && p.melds.some((meld: Card[]) => canAddToMeld(card, meld))) {
             canAdd = true;
+          }
         });
       }
 
       if (canAdd) newAddable.push(card.id);
     });
 
-    setAddableCards(newAddable);
+    return newAddable;
   }, [isMyTurn, hasDrawn, isDownMode, myPlayer, otherPlayers, haveMelded]);
-
-  return addableCards;
 };

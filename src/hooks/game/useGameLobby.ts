@@ -242,6 +242,59 @@ export function useGameLobby({
     },
   });
 
+  const updateTurnOrder = useMutation({
+    mutationFn: async (order: string[]) => {
+      const res = await fetch(`/api/game/${roomId}/turn-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requesterId: myPlayerId, order }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al actualizar turnos");
+      }
+
+      return res.json();
+    },
+    onSuccess: (_data, order) => {
+      queryClient.setQueryData(["gameState", roomId], (old: any) => {
+        if (!old) return old;
+        const byId = new Map(old.players.map((p: any) => [p.id, p]));
+        const players = order
+          .map((id: string, idx: number) => {
+            const player = byId.get(id);
+            if (!player) return null;
+            return { ...player, turnOrder: idx };
+          })
+          .filter(Boolean);
+        return { ...old, players };
+      });
+
+      invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+
+      try {
+        supabase.channel(`game:${roomId}`).send({
+          type: "broadcast",
+          event: "player_change",
+          payload: { action: "reorder" },
+        });
+      } catch (err) {
+      }
+
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al actualizar turnos",
+        description: error.message,
+        type: "error",
+      });
+      onError?.(error);
+    },
+  });
+
   // End game
   const endGame = useMutation({
     mutationFn: async () => {
@@ -283,14 +336,6 @@ export function useGameLobby({
       } catch (err) {
       }
       
-      // Clear localStorage and redirect handled by component
-      localStorage.removeItem(`carioca_player_id_${roomId}`);
-
-      // Force redirect to home
-      if (typeof window !== "undefined") {
-        window.location.href = "/";
-      }
-
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -367,6 +412,7 @@ export function useGameLobby({
     addBot,
     kickPlayer,
     startGame,
+    updateTurnOrder,
     endGame,
     leaveGame,
   };

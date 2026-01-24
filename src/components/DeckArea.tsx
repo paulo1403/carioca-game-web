@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Lightbulb } from "lucide-react";
 import { Card, GameState, Player } from "@/types/game";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { MAX_BUYS, getRemainingBuys } from "@/utils/buys";
 
 interface DeckAreaProps {
   isMyTurn: boolean;
@@ -116,7 +117,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           onClick={handleDiscardPileClick}
           className={cn(
             "relative transition-all duration-300 card-bounce-in",
-            isBuyWindowOpen && (myPlayer?.buysUsed ?? 0) < 7 && !isDownMode
+            isBuyWindowOpen && (myPlayer?.buysUsed ?? 0) < MAX_BUYS && !isDownMode
               ? "cursor-pointer hover:scale-105 hover:ring-4 hover:ring-yellow-400 rounded-lg hover:-translate-y-2"
               : "",
             // Highlight when discard is useful for this player
@@ -149,13 +150,13 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
               {isBuying ? (
                 <div className="flex items-center justify-center gap-1 text-[10px]"><span className="loader w-3 h-3 rounded-full border-2 border-white/50 border-t-white animate-spin" />...</div>
               ) : (
-                `${7 - (myPlayer?.buysUsed ?? 0)} compras`
+                `${getRemainingBuys(myPlayer?.buysUsed ?? 0)} compras`
               )}
             </div>
           )}
 
           {isBuyWindowOpen &&
-            (myPlayer?.buysUsed ?? 0) < 7 &&
+            (myPlayer?.buysUsed ?? 0) < MAX_BUYS &&
             !isDownMode &&
             (!isMyTurn || !selectedCardId) && (
               <div

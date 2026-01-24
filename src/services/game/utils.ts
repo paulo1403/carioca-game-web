@@ -10,6 +10,7 @@ export function parsePlayer(p: any): Player {
         roundScores: JSON.parse(p.roundScores || "[]") as number[],
         roundBuys: JSON.parse(p.roundBuys || "[]") as number[],
         difficulty: (p.difficulty as BotDifficulty) || undefined,
+        turnOrder: p.turnOrder ?? 0,
     };
 }
 

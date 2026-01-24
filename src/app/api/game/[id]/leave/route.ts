@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 export async function POST(
   request: Request,
@@ -13,7 +14,7 @@ export async function POST(
       where: { id },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });
@@ -36,10 +37,20 @@ export async function POST(
       where: { id: playerId }
     });
 
+    const remaining = session.players.filter(p => p.id !== playerId);
+    const reindexUpdates = remaining.map((p, idx) =>
+      prisma.player.update({
+        where: { id: p.id },
+        data: { turnOrder: idx } as any,
+      })
+    );
+
     // If no players left, maybe delete session? (Optional cleanup)
     const remainingPlayers = session.players.length - 1;
     if (remainingPlayers === 0) {
       await prisma.gameSession.delete({ where: { id } });
+    } else if (reindexUpdates.length > 0) {
+      await prisma.$transaction(reindexUpdates);
     }
 
     return NextResponse.json({ success: true, playerName: player.name });

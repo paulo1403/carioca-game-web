@@ -19,8 +19,11 @@ import {
   Users,
   Zap,
   Settings,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import QRCode from "react-qr-code";
+import { moveTurnOrder } from "@/utils/turnOrder";
 
 interface GameLobbyProps {
   gameState: GameState;
@@ -35,6 +38,7 @@ interface GameLobbyProps {
   onAddBot: (difficulty: "EASY" | "MEDIUM" | "HARD") => void;
   onKickPlayer: (playerId: string) => void;
   onStartGame: () => void;
+  onUpdateTurnOrder: (order: string[]) => void;
   onLeaveGame: () => void;
   onCopyInviteLink: () => void;
   onCopyRoomId: () => void;
@@ -61,6 +65,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   onAddBot,
   onKickPlayer,
   onStartGame,
+  onUpdateTurnOrder,
   onLeaveGame,
   onCopyInviteLink,
   onCopyRoomId,
@@ -71,6 +76,20 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   const isHost = gameState.creatorId === myPlayerId;
   const canStart = gameState.players.length >= 3;
   const playersNeeded = Math.max(3 - gameState.players.length, 0);
+  const [orderIds, setOrderIds] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    const ids = gameState.players.map((p) => p.id);
+    setOrderIds(ids);
+  }, [gameState.players.map((p) => p.id).join("|")]);
+
+  const movePlayer = (playerId: string, direction: "up" | "down") => {
+    if (!isHost) return;
+    const next = moveTurnOrder(orderIds, playerId, direction);
+    if (next === orderIds) return;
+    setOrderIds(next);
+    onUpdateTurnOrder(next);
+  };
 
   const inviteUrl =
     typeof window !== "undefined"
@@ -234,12 +253,19 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                 </h2>
 
                 <div className="space-y-3">
-                  {gameState.players.map((player, idx) => (
+                  {orderIds.map((id, idx) => {
+                    const player = gameState.players.find((p) => p.id === id);
+                    if (!player) return null;
+                    return (
                     <div
                       key={player.id}
                       className="bg-slate-800/50 rounded-xl p-4 flex items-center justify-between group hover:bg-slate-800/70 transition-colors"
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="flex flex-col items-center justify-center w-10">
+                          <span className="text-xs text-slate-400">Turno</span>
+                          <span className="text-lg font-bold text-slate-100">{idx + 1}</span>
+                        </div>
                         {/* Avatar */}
                         <div
                           className={`
@@ -299,6 +325,26 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                       </div>
 
                       {/* Actions */}
+                      {isHost && (
+                        <div className="flex items-center gap-1 mr-2">
+                          <button
+                            onClick={() => movePlayer(player.id, "up")}
+                            disabled={idx === 0}
+                            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 disabled:text-slate-600 disabled:hover:bg-transparent"
+                            title="Subir"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => movePlayer(player.id, "down")}
+                            disabled={idx === orderIds.length - 1}
+                            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 disabled:text-slate-600 disabled:hover:bg-transparent"
+                            title="Bajar"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                       {isHost && player.id !== myPlayerId && (
                         <button
                           onClick={() => onKickPlayer(player.id)}
@@ -309,7 +355,8 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                         </button>
                       )}
                     </div>
-                  ))}
+                  );
+                  })}
 
                   {/* Empty Slots */}
                   {Array.from({ length: 5 - gameState.players.length }).map(

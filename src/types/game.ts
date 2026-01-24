@@ -21,6 +21,7 @@ export interface Player {
   difficulty?: BotDifficulty;
   buysUsed: number; // Number of buys used by this player (max 7)
   hasDrawn: boolean;
+  turnOrder: number;
 }
 
 export interface GameState {
@@ -45,7 +46,8 @@ export interface GameState {
       | "ADD_TO_MELD"
       | "STEAL_JOKER"
       | "READY_FOR_NEXT_ROUND"
-      | "START_NEXT_ROUND";
+      | "START_NEXT_ROUND"
+      | "TURN_ORDER";
     description: string;
     timestamp: number;
   };

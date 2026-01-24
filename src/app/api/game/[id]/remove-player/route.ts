@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 export async function POST(
   request: Request,
@@ -13,7 +14,7 @@ export async function POST(
       where: { id },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });
@@ -48,6 +49,18 @@ export async function POST(
     await prisma.player.delete({
       where: { id: playerIdToRemove }
     });
+
+    const remaining = session.players.filter(p => p.id !== playerIdToRemove);
+    const reindexUpdates = remaining.map((p, idx) =>
+      prisma.player.update({
+        where: { id: p.id },
+        data: { turnOrder: idx } as any,
+      })
+    );
+
+    if (reindexUpdates.length > 0) {
+      await prisma.$transaction(reindexUpdates);
+    }
 
     // Touch GameSession to trigger Realtime UPDATE so other clients get notified
     if (playerToRemove) {

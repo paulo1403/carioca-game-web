@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { Card } from "@/types/game";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 import { joinGameSchema, validateRequest } from "@/lib/validations";
 import { auth } from "@/auth";
@@ -33,7 +34,7 @@ export async function POST(
       where: { id },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });
@@ -75,8 +76,9 @@ export async function POST(
         score: 0,
         buysUsed: 0,
         isBot: false,
+        turnOrder: session.players.length,
         gameSessionId: id,
-      },
+      } as any,
     });
 
     // Touch GameSession to trigger Realtime UPDATE so other clients (host) get notified

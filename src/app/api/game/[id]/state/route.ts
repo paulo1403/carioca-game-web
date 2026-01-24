@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 import { Card } from "@/types/game";
 import { checkAndProcessBotTurns } from "@/services/gameService";
 
@@ -14,7 +15,7 @@ export async function GET(
       where: { id },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });
@@ -30,7 +31,7 @@ export async function GET(
       // Re-fetch to get updated state after bot moves
       const updatedSession = await prisma.gameSession.findUnique({
         where: { id },
-        include: { players: { orderBy: { createdAt: "asc" } } },
+        include: { players: { orderBy: orderPlayersByTurn } },
       });
       if (updatedSession) {
         // Use updated session for response

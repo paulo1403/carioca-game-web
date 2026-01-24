@@ -10,6 +10,15 @@ export const sortCards = (cards: Card[]) => {
   });
 };
 
+export const sortCardsByRank = (cards: Card[]) => {
+  return [...cards].sort((a, b) => {
+    if (a.suit === "JOKER") return -1;
+    if (b.suit === "JOKER") return 1;
+    if (a.value !== b.value) return a.value - b.value;
+    return a.suit.localeCompare(b.suit);
+  });
+};
+
 const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
 
 export const isValidTrio = (cards: Card[]): boolean => {

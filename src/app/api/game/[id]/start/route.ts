@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createDeck, shuffleDeck } from '@/utils/deck';
+import { getInitialDiscardPile } from '@/utils/gameSetup';
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 export async function POST(
   request: Request,
@@ -13,7 +15,7 @@ export async function POST(
       where: { id },
       include: {
         players: {
-          orderBy: { createdAt: "asc" },
+          orderBy: orderPlayersByTurn,
         },
       },
     });
@@ -32,7 +34,7 @@ export async function POST(
 
     // Deal Cards
     const deck = shuffleDeck(createDeck());
-    const discardPile = [deck.pop()!];
+    const discardPile = getInitialDiscardPile();
 
     // Deal 11 cards to each player
     const updates = session.players.map(player => {

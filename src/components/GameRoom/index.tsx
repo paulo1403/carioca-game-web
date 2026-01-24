@@ -12,6 +12,7 @@ import { useGameLobby } from "@/hooks/game/useGameLobby";
 import { useMyPlayerId } from "@/hooks/game/useMyPlayerId";
 import { Toaster } from "@/components/Toaster";
 import { Modal } from "@/components/Modal";
+import { EMOJI_DISPLAY_MS } from "@/utils/emojiReactions";
 
 
 interface GameRoomProps {
@@ -21,7 +22,7 @@ interface GameRoomProps {
 
 export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   const router = useRouter();
-  const { playSuccess, playError, playStart, playClick } = useGameSounds();
+  const { playSuccess, playError, playStart, playClick, playBuyIntent, playPop } = useGameSounds();
 
   // Get player ID using React Query hook
   const {
@@ -82,12 +83,19 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     null,
   );
 
+  const [buyIntents, setBuyIntents] = useState<Record<string, number>>({});
+  const [emojiReactions, setEmojiReactions] = useState<Record<string, { emoji: string; timestamp: number }>>({});
+  const buyIntentTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const emojiTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   // Use React Query for game state - ELIMINAMOS POLLING DUPLICADO
   const {
     gameState,
     isLoading,
     error: queryError,
     invalidateGameState,
+    sendBuyIntent,
+    sendEmojiReaction,
   } = useGameState({
     roomId,
     myPlayerId,
@@ -119,7 +127,67 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
         setReshuffleBanner(null);
       }, 5000);
     },
+    onBuyIntent: ({ playerId, playerName, timestamp }) => {
+      if (!playerId) return;
+      if (!gameState) return;
+      const name = playerName || gameState.players.find(p => p.id === playerId)?.name || "Jugador";
+      setBuyIntents((prev) => ({ ...prev, [playerId]: timestamp }));
+      playBuyIntent();
+      toast({
+        title: "¡COMPRO!",
+        description: `${name} quiere comprar`,
+        type: "info",
+      });
+      const existing = buyIntentTimeoutsRef.current[playerId];
+      if (existing) clearTimeout(existing);
+      buyIntentTimeoutsRef.current[playerId] = setTimeout(() => {
+        setBuyIntents((prev) => {
+          const next = { ...prev };
+          delete next[playerId];
+          return next;
+        });
+        delete buyIntentTimeoutsRef.current[playerId];
+      }, 8000);
+    },
+    onEmojiReaction: ({ playerId, emoji, timestamp }) => {
+      if (!playerId || !emoji) return;
+      setEmojiReactions((prev) => ({ ...prev, [playerId]: { emoji, timestamp } }));
+      playPop();
+      const existing = emojiTimeoutsRef.current[playerId];
+      if (existing) clearTimeout(existing);
+      emojiTimeoutsRef.current[playerId] = setTimeout(() => {
+        setEmojiReactions((prev) => {
+          const next = { ...prev };
+          delete next[playerId];
+          return next;
+        });
+        delete emojiTimeoutsRef.current[playerId];
+      }, EMOJI_DISPLAY_MS);
+    },
   });
+
+  const handleBuyIntent = async () => {
+    if (!myPlayerId) return;
+    if (!gameState) return;
+    const myName = gameState.players.find(p => p.id === myPlayerId)?.name || "Jugador";
+    await sendBuyIntent?.(myPlayerId, myName);
+  };
+
+  const handleEmojiReaction = async (emoji: string) => {
+    if (!myPlayerId) return;
+    setEmojiReactions((prev) => ({ ...prev, [myPlayerId]: { emoji, timestamp: Date.now() } }));
+    const existing = emojiTimeoutsRef.current[myPlayerId];
+    if (existing) clearTimeout(existing);
+    emojiTimeoutsRef.current[myPlayerId] = setTimeout(() => {
+      setEmojiReactions((prev) => {
+        const next = { ...prev };
+        delete next[myPlayerId];
+        return next;
+      });
+      delete emojiTimeoutsRef.current[myPlayerId];
+    }, EMOJI_DISPLAY_MS);
+    await sendEmojiReaction?.(myPlayerId, emoji);
+  };
 
   // Use React Query for game actions - MUTATIONS
   const gameActions = useGameActions({
@@ -276,6 +344,15 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     }
   };
 
+  const handleUpdateTurnOrder = async (order: string[]) => {
+    try {
+      await lobbyActions.updateTurnOrder.mutateAsync(order);
+      playClick();
+    } catch {
+      // Error handling already done in hook
+    }
+  };
+
   const handleDrawDeck = async () => {
     setOptimisticDrawn(true);
     try {
@@ -376,8 +453,6 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
       async () => {
         try {
           await lobbyActions.endGame.mutateAsync();
-          localStorage.removeItem(`carioca_player_id_${roomId}`);
-          router.push("/");
         } catch {
           // Error handling already done in hook
         }
@@ -512,6 +587,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
           onAddBot={handleAddBot}
           onKickPlayer={handleKickPlayer}
           onStartGame={handleStartGame}
+          onUpdateTurnOrder={handleUpdateTurnOrder}
           onLeaveGame={handleLeaveGame}
           onCopyInviteLink={copyInviteLink}
           onCopyRoomId={copyRoomId}
@@ -524,6 +600,10 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
           myPlayerId={myPlayerId!}
           roomId={roomId}
           hasDrawn={hasDrawn ?? false}
+          buyIntents={buyIntents}
+          onBuyIntent={handleBuyIntent}
+          emojiReactions={emojiReactions}
+          onEmojiReaction={handleEmojiReaction}
           modalConfig={modalConfig}
           roundWinnerModal={roundWinnerModal}
           reshuffleBanner={reshuffleBanner}

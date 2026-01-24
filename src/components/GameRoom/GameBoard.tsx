@@ -11,6 +11,10 @@ interface GameBoardProps {
   gameState: GameState;
   myPlayerId: string;
   roomId?: string;
+  buyIntents?: Record<string, number>;
+  onBuyIntent?: () => void;
+  emojiReactions?: Record<string, { emoji: string; timestamp: number }>;
+  onEmojiReaction?: (emoji: string) => void;
   modalConfig: {
     isOpen: boolean;
     title: string;
@@ -62,6 +66,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   gameState,
   myPlayerId,
   roomId,
+  buyIntents,
+  onBuyIntent,
+  emojiReactions,
+  onEmojiReaction,
   modalConfig,
   roundWinnerModal,
   reshuffleBanner,
@@ -89,6 +97,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const isHost = gameState.creatorId === myPlayerId;
   const isRoundEnded = gameState.status === "ROUND_ENDED";
   const isGameFinished = gameState.status === "FINISHED";
+
+  const getRoundScore = (player: { roundScores?: number[] }) => {
+    const scores = player.roundScores || [];
+    return scores.length > 0 ? scores[scores.length - 1] : 0;
+  };
+
+  const getRoundBuys = (player: { roundBuys?: number[] }) => {
+    const buys = player.roundBuys || [];
+    return buys.length > 0 ? buys[buys.length - 1] : 0;
+  };
 
   // Auto-show results if game is finished
   React.useEffect(() => {
@@ -187,7 +205,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               </h3>
               <div className="space-y-3 mb-6">
                 {roundWinnerModal.scores
-                  .sort((a, b) => a.score - b.score)
+                  .sort((a, b) => {
+                    const aScore = isGameFinished ? a.score : getRoundScore(a);
+                    const bScore = isGameFinished ? b.score : getRoundScore(b);
+                    return aScore - bScore;
+                  })
                   .map((player, idx) => (
                     <div
                       key={player.name}
@@ -216,10 +238,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className="text-lg font-bold text-slate-200">
-                            {player.score} pts
+                            {isGameFinished ? player.score : getRoundScore(player)} pts
                           </div>
                           <div className="text-xs text-slate-400">
-                            {player.buysUsed} compras
+                            {isGameFinished
+                              ? `${player.buysUsed} compras totales`
+                              : `${getRoundBuys(player)} compras de la ronda`}
                           </div>
                         </div>
                       </div>
@@ -409,6 +433,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           onEndGame={onEndGame}
           onUpdateName={onUpdateName}
           hasDrawn={hasDrawn}
+          buyIntents={buyIntents}
+          onBuyIntent={onBuyIntent}
+          emojiReactions={emojiReactions}
+          onEmojiReaction={onEmojiReaction}
         />
       )}
 
@@ -416,8 +444,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       <ResultsModal
         isOpen={showResults}
         players={gameState.players}
+        roomId={roomId}
         onClose={() => {
           setShowResults(false);
+          if (roomId && typeof window !== "undefined") {
+            localStorage.removeItem(`carioca_player_id_${roomId}`);
+          }
           router.push("/");
         }}
       />
@@ -425,8 +457,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       <ResultsModal
         isOpen={showResults}
         players={gameState.players}
+        roomId={roomId}
         onClose={() => {
           setShowResults(false);
+          if (roomId && typeof window !== "undefined") {
+            localStorage.removeItem(`carioca_player_id_${roomId}`);
+          }
           router.push("/");
         }}
       />
