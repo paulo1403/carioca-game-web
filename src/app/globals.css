@@ -245,6 +245,22 @@ body {
     }
 }
 
+@keyframes cardLift {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.animate-card-lift {
+    animation: cardLift 0.45s ease;
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
     width: 8px;

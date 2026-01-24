@@ -58,11 +58,15 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
         }}
         className={cn(
           "relative transition-all duration-300 card-bounce-in",
+          isDrawing && "animate-card-lift",
           isMyTurn && !hasDrawn && !isDownMode
             ? "cursor-pointer hover:scale-110 hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:-translate-y-2"
             : "opacity-75 grayscale-[0.2]",
         )}
       >
+        <div className="absolute -top-2 -left-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full border border-white/20 w-10 text-center">
+          {gameState.deck?.length ?? 0}
+        </div>
         <div
           className={cn(
             "bg-blue-800 rounded-xl border-2 border-blue-400 shadow-2xl flex items-center justify-center relative overflow-hidden group-hover:border-white transition-colors",
@@ -117,6 +121,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           onClick={handleDiscardPileClick}
           className={cn(
             "relative transition-all duration-300 card-bounce-in",
+            isBuying && "animate-card-lift",
             isBuyWindowOpen && (myPlayer?.buysUsed ?? 0) < MAX_BUYS && !isDownMode
               ? "cursor-pointer hover:scale-105 hover:ring-4 hover:ring-yellow-400 rounded-lg hover:-translate-y-2"
               : "",

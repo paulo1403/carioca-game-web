@@ -36,20 +36,20 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
     <div
       onClick={onClick}
       className={cn(
-        "transform transition-all duration-300 origin-bottom card-slide-in",
+        "transform transition-all duration-300 origin-bottom card-slide-in active:scale-95 active:translate-y-1",
         !isMobile && "touch-none",
         disabled ? "" : "hover:-translate-y-6 hover:scale-105",
         disabled ? "cursor-default opacity-75" : "cursor-pointer",
         isSelected ? "-translate-y-10 z-40 card-glow scale-110" : "",
         isTempSelected ? "-translate-y-6 z-40 scale-105" : "",
         isAddable && !isSelected && !isTempSelected
-          ? "-translate-y-4 z-30 ring-4 ring-blue-400 rounded-lg shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-pulse"
+          ? "-translate-y-3 z-30 ring-2 ring-blue-400 rounded-lg shadow-[0_0_8px_rgba(59,130,246,0.35)]"
           : "",
         isGroupMember && !isSelected && !isTempSelected
-          ? "-translate-y-3 z-35 ring-4 ring-amber-400 rounded-lg shadow-[0_0_18px_rgba(245,158,11,0.28)]"
+          ? "-translate-y-2 z-35 ring-2 ring-amber-400 rounded-lg shadow-[0_0_10px_rgba(245,158,11,0.2)]"
           : "",
         isSuggestedDiscard && !isSelected && !isTempSelected && !isAddable
-          ? "-translate-y-2 z-20 ring-4 ring-red-400 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+          ? "-translate-y-2 z-20 ring-2 ring-red-400 rounded-lg shadow-[0_0_8px_rgba(239,68,68,0.35)]"
           : "",
       )}
       style={{

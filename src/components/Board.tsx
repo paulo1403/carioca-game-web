@@ -197,6 +197,7 @@ export const Board: React.FC<BoardProps> = ({
   const [panelOpen, setPanelOpen] = useState(!isMobile);
   const [panelTab, setPanelTab] = useState<"actions" | "emoji">("actions");
   const [showAssistant, setShowAssistant] = useState(false);
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
 
   const handleSortModeChange = (mode: SortMode) => {
     setSortMode(mode);
@@ -485,6 +486,19 @@ export const Board: React.FC<BoardProps> = ({
         onEndGame={onEndGame}
       />
       <div className="h-10 md:h-12"></div> {/* Spacer for fixed header */}
+      <div className="flex justify-center mb-2">
+        <div
+          className={cn(
+            "px-3 py-1 rounded-full text-xs md:text-sm font-semibold bg-slate-900/50 text-slate-100 border border-slate-700/60 shadow-sm",
+            isMyTurn ? "ring-1 ring-amber-300/70 bg-emerald-500/20" : "",
+          )}
+        >
+          {isMyTurn ? "Tu turno" : "Turno"} · R{gameState.currentRound}
+          {isDownMode && " · Bajada"}
+          {!isDownMode && isMyTurn && !hasDrawn && " · Roba"}
+          {!isDownMode && isMyTurn && hasDrawn && !selectedCardId && " · Descarta"}
+        </div>
+      </div>
       <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 pb-6">
         <section className="rounded-2xl bg-slate-950/40 border border-slate-800/60 p-3 md:p-4 shadow-lg">
           {/* Players Area - Responsive Layout */}
@@ -649,16 +663,16 @@ export const Board: React.FC<BoardProps> = ({
         </section>
 
         <section
-          className="rounded-2xl bg-slate-950/70 border border-slate-700/60 p-3 md:p-4 shadow-xl backdrop-blur-sm sticky bottom-0 z-30"
+          className="rounded-2xl bg-slate-950/60 border border-slate-700/50 p-3 md:p-4 shadow-xl backdrop-blur-sm sticky bottom-0 z-30"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
         >
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    "text-white font-semibold text-sm md:text-base bg-black/40 px-3 py-1 md:px-4 rounded-full transition-all text-center max-w-[90vw] truncate",
-                    isMyTurn ? "ring-2 ring-yellow-400 bg-green-600/70" : "",
+                    "text-white font-semibold text-sm md:text-base bg-slate-900/60 px-3 py-1 md:px-4 rounded-full transition-all text-center max-w-[90vw] truncate border border-slate-700/60",
+                    isMyTurn ? "ring-1 ring-amber-300/70 bg-emerald-600/30" : "",
                   )}
                 >
                   {isMyTurn ? "Tu turno" : "Turno"} · {myPlayer?.name} · R{gameState.currentRound}
@@ -668,7 +682,7 @@ export const Board: React.FC<BoardProps> = ({
                 </div>
                 {myEmojiReaction && (
                   <div className="relative">
-                    <div className="text-2xl drop-shadow-lg animate-bounce bg-white text-slate-900 px-2 py-1 rounded-full border border-slate-300 shadow-md">
+                    <div className="text-2xl drop-shadow-lg animate-bounce bg-slate-50 text-slate-900 px-2 py-1 rounded-full border border-slate-300 shadow-sm">
                       {myEmojiReaction}
                     </div>
                     <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-l border-b border-slate-300 rotate-45" />
@@ -682,84 +696,20 @@ export const Board: React.FC<BoardProps> = ({
                     {sortFeedback}
                   </span>
                 )}
-
-                <div className="flex items-center gap-1 bg-slate-900/60 border border-slate-700/60 rounded-full p-1">
-                  <button
-                    type="button"
-                    onClick={decreaseVolume}
-                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
-                    title="Bajar volumen"
-                  >
-                    Vol -
-                  </button>
-                  <div className="text-[10px] md:text-xs text-slate-300 px-2">
-                    {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={increaseVolume}
-                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
-                    title="Subir volumen"
-                  >
-                    Vol +
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleMute}
-                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
-                    title={isMuted ? "Activar sonido" : "Silenciar"}
-                  >
-                    {isMuted ? "Mute" : "Silencio"}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowAssistant((prev) => !prev)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold border",
-                    showAssistant
-                      ? "bg-blue-600/80 text-white border-blue-400"
-                      : "bg-slate-900/40 text-slate-200 border-slate-600/60",
-                  )}
-                >
-                  Asistente
-                </button>
-
                 <button
                   type="button"
                   onClick={() => setPanelOpen((prev) => !prev)}
-                  className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold border bg-slate-900/40 text-slate-200 border-slate-600/60"
+                  className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold border bg-slate-900/60 text-slate-200 border-slate-700/60 hover:bg-slate-800/70"
                 >
                   {panelOpen ? "Ocultar" : "Panel"}
                 </button>
-
-                <div className="flex items-center gap-1 bg-slate-900/60 border border-slate-700/60 rounded-full p-1">
-                  <button
-                    type="button"
-                    onClick={() => setPanelTab("actions")}
-                    className={cn(
-                      "text-xs md:text-sm font-semibold px-3 py-1 rounded-full",
-                      panelTab === "actions"
-                        ? "bg-blue-600/80 text-white"
-                        : "bg-slate-800/60 text-slate-200",
-                    )}
-                  >
-                    Acciones
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPanelTab("emoji")}
-                    className={cn(
-                      "text-xs md:text-sm font-semibold px-3 py-1 rounded-full",
-                      panelTab === "emoji"
-                        ? "bg-blue-600/80 text-white"
-                        : "bg-slate-800/60 text-slate-200",
-                    )}
-                  >
-                    Emojis
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setSecondaryOpen((prev) => !prev)}
+                  className="px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold border bg-slate-900/60 text-slate-200 border-slate-700/60 hover:bg-slate-800/70"
+                >
+                  {secondaryOpen ? "Menos" : "Más"}
+                </button>
               </div>
             </div>
 
@@ -779,7 +729,7 @@ export const Board: React.FC<BoardProps> = ({
               />
             )}
 
-            {panelOpen && panelTab === "emoji" && onEmojiReaction && (
+            {secondaryOpen && panelTab === "emoji" && onEmojiReaction && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {EMOJI_REACTIONS.map((emoji) => (
                   <button
@@ -800,7 +750,7 @@ export const Board: React.FC<BoardProps> = ({
               </div>
             )}
 
-            {showAssistant && (
+            {secondaryOpen && showAssistant && (
               <HandAssistant
                 hand={myPlayer?.hand ?? []}
                 topDiscard={
@@ -850,6 +800,80 @@ export const Board: React.FC<BoardProps> = ({
                 }}
                 disabled={isDownMode || !myPlayer}
               />
+            )}
+
+            {secondaryOpen && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1 bg-slate-900/70 border border-slate-700/70 rounded-full p-1">
+                  <button
+                    type="button"
+                    onClick={decreaseVolume}
+                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
+                    title="Bajar volumen"
+                  >
+                    Vol -
+                  </button>
+                  <div className="text-[10px] md:text-xs text-slate-300 px-2">
+                    {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={increaseVolume}
+                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
+                    title="Subir volumen"
+                  >
+                    Vol +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
+                    title={isMuted ? "Activar sonido" : "Silenciar"}
+                  >
+                    {isMuted ? "Mute" : "Silencio"}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAssistant((prev) => !prev)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold border",
+                    showAssistant
+                      ? "bg-blue-600/70 text-white border-blue-400/70"
+                      : "bg-slate-900/60 text-slate-200 border-slate-700/60 hover:bg-slate-800/70",
+                  )}
+                >
+                  Asistente
+                </button>
+
+                <div className="flex items-center gap-1 bg-slate-900/70 border border-slate-700/70 rounded-full p-1">
+                  <button
+                    type="button"
+                    onClick={() => setPanelTab("actions")}
+                    className={cn(
+                      "text-xs md:text-sm font-semibold px-3 py-1 rounded-full",
+                      panelTab === "actions"
+                        ? "bg-blue-600/70 text-white"
+                        : "bg-slate-800/70 text-slate-200",
+                    )}
+                  >
+                    Acciones
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPanelTab("emoji")}
+                    className={cn(
+                      "text-xs md:text-sm font-semibold px-3 py-1 rounded-full",
+                      panelTab === "emoji"
+                        ? "bg-blue-600/70 text-white"
+                        : "bg-slate-800/70 text-slate-200",
+                    )}
+                  >
+                    Emojis
+                  </button>
+                </div>
+              </div>
             )}
 
             {!isDownMode && selectedAddTargets.length > 0 && (

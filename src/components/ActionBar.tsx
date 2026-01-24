@@ -1,5 +1,5 @@
 import React from "react";
-import { Wand2, Zap, ArrowDown } from "lucide-react";
+import { Wand2, Zap, ArrowDown, Loader2, Check } from "lucide-react";
 import { Card } from "@/types/game";
 import { cn } from "@/lib/utils";
 
@@ -47,14 +47,19 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => !processing && canBuyIntent && onBuyIntent()}
           disabled={processing || !canBuyIntent}
           className={cn(
-            "font-semibold px-5 py-2 rounded-full shadow-sm flex items-center gap-2 transition-all text-sm",
+            "font-semibold px-5 py-2 rounded-full shadow-sm flex items-center gap-2 transition-all text-sm active:scale-95",
             canBuyIntent
               ? "bg-amber-400 text-slate-900 hover:bg-amber-300"
               : "bg-slate-800/60 text-slate-400 cursor-not-allowed",
           )}
         >
-          <Wand2 className="w-5 h-5" />
+          {processing ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Wand2 className="w-5 h-5" />
+          )}
           ¡COMPRO!
+          {canBuyIntent && !processing && <Check className="w-4 h-4" />}
         </button>
       )}
       {/* Steal Joker Buttons */}
@@ -67,7 +72,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
               onClick={() => !processing && onStealJoker(index)}
               disabled={processing}
               className={cn(
-                "bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-full text-xs font-semibold",
+                "bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-full text-xs font-semibold active:scale-95",
                 processing ? "opacity-60 cursor-not-allowed" : ""
               )}
               title={`Robar joker - Necesitas ${
@@ -86,13 +91,18 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           onClick={() => !processing && onToggleDownMode()}
           disabled={processing}
           className={cn(
-            "font-semibold px-6 py-2 rounded-full shadow-sm flex items-center gap-2 transition-all text-sm",
+            "font-semibold px-6 py-2 rounded-full shadow-sm flex items-center gap-2 transition-all text-sm active:scale-95",
             "bg-green-500 hover:bg-green-400 text-white",
             processing ? "opacity-60 cursor-not-allowed" : ""
           )}
         >
-          <ArrowDown className="w-5 h-5" />
+          {processing ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <ArrowDown className="w-5 h-5" />
+          )}
           {hasMelds ? "Bajada adicional" : "Bajarse"}
+          {canDown && !processing && <Check className="w-4 h-4" />}
         </button>
       )}
     </div>

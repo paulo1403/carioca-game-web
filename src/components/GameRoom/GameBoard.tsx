@@ -42,6 +42,7 @@ interface GameBoardProps {
   onDrawDiscard: () => void;
   isDrawing?: boolean;
   isBuying?: boolean;
+  isServerBusy?: boolean;
   onDiscard: (cardId: string) => void;
   onDown: (groups: any[][]) => void;
   onAddToMeld: (
@@ -80,6 +81,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onDrawDiscard,
   isDrawing = false,
   isBuying = false,
+  isServerBusy = false,
   onDiscard,
   onDown,
   onAddToMeld,
@@ -123,7 +125,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   return (
     <div className="relative">
       {/* Global blocking overlay for slow servers (blocks all player actions during draw/buy) */}
-      {(isDrawing || isBuying) && (
+      {(isDrawing || isBuying || isServerBusy) && (
         <div
           className="fixed inset-0 z-140 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           aria-busy="true"
@@ -441,19 +443,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       )}
 
       {/* Detailed Final Scoreboard Modal */}
-      <ResultsModal
-        isOpen={showResults}
-        players={gameState.players}
-        roomId={roomId}
-        onClose={() => {
-          setShowResults(false);
-          if (roomId && typeof window !== "undefined") {
-            localStorage.removeItem(`carioca_player_id_${roomId}`);
-          }
-          router.push("/");
-        }}
-      />
-
       <ResultsModal
         isOpen={showResults}
         players={gameState.players}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { getNextTurnIndex } from "@/utils/turn";
 
 interface UseGameActionsOptions {
   roomId: string;
@@ -226,8 +227,12 @@ export function useGameActions({
           if (cardIndex !== -1) {
             const [card] = player.hand.splice(cardIndex, 1);
             newState.discardPile.push(card);
-            // Simular cambio de turno (simplificado)
-            newState.currentTurn = (newState.currentTurn - 1 + newState.players.length) % newState.players.length;
+            // Simular cambio de turno usando la dirección real
+            newState.currentTurn = getNextTurnIndex(
+              newState.direction ?? "counter-clockwise",
+              newState.currentTurn,
+              newState.players.length,
+            );
             player.hasDrawn = false;
           }
         }
@@ -554,5 +559,17 @@ export function useGameActions({
     // Loading flags for UI
     isDrawing: isDrawingState,
     isBuying: isBuyingState,
+    isProcessing:
+      isDrawingState ||
+      isBuyingState ||
+      drawDeck.isPending ||
+      buyFromDiscard.isPending ||
+      discard.isPending ||
+      goDown.isPending ||
+      addToMeld.isPending ||
+      stealJoker.isPending ||
+      readyForNextRound.isPending ||
+      startNextRound.isPending ||
+      updateName.isPending,
   };
 }

@@ -3,6 +3,7 @@ import { Card, Player } from "@/types/game";
 import { calculateHandPoints } from "@/utils/rules";
 import { autoReadyBots } from "../botActions";
 import { finishRound } from "./round";
+import { getNextTurnIndex } from "@/utils/turn";
 
 export async function handleDiscard(
     session: any,
@@ -26,8 +27,11 @@ export async function handleDiscard(
         return await finishRound(session, players, playerId, discardPile);
     }
 
-    const direction = session.direction === "clockwise" ? 1 : -1;
-    const nextTurn = (session.currentTurn + direction + players.length) % players.length;
+    const nextTurn = getNextTurnIndex(
+        session.direction,
+        session.currentTurn,
+        players.length,
+    );
 
     await prisma.$transaction([
         prisma.gameSession.update({
