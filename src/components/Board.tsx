@@ -30,6 +30,7 @@ import { GameHeader } from "./GameHeader";
 import { canStealJoker, canAddToMeld } from "@/utils/rules";
 import { findBestCardMove } from "@/utils/cardMoveHelper";
 import { findPotentialContractGroups, findAllValidGroups } from "@/utils/handAnalyzer";
+import { ROUND_CONTRACTS_DATA } from "@/types/game";
 
 // Types and interfaces
 interface BoardProps {
@@ -135,7 +136,16 @@ export const Board: React.FC<BoardProps> = ({
       [...trios, ...escalas].forEach(g => g.forEach(c => set.add(c.id)));
     } else {
       const { trios, escalas } = findPotentialContractGroups(myPlayer.hand, gameState.currentRound);
-      [...trios, ...escalas].forEach(g => g.forEach(c => set.add(c.id)));
+
+      // Only highlight if overall contract requirement can be met.
+      const reqs = ROUND_CONTRACTS_DATA[gameState.currentRound] || { differentSuitGroups: 0, escalas: 0 };
+      const hasEnoughTrios = trios.length >= (reqs.differentSuitGroups || 0);
+      const hasEnoughEscalas = escalas.length >= (reqs.escalas || 0);
+
+      if (hasEnoughTrios && hasEnoughEscalas) {
+        // Only include the exact groups needed for the contract to avoid over-highlighting.
+        [...trios.slice(0, reqs.differentSuitGroups), ...escalas.slice(0, reqs.escalas)].forEach(g => g.forEach(c => set.add(c.id)));
+      }
     }
     return set;
   }, [myPlayer, haveMelded, gameState.currentRound]);
