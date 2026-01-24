@@ -230,7 +230,18 @@ export async function handleDrawDiscard(
         }),
     ]);
 
-    // Return the updated player info to allow client to update cache immediately
+    // Build a serializable players summary to return to the client
+    const playersSummary = players.map(p => ({
+        id: p.id,
+        name: p.name,
+        hand: p.hand,
+        melds: p.melds,
+        boughtCards: p.boughtCards,
+        buysUsed: p.buysUsed,
+        score: p.score,
+    }));
+
+    // Return the updated player info and players list to allow client to update cache immediately
     return {
         success: true,
         player: {
@@ -239,5 +250,9 @@ export async function handleDrawDiscard(
             hand: buyingPlayer.hand,
             boughtCards: buyingPlayer.boughtCards,
         },
+        players: playersSummary,
+        deck,
+        discardPile,
+        reshuffleCount,
     };
 }

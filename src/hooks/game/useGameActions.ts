@@ -146,8 +146,27 @@ export function useGameActions({
       onError?.(error);
     },
     onSuccess: (data) => {
-      // If the server returned the updated player, patch cache immediately to avoid waiting for refetch
-      if (data?.player) {
+      // If the server returned the updated players or player, patch cache immediately to avoid waiting for refetch
+      if (data?.players) {
+        queryClient.setQueryData(["gameState", roomId], (old: any) => {
+          if (!old) return old;
+          const newState = JSON.parse(JSON.stringify(old));
+          // Replace players list with server-provided snapshot (merge by id)
+          for (const srvP of data.players) {
+            const existing = newState.players.find((pl: any) => pl.id === srvP.id);
+            if (existing) {
+              existing.buysUsed = srvP.buysUsed;
+              existing.hand = srvP.hand;
+              existing.boughtCards = srvP.boughtCards;
+              existing.melds = srvP.melds;
+            }
+          }
+          // Update deck/discard if provided
+          if (data.deck) newState.deck = data.deck;
+          if (data.discardPile) newState.discardPile = data.discardPile;
+          return newState;
+        });
+      } else if (data?.player) {
         const playerUpdate = data.player;
         queryClient.setQueryData(["gameState", roomId], (old: any) => {
           if (!old) return old;

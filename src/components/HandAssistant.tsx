@@ -106,8 +106,19 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
           <button
             onClick={onToggleAutoSort}
             className="text-xs font-bold px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900/50 text-slate-200 hover:bg-slate-900/80 transition-colors"
+            title={
+              sortMode === "auto"
+                ? "Ordenar la mano por palo (las cartas se mostrarán por palo). Pulsa para cambiar."
+                : "Agrupar la mano por valor (muestra grupos por valor). Pulsa para cambiar."
+            }
+            aria-pressed={sortMode !== "auto"}
+            aria-label={
+              sortMode === "auto"
+                ? "Cambiar a: Ordenar por palo"
+                : "Cambiar a: Agrupar mano"
+            }
           >
-            {sortMode === "auto" ? "Ordenar por palo" : "Agrupar mano"}
+            {sortMode === "auto" ? "Cambiar a: Ordenar por palo" : "Cambiar a: Agrupar mano"}
           </button>
           {canAutoDown && (
             <button

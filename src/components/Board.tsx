@@ -169,7 +169,10 @@ export const Board: React.FC<BoardProps> = ({
     playSuccess,
     playError,
     playYourTurn,
+    playClick,
   } = useGameSounds();
+
+  const [sortFeedback, setSortFeedback] = useState<string | null>(null);
 
   // Highlight turn for human
   React.useEffect(() => {
@@ -599,9 +602,12 @@ export const Board: React.FC<BoardProps> = ({
           }
           currentRound={gameState.currentRound}
           sortMode={sortMode}
-          onToggleAutoSort={() =>
-            setSortMode((prev) => (prev === "auto" ? "suit" : "auto"))
-          }
+          onToggleAutoSort={() => {
+            setSortMode((prev) => (prev === "auto" ? "suit" : "auto"));
+            playClick();
+            setSortFeedback("Orden aplicado");
+            setTimeout(() => setSortFeedback(null), 1200);
+          }}
           canInteract={isMyTurn && hasDrawn && !isDownMode && !!myPlayer}
           onPrefillDownMode={(cards) => {
             if (!myPlayer || !isMyTurn || !hasDrawn) return;
@@ -639,6 +645,13 @@ export const Board: React.FC<BoardProps> = ({
           }}
           disabled={isDownMode || !myPlayer}
         />
+
+        {/* Sort feedback */}
+        {sortFeedback && (
+          <div className="fixed right-6 bottom-36 z-140 bg-slate-900/90 text-white px-3 py-2 rounded-full shadow-lg">
+            {sortFeedback}
+          </div>
+        )}
 
         {/* Hand Area */}
         <HandArea
