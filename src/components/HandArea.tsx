@@ -188,7 +188,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                 <CardWrapper
                   card={card}
                   index={index}
-                  disabled={!isMyTurn || !hasDrawn || isDownMode}
+                  disabled={isDownMode}
                   isSelected={isSelected}
                   isTempSelected={isTempSelected}
                   isAddable={addableCards.includes(card.id)}

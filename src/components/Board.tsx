@@ -334,8 +334,6 @@ export const Board: React.FC<BoardProps> = ({
 
   // Handlers
   const handleCardClick = (cardId: string) => {
-    if (!isMyTurn || !hasDrawn) return;
-
     if (isDownMode) {
       const card = myPlayer?.hand.find((c) => c.id === cardId);
       if (!card) return;
