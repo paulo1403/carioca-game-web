@@ -31,6 +31,7 @@ interface GameLobbyProps {
   myPlayerId: string | null;
   isJoining: boolean;
   isAddingBot: boolean;
+  isStartingGame: boolean;
   playerName: string;
   isCopied: boolean;
   isRoomIdCopied: boolean;
@@ -60,6 +61,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   isCopied,
   isRoomIdCopied,
   isJoining,
+  isStartingGame,
   playerName,
   onJoin,
   onAddBot,
@@ -422,13 +424,19 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                   <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-6">
                     <button
                       onClick={onStartGame}
-                      disabled={!canStart}
+                      disabled={!canStart || isStartingGame}
                       className="w-full bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-green-500/20 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 text-lg"
                     >
-                      <Play className="w-6 h-6" />
-                      {canStart
-                        ? "¡Iniciar Partida!"
-                        : `Faltan ${playersNeeded} jugadores`}
+                      {isStartingGame ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        <Play className="w-6 h-6" />
+                      )}
+                      {isStartingGame
+                        ? "Iniciando..."
+                        : canStart
+                          ? "¡Iniciar Partida!"
+                          : `Faltan ${playersNeeded} jugadores`}
                     </button>
                   </div>
                 </>

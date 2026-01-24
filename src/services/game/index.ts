@@ -14,47 +14,58 @@ import { getCardPoints } from "./utils";
 
 export { getGameState, autoReadyBots };
 
+const botLocks = new Map<string, number>();
+const BOT_LOCK_TTL_MS = 12000;
+
 export async function checkAndProcessBotTurns(sessionId: string) {
+    const now = Date.now();
+    const lockUntil = botLocks.get(sessionId) ?? 0;
+    if (lockUntil > now) return;
+    botLocks.set(sessionId, now + BOT_LOCK_TTL_MS);
+
     const MAX_BOT_ITERATIONS = 50;
     const MAX_TIME_PER_TURN = 10000;
     const startTime = Date.now();
+    try {
+        for (let i = 0; i < MAX_BOT_ITERATIONS; i++) {
+            const gameState = await getGameState(sessionId);
+            if (!gameState || gameState.status !== "PLAYING") break;
 
-    for (let i = 0; i < MAX_BOT_ITERATIONS; i++) {
-        const gameState = await getGameState(sessionId);
-        if (!gameState || gameState.status !== "PLAYING") break;
+            const currentPlayer = gameState.players[gameState.currentTurn];
+            if (!currentPlayer.isBot) break;
 
-        const currentPlayer = gameState.players[gameState.currentTurn];
-        if (!currentPlayer.isBot) break;
-
-        // Watchdog timeout - force a move if taking too long
-        if (Date.now() - startTime > MAX_TIME_PER_TURN) {
-            console.warn(`[Watchdog] Bot ${currentPlayer.name} timeout! Forcing move.`);
-            await forceEmergencyMove(sessionId, currentPlayer);
-            break;
-        }
-
-        const difficulty = currentPlayer.difficulty || "MEDIUM";
-        const move = calculateBotMove(gameState, currentPlayer.id, difficulty);
-
-        if (move) {
-            // Special handling for DRAW_DISCARD: register buy intent first
-            if (move.action === "DRAW_DISCARD") {
-                await processMove(sessionId, currentPlayer.id, "INTEND_BUY", {});
+            // Watchdog timeout - force a move if taking too long
+            if (Date.now() - startTime > MAX_TIME_PER_TURN) {
+                console.warn(`[Watchdog] Bot ${currentPlayer.name} timeout! Forcing move.`);
+                await forceEmergencyMove(sessionId, currentPlayer);
+                break;
             }
 
-            const result = await processMove(sessionId, currentPlayer.id, move.action, move.payload) as any;
+            const difficulty = currentPlayer.difficulty || "MEDIUM";
+            const move = calculateBotMove(gameState, currentPlayer.id, difficulty);
 
-            if (!result.success) {
-                console.error(`[Bot] Move failed: ${result.error}. Forcing emergency move.`);
+            if (move) {
+                // Special handling for DRAW_DISCARD: register buy intent first
+                if (move.action === "DRAW_DISCARD") {
+                    await processMove(sessionId, currentPlayer.id, "INTEND_BUY", {});
+                }
+
+                const result = await processMove(sessionId, currentPlayer.id, move.action, move.payload) as any;
+
+                if (!result.success) {
+                    console.error(`[Bot] Move failed: ${result.error}. Forcing emergency move.`);
+                    await forceEmergencyMove(sessionId, currentPlayer);
+                    continue;
+                }
+
+                if (result.gameStatus === "ROUND_ENDED" || result.gameStatus === "FINISHED") break;
+            } else {
                 await forceEmergencyMove(sessionId, currentPlayer);
                 continue;
             }
-
-            if (result.gameStatus === "ROUND_ENDED" || result.gameStatus === "FINISHED") break;
-        } else {
-            await forceEmergencyMove(sessionId, currentPlayer);
-            continue;
         }
+    } finally {
+        botLocks.delete(sessionId);
     }
 }
 

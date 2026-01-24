@@ -184,6 +184,11 @@ export const Board: React.FC<BoardProps> = ({
     playError,
     playYourTurn,
     playClick,
+    volume,
+    decreaseVolume,
+    increaseVolume,
+    toggleMute,
+    isMuted,
   } = useGameSounds();
 
   const [sortFeedback, setSortFeedback] = useState<string | null>(null);
@@ -677,6 +682,36 @@ export const Board: React.FC<BoardProps> = ({
                     {sortFeedback}
                   </span>
                 )}
+
+                <div className="flex items-center gap-1 bg-slate-900/60 border border-slate-700/60 rounded-full p-1">
+                  <button
+                    type="button"
+                    onClick={decreaseVolume}
+                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
+                    title="Bajar volumen"
+                  >
+                    Vol -
+                  </button>
+                  <div className="text-[10px] md:text-xs text-slate-300 px-2">
+                    {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={increaseVolume}
+                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
+                    title="Subir volumen"
+                  >
+                    Vol +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="text-xs md:text-sm font-semibold px-2 py-1 rounded-full text-slate-200 hover:bg-slate-800/70"
+                    title={isMuted ? "Activar sonido" : "Silenciar"}
+                  >
+                    {isMuted ? "Mute" : "Silencio"}
+                  </button>
+                </div>
 
                 <button
                   type="button"

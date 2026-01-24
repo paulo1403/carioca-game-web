@@ -580,6 +580,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
           myPlayerId={myPlayerId}
           isJoining={isJoining}
           isAddingBot={isAddingBot}
+          isStartingGame={lobbyActions.startGame.isPending}
           playerName={playerName}
           isCopied={isCopied}
           isRoomIdCopied={isRoomIdCopied}

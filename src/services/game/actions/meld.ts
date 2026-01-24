@@ -88,27 +88,63 @@ export async function handleAddToMeld(
     currentPlayer.hand.splice(cardIndex, 1);
     targetPlayer.melds[meldIndex].push(card);
 
-    await prisma.$transaction([
-        prisma.player.update({
-            where: { id: playerId },
-            data: { hand: JSON.stringify(currentPlayer.hand) },
-        }),
-        prisma.player.update({
-            where: { id: targetPlayerId },
-            data: { melds: JSON.stringify(targetPlayer.melds) },
-        }),
-        prisma.gameSession.update({
-            where: { id: session.id },
-            data: {
-                lastAction: JSON.stringify({
-                    playerId,
-                    type: "ADD_TO_MELD",
-                    description: `${currentPlayer.name} añadió una carta a un juego`,
-                    timestamp: Date.now(),
-                }),
-            },
-        }),
-    ]);
+    const isDeadlock = (err: unknown) => {
+        const msg = String((err as any)?.message || err);
+        return msg.includes("40P01") || msg.toLowerCase().includes("deadlock detected");
+    };
+
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const commitAddToMeld = async () => {
+        await prisma.$transaction(async (tx) => {
+            if (playerId === targetPlayerId) {
+                await tx.player.update({
+                    where: { id: playerId },
+                    data: {
+                        hand: JSON.stringify(currentPlayer.hand),
+                        melds: JSON.stringify(targetPlayer.melds),
+                    },
+                });
+            } else {
+                const updates = [
+                    {
+                        id: playerId,
+                        data: { hand: JSON.stringify(currentPlayer.hand) },
+                    },
+                    {
+                        id: targetPlayerId,
+                        data: { melds: JSON.stringify(targetPlayer.melds) },
+                    },
+                ].sort((a, b) => a.id.localeCompare(b.id));
+
+                for (const update of updates) {
+                    await tx.player.update({ where: { id: update.id }, data: update.data });
+                }
+            }
+
+            await tx.gameSession.update({
+                where: { id: session.id },
+                data: {
+                    lastAction: JSON.stringify({
+                        playerId,
+                        type: "ADD_TO_MELD",
+                        description: `${currentPlayer.name} añadió una carta a un juego`,
+                        timestamp: Date.now(),
+                    }),
+                },
+            });
+        });
+    };
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            await commitAddToMeld();
+            break;
+        } catch (err) {
+            if (!isDeadlock(err) || attempt === 2) throw err;
+            await sleep(100 * (attempt + 1));
+        }
+    }
 
     if (currentPlayer.hand.length === 0) {
         // We need the latest discard pile to finish the round. 
