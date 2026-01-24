@@ -29,6 +29,7 @@ import { GameHeader } from "./GameHeader";
 // Utils
 import { canStealJoker, canAddToMeld } from "@/utils/rules";
 import { findBestCardMove } from "@/utils/cardMoveHelper";
+import { findPotentialContractGroups, findAllValidGroups } from "@/utils/handAnalyzer";
 
 // Types and interfaces
 interface BoardProps {
@@ -116,14 +117,35 @@ export const Board: React.FC<BoardProps> = ({
     isDownMode,
   );
 
-  // Discard hint
-  const { suggestedDiscardCardId, isDiscardUseful } = useDiscardHint(
+  // Discard hint + reason
+  const { suggestedDiscardCardId, isDiscardUseful, discardReason } = useDiscardHint(
     myPlayer,
     isMyTurn,
     hasDrawn,
     isDownMode,
     gameState,
   );
+
+  // Group candidates (cards that are part of potential or valid groups)
+  const groupCandidateIds = React.useMemo(() => {
+    const set = new Set<string>();
+    if (!myPlayer) return set;
+    if (haveMelded) {
+      const { trios, escalas } = findAllValidGroups(myPlayer.hand);
+      [...trios, ...escalas].forEach(g => g.forEach(c => set.add(c.id)));
+    } else {
+      const { trios, escalas } = findPotentialContractGroups(myPlayer.hand, gameState.currentRound);
+      [...trios, ...escalas].forEach(g => g.forEach(c => set.add(c.id)));
+    }
+    return set;
+  }, [myPlayer, haveMelded, gameState.currentRound]);
+
+  // Additional groups for players who've melded (quick suggestions)
+  const additionalGroups = React.useMemo(() => {
+    if (!myPlayer || !haveMelded) return [] as Card[][];
+    const { trios, escalas } = findAllValidGroups(myPlayer.hand);
+    return [...trios, ...escalas];
+  }, [myPlayer, haveMelded]);
 
   // Sounds
   const {
@@ -466,6 +488,7 @@ export const Board: React.FC<BoardProps> = ({
           handleDiscardPileClick={handleDiscardPileClick}
           setShowBuyConfirmDialog={setShowBuyConfirmDialog}
           isDiscardUseful={isDiscardUseful}
+          discardReason={discardReason}
           playShuffle={playShuffle}
           selectedCardId={selectedCardId}
         />
@@ -571,6 +594,7 @@ export const Board: React.FC<BoardProps> = ({
             playSelect();
           }}
           allMelds={gameState.players.flatMap(p => p.melds || [])}
+          additionalGroups={additionalGroups}
           onAddToMeld={(cardId) => {
             if (!myPlayer) return;
             const card = myPlayer.hand.find(c => c.id === cardId);
@@ -599,6 +623,24 @@ export const Board: React.FC<BoardProps> = ({
           disabled={isDownMode || !myPlayer}
         />
 
+        {/* Hand Area */}
+        <HandArea
+          sortedHand={sortedHand}
+          groupsToMeld={groupsToMeld}
+          tempGroup={tempGroup}
+          selectedCardId={selectedCardId}
+          addableCards={addableCards}
+          suggestedDiscardCardId={suggestedDiscardCardId}
+          isMyTurn={isMyTurn}
+          hasDrawn={hasDrawn}
+          isDownMode={isDownMode}
+          isMobile={isMobile}
+          onClick={handleCardClick}
+          handPoints={myHandPoints}
+          boughtCardIds={myPlayer?.boughtCards.map((c) => c.id)}
+          groupCandidateIds={groupCandidateIds}
+        />
+
         {/* Down Mode Controls */}
         {isDownMode && (
           <DownModeControls
@@ -624,22 +666,7 @@ export const Board: React.FC<BoardProps> = ({
           />
         )}
 
-        {/* Hand Area */}
-        <HandArea
-          sortedHand={sortedHand}
-          groupsToMeld={groupsToMeld}
-          tempGroup={tempGroup}
-          selectedCardId={selectedCardId}
-          addableCards={addableCards}
-          suggestedDiscardCardId={suggestedDiscardCardId}
-          isMyTurn={isMyTurn}
-          hasDrawn={hasDrawn}
-          isDownMode={isDownMode}
-          isMobile={isMobile}
-          onClick={handleCardClick}
-          handPoints={myHandPoints}
-          boughtCardIds={myPlayer?.boughtCards.map((c) => c.id)}
-        />
+        {/* Duplicate HandArea removed - single HandArea above handles rendering */}
       </div>
       {/* Buy Confirmation Dialog */}
       <BuyConfirmDialog

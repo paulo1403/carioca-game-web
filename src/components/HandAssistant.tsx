@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Eye, Layers, Sparkles, ArrowRight, Zap } from "lucide-react";
-import { Card } from "@/types/game";
+import { Card, ROUND_CONTRACTS_DATA } from "@/types/game";
 import { cn } from "@/lib/utils";
 import {
   formatCardShort,
@@ -22,6 +22,7 @@ interface HandAssistantProps {
   allMelds?: Card[][];
   onAddToMeld?: (cardId: string) => void;
   haveMelded?: boolean;
+  additionalGroups?: Card[][];
 }
 
 const getSuitSymbol = (suit: string) => {
@@ -46,6 +47,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
   allMelds = [],
   onAddToMeld,
   haveMelded,
+  additionalGroups = [],
 }) => {
   const data = useMemo(
     () => getHandSuggestions(hand, topDiscard, allMelds),
@@ -56,6 +58,17 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
   const nearEscalas = data.nearEscalas.slice(0, 2);
   const addableToTable = haveMelded ? data.addableToTable : [];
   const watch = data.watch.slice(0, 8);
+
+  const contractStatus = useMemo(() => {
+    if (!currentRound || currentRound === 8) return null;
+    const reqs = ROUND_CONTRACTS_DATA[currentRound];
+    if (!reqs) return null;
+    const need = reqs.differentSuitGroups;
+    const size = reqs.differentSuitSize;
+    const complete = nearDifferentSuitGroups.filter(g => g.missingCount === 0 && g.cards.length >= size).length;
+    if (complete >= need) return null;
+    return { need, size, complete, missing: need - complete };
+  }, [currentRound, nearDifferentSuitGroups]);
 
   if (disabled) return null;
   if (
@@ -116,6 +129,12 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
             </button>
           )}
         </div>
+
+        {contractStatus && (
+          <div className="w-full mt-2 px-3 py-2 rounded-md border border-amber-500/20 bg-amber-900/5 text-amber-300 text-sm font-semibold">
+            Contrato R{currentRound}: necesitas <span className="font-bold">{contractStatus.need}</span> grupo(s) de <span className="font-bold">{contractStatus.size}</span>. Tienes <span className="font-bold">{contractStatus.complete}</span>. Falta <span className="font-bold">{contractStatus.missing}</span>.
+          </div>
+        )}
       </div>
 
       {watch.length > 0 && (
@@ -152,6 +171,36 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                   {formatCardShort(c)}
                   <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {haveMelded && additionalGroups.length > 0 && (
+          <div className="rounded-xl border border-emerald-800 bg-emerald-900/10 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2">
+              <Zap className="w-4 h-4 text-emerald-300" />
+              Bajadas adicionales
+            </div>
+            <div className="space-y-2">
+              {additionalGroups.map((g, idx) => (
+                <div key={`addg-${idx}`} className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold text-slate-200">{g.map(formatCardShort).join(" ")}</div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onPrefillDownMode && onPrefillDownMode(g)}
+                      className={cn(
+                        "text-xs font-bold px-3 py-1.5 rounded-full transition-colors",
+                        canInteract
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15"
+                          : "border-slate-700 bg-slate-900/40 text-slate-500",
+                      )}
+                      disabled={!canInteract}
+                    >
+                      Preseleccionar
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>

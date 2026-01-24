@@ -17,6 +17,7 @@ interface DeckAreaProps {
   handleDiscardPileClick: () => void;
   setShowBuyConfirmDialog: (show: boolean) => void;
   isDiscardUseful: boolean;
+  discardReason?: string | null;
   playShuffle: () => void;
   selectedCardId: string | null;
 }
@@ -30,6 +31,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
   onDrawDeck,
   handleDiscardPileClick,
   isDiscardUseful,
+  discardReason,
   playShuffle,
   selectedCardId,
 }) => {
@@ -146,18 +148,8 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
                     ? "bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 shadow-lg scale-105"
                     : "bg-black/50 text-white"
                 )}
-                title={isDiscardUseful ? "¡Esta carta te permite bajar!" : undefined}
+                title={isDiscardUseful ? (discardReason ?? "¡Esta carta te permite bajar!") : undefined}
               >
-                Comprar
-              </div>
-            )}
-
-          {/* Hint Indicator */}
-          {isDiscardUseful && isBuyWindowOpen && (
-            <div
-              className="absolute -top-2 -right-2 bg-yellow-400 text-black p-1 rounded-full shadow-lg animate-bounce z-20"
-              title="¡Esta carta te sirve!"
-            >
               <Lightbulb className="w-4 h-4" />
             </div>
           )}

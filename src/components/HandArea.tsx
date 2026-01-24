@@ -17,6 +17,7 @@ interface HandAreaProps {
   onClick: (cardId: string) => void;
   handPoints?: number;
   boughtCardIds?: string[];
+  groupCandidateIds?: Set<string>;
 }
 
 export const HandArea: React.FC<HandAreaProps> = ({
@@ -33,6 +34,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
   onClick,
   handPoints = 0,
   boughtCardIds = [],
+  groupCandidateIds = new Set<string>(),
 }) => {
   const boughtCardIdsSet = React.useMemo(() => new Set(boughtCardIds), [boughtCardIds]);
 
@@ -86,6 +88,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                   isTempSelected={isTempSelected}
                   isAddable={addableCards.includes(card.id)}
                   isSuggestedDiscard={suggestedDiscardCardId === card.id}
+                  isGroupMember={groupCandidateIds.has(card.id)}
                   isNew={boughtCardIdsSet.has(card.id)}
                   onClick={() => onClick(card.id)}
                   isMobile={isMobile}

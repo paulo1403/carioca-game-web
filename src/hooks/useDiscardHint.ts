@@ -18,6 +18,7 @@ export const useDiscardHint = (
     string | null
   >(null);
   const [isDiscardUseful, setIsDiscardUseful] = useState(false);
+  const [discardReason, setDiscardReason] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isMyTurn || isDownMode || !myPlayer?.hand || !gameState) {
@@ -58,9 +59,11 @@ export const useDiscardHint = (
         // Heuristic: mark useful if it immediately allows going down, OR it increases
         // the number of potential groups, OR it increases unique suits for the discard value
         let useful = canDown;
+        let reason: string | null = null;
         if (!useful) {
           if (after.trios.length > before.trios.length || after.escalas.length > before.escalas.length) {
             useful = true;
+            reason = `Aumenta grupos potenciales (${before.trios.length}/${before.escalas.length} → ${after.trios.length}/${after.escalas.length})`;
           } else {
             // Check unique suit increase for discard value
             const val = discardCard.value;
@@ -68,11 +71,15 @@ export const useDiscardHint = (
             const uniqueSuitsAfter = new Set(([...myPlayer.hand, discardCard].filter(c => c.value === val && !(c.suit === 'JOKER' || c.value === 0))).map(c => c.suit)).size;
             if (uniqueSuitsAfter > uniqueSuitsBefore) {
               useful = true;
+              reason = `Aumenta variedad de palos para ${val} (${uniqueSuitsBefore} → ${uniqueSuitsAfter})`;
             }
           }
+        } else {
+          reason = "Permite cumplir el contrato inmediatamente";
         }
 
         setIsDiscardUseful(useful);
+        setDiscardReason(useful ? reason : null);
       } else {
         // Already melded, additional downs possible
         const before = findAllValidGroups(myPlayer.hand);
@@ -102,8 +109,10 @@ export const useDiscardHint = (
         alreadyMelded
       );
       setIsDiscardUseful(canDown);
+      setDiscardReason(canDown ? "Hace que puedas bajar" : null);
     } else {
       setIsDiscardUseful(false);
+      setDiscardReason(null);
     }
 
     // Only suggest a card to discard if we've already drawn
@@ -186,5 +195,6 @@ export const useDiscardHint = (
   return {
     suggestedDiscardCardId,
     isDiscardUseful,
+    discardReason,
   };
 };
