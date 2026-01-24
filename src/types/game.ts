@@ -113,37 +113,37 @@ export const ROUND_CONTRACTS = [
   {
     round: 1,
     name: "1/3",
-    description: "1 grupo de 3+ cartas de diferente palo",
+    description: "1 grupo de 3+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 2,
     name: "2/3",
-    description: "2 grupos de 3+ cartas de diferente palo",
+    description: "2 grupos de 3+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 3,
     name: "1/4",
-    description: "1 grupo de 4+ cartas de diferente palo",
+    description: "1 grupo de 4+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 4,
     name: "2/4",
-    description: "2 grupos de 4+ cartas de diferente palo",
+    description: "2 grupos de 4+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 5,
     name: "1/5",
-    description: "1 grupo de 5+ cartas de diferente palo",
+    description: "1 grupo de 5+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 6,
     name: "2/5",
-    description: "2 grupos de 5+ cartas de diferente palo",
+    description: "2 grupos de 5+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 7,
     name: "1/6",
-    description: "1 grupo de 6+ cartas de diferente palo",
+    description: "1 grupo de 6+ cartas del mismo valor (palo puede repetirse)",
   },
   {
     round: 8,

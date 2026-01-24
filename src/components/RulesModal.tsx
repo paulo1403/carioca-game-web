@@ -72,7 +72,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               Grupo (Rondas 1-7)
             </h4>
             <p className="text-[11px] text-slate-400">
-              Cartas de palos DIFERENTES. Ejemplo: 5♥ 7♦ K♣
+              Cartas del <strong>mismo valor</strong>. Los palos pueden repetirse. Ejemplo: 5♥ 5♦ 5♣
             </p>
           </div>
           <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
@@ -101,13 +101,13 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
           <div className="space-y-4">
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold text-slate-500 uppercase ml-2">
-                ✓ Grupo válido (Ronda 1: 3+ palos diferentes)
+                ✓ Grupo válido (Ronda 1: 3+ mismo valor)
               </span>
               <div className="flex gap-2 bg-black/20 p-3 rounded-2xl border border-white/5 overflow-x-auto">
                 {[
                   { id: "g1", value: 5, suit: "HEART", displayValue: "5" },
-                  { id: "g2", value: 7, suit: "DIAMOND", displayValue: "7" },
-                  { id: "g3", value: 13, suit: "CLUB", displayValue: "K" },
+                  { id: "g2", value: 5, suit: "DIAMOND", displayValue: "5" },
+                  { id: "g3", value: 5, suit: "CLUB", displayValue: "5" },
                 ].map((c) => (
                   <PlayingCard
                     key={c.id}
@@ -117,18 +117,18 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 ))}
               </div>
               <p className="text-[9px] text-slate-400 ml-2">
-                Tres palos diferentes: ♥ ♦ ♣ ✓
+                Mismo valor: 5 5 5 ✓
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold text-slate-500 uppercase ml-2">
-                ✓ Grupo con Joker (completa el palo faltante)
+                ✓ Grupo con Joker (completa el valor faltante)
               </span>
               <div className="flex gap-2 bg-black/20 p-3 rounded-2xl border border-white/5 overflow-x-auto">
                 {[
                   { id: "g4", value: 3, suit: "HEART", displayValue: "3" },
-                  { id: "g5", value: 9, suit: "DIAMOND", displayValue: "9" },
+                  { id: "g5", value: 3, suit: "DIAMOND", displayValue: "3" },
                   { id: "g6", value: 0, suit: "JOKER", displayValue: "J" },
                 ].map((c) => (
                   <PlayingCard
@@ -139,19 +139,19 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 ))}
               </div>
               <p className="text-[9px] text-slate-400 ml-2">
-                Dos palos + Joker (representa un 3er palo) ✓
+                Dos cartas del mismo valor + Joker ✓
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold text-slate-500 uppercase ml-2">
-                ✗ Grupo inválido (mismo palo, no diferentes)
+                ✗ Grupo inválido (valores distintos)
               </span>
               <div className="flex gap-2 bg-black/20 p-3 rounded-2xl border border-white/5 overflow-x-auto opacity-60">
                 {[
                   { id: "b1", value: 4, suit: "HEART", displayValue: "4" },
                   { id: "b2", value: 8, suit: "HEART", displayValue: "8" },
-                  { id: "b3", value: 13, suit: "HEART", displayValue: "K" },
+                  { id: "b3", value: 13, suit: "CLUB", displayValue: "K" },
                 ].map((c) => (
                   <PlayingCard
                     key={c.id}
@@ -161,7 +161,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 ))}
               </div>
               <p className="text-[9px] text-slate-400 ml-2">
-                Todos del mismo palo ♥ - NO válido para rondas 1-7 ✗
+                Valores diferentes (no mismo valor) - NO válido para rondas 1-7 ✗
               </p>
             </div>
 
