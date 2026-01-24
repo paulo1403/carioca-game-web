@@ -130,7 +130,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
           )}
         </div>
 
-        {contractStatus && (
+        {!haveMelded && contractStatus && (
           <div className="w-full mt-2 px-3 py-2 rounded-md border border-amber-500/20 bg-amber-900/5 text-amber-300 text-sm font-semibold">
             Contrato R{currentRound}: necesitas <span className="font-bold">{contractStatus.need}</span> grupo(s) de <span className="font-bold">{contractStatus.size}</span>. Tienes <span className="font-bold">{contractStatus.complete}</span>. Falta <span className="font-bold">{contractStatus.missing}</span>.
           </div>

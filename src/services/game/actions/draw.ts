@@ -230,5 +230,14 @@ export async function handleDrawDiscard(
         }),
     ]);
 
-    return { success: true };
+    // Return the updated player info to allow client to update cache immediately
+    return {
+        success: true,
+        player: {
+            id: playerId,
+            buysUsed: buyingPlayer.buysUsed,
+            hand: buyingPlayer.hand,
+            boughtCards: buyingPlayer.boughtCards,
+        },
+    };
 }

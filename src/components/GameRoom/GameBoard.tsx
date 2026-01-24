@@ -70,6 +70,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onCloseReshuffleBanner,
   onDrawDeck,
   onDrawDiscard,
+  isDrawing = false,
+  isBuying = false,
   onDiscard,
   onDown,
   onAddToMeld,
@@ -102,6 +104,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <div className="relative">
+      {/* Global blocking overlay for slow servers (blocks all player actions during draw/buy) */}
+      {(isDrawing || isBuying) && (
+        <div
+          className="fixed inset-0 z-140 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <div className="bg-slate-900/95 border border-white/10 rounded-2xl p-6 w-full max-w-md text-center">
+            <div className="flex items-center justify-center gap-4">
+              <div className="loader w-10 h-10 rounded-full border-4 border-white/20 border-t-white animate-spin" />
+              <div className="text-white font-bold text-lg">
+                {isDrawing ? "Robando carta del servidor..." : "Comprando del descarte..."}
+              </div>
+            </div>
+            <div className="text-slate-300 text-sm mt-3">
+              Espera un momento mientras confirmamos la operación con el servidor.
+            </div>
+          </div>
+        </div>
+      )}
+
 
 
       {/* Reshuffle Banner */}

@@ -145,6 +145,23 @@ export function useGameActions({
       });
       onError?.(error);
     },
+    onSuccess: (data) => {
+      // If the server returned the updated player, patch cache immediately to avoid waiting for refetch
+      if (data?.player) {
+        const playerUpdate = data.player;
+        queryClient.setQueryData(["gameState", roomId], (old: any) => {
+          if (!old) return old;
+          const newState = JSON.parse(JSON.stringify(old));
+          const p = newState.players.find((pl: any) => pl.id === playerUpdate.id);
+          if (p) {
+            p.buysUsed = playerUpdate.buysUsed;
+            p.hand = playerUpdate.hand;
+            p.boughtCards = playerUpdate.boughtCards;
+          }
+          return newState;
+        });
+      }
+    },
     onSettled: () => {
       setIsBuyingState(false);
       invalidateGameState();
