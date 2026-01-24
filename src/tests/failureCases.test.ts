@@ -1,5 +1,5 @@
 import { Card } from "@/types/game";
-import { isDifferentSuitGroup, isEscala, validateContract, canAddToMeld, canStealJoker } from "@/utils/rules";
+import { isTrio, isEscala, validateContract, canAddToMeld, canStealJoker } from "@/utils/rules";
 
 describe("Carioca Rule Validation: Failure Cases", () => {
     const createCard = (suit: string, value: number, id: string): Card => ({
@@ -9,15 +9,15 @@ describe("Carioca Rule Validation: Failure Cases", () => {
         displayValue: String(value)
     });
 
-    describe("isDifferentSuitGroup Failure Cases", () => {
-        test("Should reject group with same suits", () => {
+    describe("isTrio Failure Cases", () => {
+        test("Should reject group with mixed values", () => {
             const group = [
                 createCard("SPADE", 2, "1"),
                 createCard("SPADE", 3, "2"),
                 createCard("CLUB", 4, "3"),
             ];
-            // Only 2 unique suits (SPADE, CLUB) but requires 3
-            expect(isDifferentSuitGroup(group, 3)).toBe(false);
+            // Values differ
+            expect(isTrio(group, 3)).toBe(false);
         });
 
         test("Should reject group too short", () => {
@@ -25,7 +25,7 @@ describe("Carioca Rule Validation: Failure Cases", () => {
                 createCard("SPADE", 10, "1"),
                 createCard("HEART", 11, "2"),
             ];
-            expect(isDifferentSuitGroup(group, 3)).toBe(false);
+            expect(isTrio(group, 3)).toBe(false);
         });
     });
 
@@ -50,14 +50,14 @@ describe("Carioca Rule Validation: Failure Cases", () => {
             expect(isEscala(group)).toBe(false);
         });
 
-        test("Should reject circular escala (K-A-2)", () => {
+        test("Should accept circular escala (K-A-2-3)", () => {
             const group = [
                 createCard("DIAMOND", 13, "1"), // K
                 createCard("DIAMOND", 1, "2"),  // A
                 createCard("DIAMOND", 2, "3"),  // 2
                 createCard("DIAMOND", 3, "4"),
             ];
-            expect(isEscala(group, 4)).toBe(false);
+            expect(isEscala(group, 4)).toBe(true);
         });
     });
 
@@ -76,7 +76,7 @@ describe("Carioca Rule Validation: Failure Cases", () => {
 
             const result = validateContract([groupOf3], 3);
             expect(result.valid).toBe(false);
-            expect(result.error).toContain("grupo(s) de 4+ palos diferentes");
+            expect(result.error).toContain("grupo(s) de 4+ cartas del mismo valor");
         });
     });
 

@@ -30,13 +30,19 @@ export function useGameState({
   onReshuffle,
 }: UseGameStateOptions) {
   const queryClient = useQueryClient();
+  const realtimeFailedRef = useRef(false);
 
   // Suscripción Realtime a cambios en la base de datos
   useEffect(() => {
     if (!roomId || !enabled) return;
 
-    const channel = supabase
-      .channel(`game:${roomId}`)
+    let subscription: any = null;
+    let fallbackInterval: any = null;
+
+    const setupRealtime = async () => {
+      try {
+        const channel = supabase
+          .channel(`game:${roomId}`)
       // GameSession updates (existing behavior)
       .on(
         "postgres_changes",
@@ -48,7 +54,6 @@ export function useGameState({
         },
         (payload) => {
           // Invalida el cache inmediatamente al detectar un cambio en DB
-          console.debug("[useGameState] Realtime GameSession UPDATE received", payload);
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
           // Force immediate refetch to avoid waiting for stale timers
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
@@ -64,7 +69,6 @@ export function useGameState({
           filter: `gameSessionId=eq.${roomId}`,
         },
         (payload) => {
-          console.debug("[useGameState] Realtime Player INSERT received", payload);
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
@@ -78,7 +82,6 @@ export function useGameState({
           filter: `gameSessionId=eq.${roomId}`,
         },
         (payload) => {
-          console.debug("[useGameState] Realtime Player DELETE received", payload);
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
@@ -93,7 +96,6 @@ export function useGameState({
           filter: `gameSessionId=eq.${roomId}`,
         },
         (payload) => {
-          console.debug("[useGameState] Realtime Player UPDATE received", payload);
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
@@ -103,7 +105,7 @@ export function useGameState({
         "broadcast",
         { event: "player_change" },
         (payload) => {
-          console.debug("[useGameState] Broadcast player_change received", payload);          const msg = payload?.payload ?? payload;
+          const msg = payload?.payload ?? payload;
 
           // Handle join with full player object for immediate optimistic update
           if (msg?.action === "join" && msg?.player) {
@@ -146,7 +148,6 @@ export function useGameState({
         "broadcast",
         { event: "game_started" },
         (payload) => {
-          console.debug("[useGameState] Broadcast game_started received", payload);
           // Immediately invalidate and refetch the game state
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
@@ -157,16 +158,43 @@ export function useGameState({
         "broadcast",
         { event: "game_ended" },
         (payload) => {
-          console.debug("[useGameState] Broadcast game_ended received", payload);
           // Immediately invalidate and refetch the game state
           queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
           queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") {
+          console.warn("[useGameState] Realtime subscription failed, using polling fallback", status);
+          realtimeFailedRef.current = true;
+        } else {
+          realtimeFailedRef.current = false;
+        }
+      });
+
+        subscription = channel;
+      } catch (error) {
+        console.warn("[useGameState] Failed to setup Realtime, using polling fallback", error);
+        realtimeFailedRef.current = true;
+      }
+
+      // Fallback: Si Realtime falla, usa polling agresivo
+      if (realtimeFailedRef.current || !subscription) {
+        fallbackInterval = setInterval(() => {
+          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+        }, 2000); // Polling cada 2 segundos como fallback (más responsivo)
+      }
+    };
+
+    setupRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
     };
   }, [roomId, enabled, queryClient]);
 
@@ -191,12 +219,12 @@ export function useGameState({
       return data.gameState as GameState;
     },
     enabled: enabled && !!roomId,
-    // Polling de seguridad muy lento (heartbeat) ya que usamos Realtime
-    refetchInterval: 60000,
-    staleTime: 1000,
+    // Polling agresivo como fallback para cuando Realtime no funciona
+    refetchInterval: 2000,
+    staleTime: 500,
     gcTime: 5 * 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
 

@@ -36,8 +36,6 @@ export async function checkAndProcessBotTurns(sessionId: string) {
         const move = calculateBotMove(gameState, currentPlayer.id, difficulty);
 
         if (move) {
-            console.log(`[Bot] ${currentPlayer.name} performing: ${move.action}`);
-
             // Special handling for DRAW_DISCARD: register buy intent first
             if (move.action === "DRAW_DISCARD") {
                 await processMove(sessionId, currentPlayer.id, "INTEND_BUY", {});
@@ -53,7 +51,6 @@ export async function checkAndProcessBotTurns(sessionId: string) {
 
             if (result.gameStatus === "ROUND_ENDED" || result.gameStatus === "FINISHED") break;
         } else {
-            console.log(`[Bot] ${currentPlayer.name} couldn't decide. Forcing emergency move.`);
             await forceEmergencyMove(sessionId, currentPlayer);
             continue;
         }

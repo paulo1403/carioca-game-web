@@ -20,7 +20,7 @@ export const useDiscardHint = (
   const [isDiscardUseful, setIsDiscardUseful] = useState(false);
 
   useEffect(() => {
-    if (!isMyTurn || !hasDrawn || isDownMode || !myPlayer?.hand || !gameState) {
+    if (!isMyTurn || isDownMode || !myPlayer?.hand || !gameState) {
       setSuggestedDiscardCardId(null);
       setIsDiscardUseful(false);
       return;
@@ -32,16 +32,84 @@ export const useDiscardHint = (
         ? gameState.discardPile[gameState.discardPile.length - 1]
         : undefined;
 
-    if (discardCard) {
-      // Check if we can fulfill the contract with this card
+    if (discardCard && !hasDrawn) {
+      // BUY PHASE: Check if buying the discard card would enable initial down
+      const alreadyMelded = myPlayer.melds && myPlayer.melds.length > 0;
       const withDiscardCard = [...myPlayer.hand, discardCard];
+
+      // IMPORTANT: If player's current hand already allows going down, do NOT suggest buying
+      const currentCanDown = canFulfillContract(myPlayer.hand, gameState.currentRound, alreadyMelded).canDown;
+      if (currentCanDown) {
+        setIsDiscardUseful(false);
+        // No suggestion to buy since already have a group
+        return;
+      }
+
+      if (!alreadyMelded) {
+        // Only suggest buying if player hasn't melded yet
+        const before = findPotentialContractGroups(myPlayer.hand, gameState.currentRound);
+        const after = findPotentialContractGroups(withDiscardCard, gameState.currentRound);
+        const { canDown, groups } = canFulfillContract(
+          withDiscardCard,
+          gameState.currentRound,
+          false // alreadyMelded = false, checking initial down
+        );
+
+        // Heuristic: mark useful if it immediately allows going down, OR it increases
+        // the number of potential groups, OR it increases unique suits for the discard value
+        let useful = canDown;
+        if (!useful) {
+          if (after.trios.length > before.trios.length || after.escalas.length > before.escalas.length) {
+            useful = true;
+          } else {
+            // Check unique suit increase for discard value
+            const val = discardCard.value;
+            const uniqueSuitsBefore = new Set((myPlayer.hand.filter(c => c.value === val && !(c.suit === 'JOKER' || c.value === 0))).map(c => c.suit)).size;
+            const uniqueSuitsAfter = new Set(([...myPlayer.hand, discardCard].filter(c => c.value === val && !(c.suit === 'JOKER' || c.value === 0))).map(c => c.suit)).size;
+            if (uniqueSuitsAfter > uniqueSuitsBefore) {
+              useful = true;
+            }
+          }
+        }
+
+        setIsDiscardUseful(useful);
+      } else {
+        // Already melded, additional downs possible
+        const before = findAllValidGroups(myPlayer.hand);
+        const after = findAllValidGroups(withDiscardCard);
+        const { canDown, groups } = canFulfillContract(
+          withDiscardCard,
+          gameState.currentRound,
+          true // alreadyMelded = true, checking additional down
+        );
+
+        let useful = canDown;
+        if (!useful) {
+          if (after.trios.length > before.trios.length || after.escalas.length > before.escalas.length) {
+            useful = true;
+          }
+        }
+
+        setIsDiscardUseful(useful);
+      }
+    } else if (discardCard && hasDrawn) {
+      // DISCARD PHASE: Check if the discard card is useful for hand management
+      const withDiscardCard = [...myPlayer.hand, discardCard];
+      const alreadyMelded = myPlayer.melds && myPlayer.melds.length > 0;
       const { canDown } = canFulfillContract(
         withDiscardCard,
-        gameState.currentRound
+        gameState.currentRound,
+        alreadyMelded
       );
       setIsDiscardUseful(canDown);
     } else {
       setIsDiscardUseful(false);
+    }
+
+    // Only suggest a card to discard if we've already drawn
+    if (!hasDrawn) {
+      setSuggestedDiscardCardId(null);
+      return;
     }
 
     // Suggest a card to discard: prefer cards NOT in potential contract groups

@@ -249,7 +249,7 @@ const findAllPotentialGroups = (hand: Card[], round: number): { trios: CardGroup
   const foundTrios: CardGroup[] = [];
   const foundEscalas: CardGroup[] = [];
 
-  // Trios: same value, different suits
+  // Trios: same value (suits may repeat), jokers allowed
   if (reqs.differentSuitSize >= 3) {
     const byValue = new Map<number, Card[]>();
     nonJokers.forEach(c => {
@@ -259,21 +259,25 @@ const findAllPotentialGroups = (hand: Card[], round: number): { trios: CardGroup
     });
 
     for (const [val, cards] of byValue) {
-      const uniqueSuitsMap = new Map();
-      cards.forEach(c => uniqueSuitsMap.set(c.suit, c));
-      const uniqueCards = Array.from(uniqueSuitsMap.values()) as Card[];
+      const naturalCards = cards as Card[]; // same value
+      const naturalCount = naturalCards.length;
 
-      const naturalCount = uniqueCards.length;
-      // Rule: Natural cards must be >= Jokers
-      const minNaturalNeeded = Math.ceil(reqs.differentSuitSize / 2);
+      // isTrio compatibility: allow if at least 2 natural cards (unless all jokers)
+      const minNaturalRequired = 2;
 
-      if (naturalCount >= minNaturalNeeded) {
-        if (naturalCount >= reqs.differentSuitSize) {
-          foundTrios.push({ cards: uniqueCards.slice(0, reqs.differentSuitSize), type: "DIFFERENT_SUIT" });
-        } else if (naturalCount + jokers.length >= reqs.differentSuitSize) {
-          const neededJokers = reqs.differentSuitSize - naturalCount;
-          foundTrios.push({ cards: [...uniqueCards, ...jokers.slice(0, neededJokers)], type: "DIFFERENT_SUIT" });
+      if (naturalCount === 0) {
+        // all jokers group (rare) - allow if jokers can satisfy size
+        if (jokers.length >= reqs.differentSuitSize) {
+          foundTrios.push({ cards: jokers.slice(0, reqs.differentSuitSize), type: "TRIO" });
         }
+        continue;
+      }
+
+      if (naturalCount >= reqs.differentSuitSize) {
+        foundTrios.push({ cards: naturalCards.slice(0, reqs.differentSuitSize), type: "TRIO" });
+      } else if (naturalCount + jokers.length >= reqs.differentSuitSize && naturalCount >= minNaturalRequired) {
+        const neededJokers = reqs.differentSuitSize - naturalCount;
+        foundTrios.push({ cards: [...naturalCards, ...jokers.slice(0, neededJokers)], type: "TRIO" });
       }
     }
   }

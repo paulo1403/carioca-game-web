@@ -77,9 +77,7 @@ export function useGameLobby({
             player: createdPlayer,
           },
         });
-        console.debug("[useGameLobby] Broadcast player_change sent", { roomId, player: createdPlayer.id });
       } catch (err) {
-        console.debug("[useGameLobby] Failed sending broadcast", err);
       }
 
       onSuccess?.();
@@ -136,21 +134,10 @@ export function useGameLobby({
           event: "player_change",
           payload: { action: "join", player: createdBot },
         });
-        console.debug("[useGameLobby] Broadcast bot join sent", { roomId, botId: createdBot.id });
       } catch (err) {
-        console.debug("[useGameLobby] Failed sending bot broadcast", err);
       }
 
       onSuccess?.();
-    },
-
-    onError: (error: Error) => {
-      toast({
-        title: "Error al añadir bot",
-        description: error.message,
-        type: "error",
-      });
-      onError?.(error);
     },
   });
 
@@ -194,9 +181,7 @@ export function useGameLobby({
           event: "player_change",
           payload: { action: "leave", playerId: playerIdToKick },
         });
-        console.debug("[useGameLobby] Broadcast player_leave sent", { roomId, playerIdToKick });
       } catch (err) {
-        console.debug("[useGameLobby] Failed sending player_leave broadcast", err);
       }
 
       onSuccess?.();
@@ -233,14 +218,16 @@ export function useGameLobby({
       
       // Broadcast a otros jugadores que el juego inició
       try {
-        supabase.channel(`game:${roomId}`).send({
-          type: "broadcast",
-          event: "game_started",
-          payload: { roomId },
+        supabase.channel(`game:${roomId}`).subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            supabase.channel(`game:${roomId}`).send({
+              type: "broadcast",
+              event: "game_started",
+              payload: { roomId },
+            });
+          }
         });
-        console.debug("[useGameLobby] Broadcast game_started sent", { roomId });
       } catch (err) {
-        console.debug("[useGameLobby] Failed sending game_started broadcast", err);
       }
       
       onSuccess?.();
@@ -284,14 +271,16 @@ export function useGameLobby({
       
       // Broadcast a otros jugadores que el juego terminó
       try {
-        supabase.channel(`game:${roomId}`).send({
-          type: "broadcast",
-          event: "game_ended",
-          payload: { roomId },
+        supabase.channel(`game:${roomId}`).subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            supabase.channel(`game:${roomId}`).send({
+              type: "broadcast",
+              event: "game_ended",
+              payload: { roomId },
+            });
+          }
         });
-        console.debug("[useGameLobby] Broadcast game_ended sent", { roomId });
       } catch (err) {
-        console.debug("[useGameLobby] Failed sending game_ended broadcast", err);
       }
       
       // Clear localStorage and redirect handled by component
@@ -353,9 +342,7 @@ export function useGameLobby({
             event: "player_change",
             payload: { action: "leave", playerId: leavingId },
           });
-          console.debug("[useGameLobby] Broadcast leave sent", { roomId, playerId: leavingId });
         } catch (err) {
-          console.debug("[useGameLobby] Failed sending leave broadcast", err);
         }
       }
 

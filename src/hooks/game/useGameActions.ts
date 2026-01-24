@@ -68,6 +68,7 @@ export function useGameActions({
     },
     onSettled: () => {
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
@@ -130,6 +131,7 @@ export function useGameActions({
     },
     onSettled: () => {
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
@@ -197,6 +199,7 @@ export function useGameActions({
     onSettled: () => {
       // Siempre refrescar al terminar (exito o error) para sincronizar con el server
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
@@ -252,6 +255,7 @@ export function useGameActions({
     },
     onSettled: () => {
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
@@ -316,6 +320,7 @@ export function useGameActions({
     },
     onSettled: () => {
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
@@ -385,6 +390,7 @@ export function useGameActions({
     },
     onSettled: () => {
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
@@ -440,6 +446,7 @@ export function useGameActions({
     },
     onSuccess: () => {
       invalidateGameState();
+      queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
       onSuccess?.();
     },
     onError: (error: Error) => {

@@ -170,33 +170,31 @@ export async function handleDrawDiscard(
     buyingPlayer.hand.push(discardCard);
     buyingPlayer.boughtCards.push(discardCard);
 
-    // CURRENT PLAYER drawing from discard is a standard draw (1 card)
-    // OTHER PLAYER buying from discard gets 1 from discard + 2 from deck
-    if (!isCurrentPlayer) {
-        const drawFromDeck = (): Card | undefined => {
-            let card = deck.pop();
-            if (!card && reshuffleCount < 3) {
-                deck.push(...shuffleDeck(discardPile.splice(0)));
-                discardPile.length = 0;
-                reshuffleCount++;
-                card = deck.pop();
-            }
-            return card;
-        };
-
-        for (let i = 0; i < 2; i++) {
-            const extra = drawFromDeck();
-            if (!extra) break;
-            buyingPlayer.hand.push(extra);
-            buyingPlayer.boughtCards.push(extra);
-            boughtCards.push(extra);
+    // ALL players who buy from discard get: 1 from discard + 2 from deck
+    const drawFromDeck = (): Card | undefined => {
+        let card = deck.pop();
+        if (!card && reshuffleCount < 3) {
+            deck.push(...shuffleDeck(discardPile.splice(0)));
+            discardPile.length = 0;
+            reshuffleCount++;
+            card = deck.pop();
         }
-        buyingPlayer.buysUsed = (buyingPlayer.buysUsed || 0) + 1;
+        return card;
+    };
+
+    for (let i = 0; i < 2; i++) {
+        const extra = drawFromDeck();
+        if (!extra) break;
+        buyingPlayer.hand.push(extra);
+        buyingPlayer.boughtCards.push(extra);
+        boughtCards.push(extra);
     }
 
-    // Mark that the player has drawn (on their turn) 
-    // or just processed their buy (if it's not their turn, hasDrawn remains false for the currentPlayer)
-    if (isCurrentPlayer) {
+    // Track buy usage (only for non-current players)
+    if (!isCurrentPlayer) {
+        buyingPlayer.buysUsed = (buyingPlayer.buysUsed || 0) + 1;
+    } else {
+        // Current player also counts as having used their draw
         buyingPlayer.hasDrawn = true;
     }
 

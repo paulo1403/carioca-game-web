@@ -30,8 +30,8 @@ describe("Carioca Game Simulation", () => {
             hand: [
                 createCard("SPADE", 2, "b1s2"),
                 createCard("HEART", 5, "b1h5"),
-                createCard("CLUB", 9, "b1c9"), // Different suits Group
-                createCard("DIAMOND", 4, "b1d4"),
+                createCard("CLUB", 5, "b1c5"), // Trio of 5s
+                createCard("DIAMOND", 5, "b1d5"),
                 createCard("SPADE", 7, "b1s7"),
                 createCard("HEART", 11, "b1h11"),
                 createCard("CLUB", 12, "b1c12"),
@@ -58,7 +58,7 @@ describe("Carioca Game Simulation", () => {
             const validation = validateContract(groups, 1);
             expect(validation.valid).toBe(true);
         } else {
-            fail("Bot 1 should have chosen to go DOWN in Round 1");
+            throw new Error("Bot 1 should have chosen to go DOWN in Round 1");
         }
     });
 

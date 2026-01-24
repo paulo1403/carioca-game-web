@@ -101,11 +101,11 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           onClick={handleDiscardPileClick}
           className={cn(
             "relative transition-all duration-300 card-bounce-in",
-            isBuyWindowOpen &&
-              (myPlayer?.buysUsed ?? 0) < 7 &&
-              !isDownMode
+            isBuyWindowOpen && (myPlayer?.buysUsed ?? 0) < 7 && !isDownMode
               ? "cursor-pointer hover:scale-105 hover:ring-4 hover:ring-yellow-400 rounded-lg hover:-translate-y-2"
               : "",
+            // Highlight when discard is useful for this player
+            isDiscardUseful && isBuyWindowOpen ? "ring-6 ring-yellow-300 shadow-[0_0_30px_rgba(250,204,21,0.28)] animate-pulse" : ""
           )}
         >
           {gameState.discardPile.length > 0 ? (
@@ -139,7 +139,15 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
             (myPlayer?.buysUsed ?? 0) < 7 &&
             !isDownMode &&
             (!isMyTurn || !selectedCardId) && (
-              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white text-xs font-bold bg-black/50 px-2 py-1 rounded whitespace-nowrap animate-bounce rotate-in">
+              <div
+                className={cn(
+                  "absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs font-bold px-2 py-1 rounded whitespace-nowrap animate-bounce rotate-in",
+                  isDiscardUseful
+                    ? "bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 shadow-lg scale-105"
+                    : "bg-black/50 text-white"
+                )}
+                title={isDiscardUseful ? "¡Esta carta te permite bajar!" : undefined}
+              >
                 Comprar
               </div>
             )}

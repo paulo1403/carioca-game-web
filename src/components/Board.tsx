@@ -645,6 +645,8 @@ export const Board: React.FC<BoardProps> = ({
       <BuyConfirmDialog
         show={showBuyConfirmDialog}
         myPlayer={myPlayer}
+        discardCard={gameState.discardPile.length > 0 ? gameState.discardPile[gameState.discardPile.length - 1] : undefined}
+        currentRound={gameState.currentRound}
         onConfirm={() => {
           setShowBuyConfirmDialog(false);
           onDrawDiscard();
