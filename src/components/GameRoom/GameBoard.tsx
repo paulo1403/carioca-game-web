@@ -36,6 +36,8 @@ interface GameBoardProps {
   onCloseReshuffleBanner: () => void;
   onDrawDeck: () => void;
   onDrawDiscard: () => void;
+  isDrawing?: boolean;
+  isBuying?: boolean;
   onDiscard: (cardId: string) => void;
   onDown: (groups: any[][]) => void;
   onAddToMeld: (

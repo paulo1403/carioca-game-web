@@ -172,20 +172,33 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
               {/* Content */}
               <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="flex flex-col gap-8 w-full">
-                  {player.melds?.map((group: Card[], gIdx: number) => (
-                    <div
-                      key={gIdx}
-                      className="bg-black/20 p-2 rounded-xl w-full border border-white/5"
-                    >
-                      <MeldGroup
-                        group={group}
-                        playerId={player.id}
-                        meldIndex={gIdx}
-                        size="large"
-                        onClick={() => onMeldClick && onMeldClick(player.id, gIdx)}
-                      />
-                    </div>
-                  ))}
+                  {(() => {
+                // Deduplicate identical melds (defensive UI fix for visual glitches)
+                const seen = new Set<string>();
+                const unique: Card[][] = [];
+                (player.melds || []).forEach((group: Card[]) => {
+                  const key = group.map(c => c.id).sort().join(",");
+                  if (!seen.has(key)) {
+                    seen.add(key);
+                    unique.push(group);
+                  }
+                });
+
+                return unique.map((group: Card[], gIdx: number) => (
+                  <div
+                    key={gIdx}
+                    className="bg-black/20 p-2 rounded-xl w-full border border-white/5"
+                  >
+                    <MeldGroup
+                      group={group}
+                      playerId={player.id}
+                      meldIndex={gIdx}
+                      size="large"
+                      onClick={() => onMeldClick && onMeldClick(player.id, gIdx)}
+                    />
+                  </div>
+                ));
+              })()}
                 </div>
               </div>
 

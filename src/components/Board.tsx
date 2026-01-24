@@ -39,6 +39,8 @@ interface BoardProps {
   roomId?: string;
   onDrawDeck: () => void;
   onDrawDiscard: () => void;
+  isDrawing?: boolean;
+  isBuying?: boolean;
   onDiscard: (cardId: string) => void;
   onDown: (groups: Card[][]) => void;
   onAddToMeld: (
@@ -62,6 +64,8 @@ export const Board: React.FC<BoardProps> = ({
   roomId,
   onDrawDeck,
   onDrawDiscard,
+  isDrawing = false,
+  isBuying = false,
   onDiscard,
   onDown,
   onAddToMeld,
@@ -495,6 +499,8 @@ export const Board: React.FC<BoardProps> = ({
           myPlayer={myPlayer}
           onDrawDeck={onDrawDeck}
           onDrawDiscard={onDrawDiscard}
+          isDrawing={isDrawing}
+          isBuying={isBuying}
           handleDiscardPileClick={handleDiscardPileClick}
           setShowBuyConfirmDialog={setShowBuyConfirmDialog}
           isDiscardUseful={isDiscardUseful}
@@ -538,6 +544,7 @@ export const Board: React.FC<BoardProps> = ({
             hasMelds={haveMelded ?? false}
             onToggleDownMode={toggleDownMode}
             onStealJoker={handleStealJoker}
+            processing={isDrawing || isBuying}
           />
         )}
 

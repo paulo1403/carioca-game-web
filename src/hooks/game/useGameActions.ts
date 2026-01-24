@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -24,6 +25,7 @@ export function useGameActions({
   };
 
   // Draw from deck
+  const [isDrawingState, setIsDrawingState] = useState(false);
   const drawDeck = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/game/${roomId}/move`, {
@@ -39,6 +41,7 @@ export function useGameActions({
       return res.json();
     },
     onMutate: async () => {
+      setIsDrawingState(true);
       await queryClient.cancelQueries({ queryKey: ["gameState", roomId] });
       const previousState = queryClient.getQueryData<any>(["gameState", roomId]);
 
@@ -56,6 +59,7 @@ export function useGameActions({
       return { previousState };
     },
     onError: (error: Error, _variables, context) => {
+      setIsDrawingState(false);
       if (context?.previousState) {
         queryClient.setQueryData(["gameState", roomId], context.previousState);
       }
@@ -67,12 +71,14 @@ export function useGameActions({
       onError?.(error);
     },
     onSettled: () => {
+      setIsDrawingState(false);
       invalidateGameState();
       queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
   });
 
   // Buy from discard pile
+  const [isBuyingState, setIsBuyingState] = useState(false);
   const buyFromDiscard = useMutation({
     mutationFn: async () => {
       // Intent to buy
@@ -100,6 +106,7 @@ export function useGameActions({
       return buyRes.json();
     },
     onMutate: async () => {
+      setIsBuyingState(true);
       await queryClient.cancelQueries({ queryKey: ["gameState", roomId] });
       const previousState = queryClient.getQueryData<any>(["gameState", roomId]);
 
@@ -109,9 +116,17 @@ export function useGameActions({
         if (player) {
           const card = newState.discardPile.pop();
           player.hand.push(card);
+
+          // Optimistic: mark as drawn and, if not the current turn player, increment buysUsed
           player.hasDrawn = true;
-          // Por simplicidad optimista solo movemos la del descarte, 
-          // las 2 del mazo aparecerán cuando el server responda
+
+          const currentTurnIndex = newState.currentTurn;
+          const playerIndex = newState.players.findIndex((p: any) => p.id === myPlayerId);
+          if (playerIndex !== -1 && playerIndex !== currentTurnIndex) {
+            player.buysUsed = (player.buysUsed || 0) + 1;
+          }
+
+          // Por simplicidad optimista solo movemos la del descarte; las 2 del mazo aparecerán cuando el server responda
         }
         queryClient.setQueryData(["gameState", roomId], newState);
       }
@@ -119,6 +134,7 @@ export function useGameActions({
       return { previousState };
     },
     onError: (error: Error, _variables, context) => {
+      setIsBuyingState(false);
       if (context?.previousState) {
         queryClient.setQueryData(["gameState", roomId], context.previousState);
       }
@@ -130,6 +146,7 @@ export function useGameActions({
       onError?.(error);
     },
     onSettled: () => {
+      setIsBuyingState(false);
       invalidateGameState();
       queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
     },
@@ -498,5 +515,8 @@ export function useGameActions({
     readyForNextRound,
     startNextRound,
     updateName,
+    // Loading flags for UI
+    isDrawing: isDrawingState,
+    isBuying: isBuyingState,
   };
 }

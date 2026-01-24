@@ -22,6 +22,19 @@ export async function handleDown(
     if (!validation.valid) return { success: false, error: validation.error, status: 400 };
 
     const flatIds = groups.flat().map(c => c.id);
+
+    // Server-side sanity checks to avoid duplicate melds / cards already on table
+    const existingIds = (currentPlayer.melds || []).flat().map(c => c.id);
+    const duplicated = flatIds.filter(id => existingIds.includes(id));
+    if (duplicated.length > 0) {
+        return { success: false, error: "Algunas cartas ya están bajadas en mesa.", status: 400 };
+    }
+
+    // Ensure incoming groups don't contain duplicate card references
+    if (new Set(flatIds).size !== flatIds.length) {
+        return { success: false, error: "Grupos inválidos: duplicados dentro de la bajada.", status: 400 };
+    }
+
     currentPlayer.hand = currentPlayer.hand.filter(c => !flatIds.includes(c.id));
 
     if (!currentPlayer.melds) currentPlayer.melds = [];

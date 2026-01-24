@@ -198,6 +198,9 @@ export async function handleDrawDiscard(
         buyingPlayer.hasDrawn = true;
     }
 
+    // Log buy event for debugging / auditing
+    console.info(`[draw] DRAW_DISCARD by ${buyingPlayer.name} (isCurrentPlayer=${isCurrentPlayer}) -> buysUsed=${buyingPlayer.buysUsed}`);
+
     await prisma.$transaction([
         prisma.gameSession.update({
             where: { id: session.id },

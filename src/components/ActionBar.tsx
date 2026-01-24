@@ -21,6 +21,7 @@ interface ActionBarProps {
   onToggleDownMode: () => void;
   onStealJoker: (index: number) => void;
   playerNames?: Record<string, string>;
+  processing?: boolean;
 }
 
 export const ActionBar: React.FC<ActionBarProps> = ({
@@ -33,6 +34,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
   onToggleDownMode,
   onStealJoker,
   playerNames = {},
+  processing = false,
 }) => {
   return (
     <div className="mb-4 flex gap-4 z-50 flex-wrap justify-center animate-in fade-in">
@@ -51,8 +53,12 @@ export const ActionBar: React.FC<ActionBarProps> = ({
             {stealableJokers.slice(0, 3).map((sj, index) => (
               <button
                 key={`${sj.playerId}-${sj.meldIndex}`}
-                onClick={() => onStealJoker(index)}
-                className="bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-3 py-2 rounded-lg flex flex-col items-center min-w-[70px] transition-all active:scale-95 shadow-lg font-semibold hover:scale-110 hover:shadow-xl"
+                onClick={() => !processing && onStealJoker(index)}
+                disabled={processing}
+                className={cn(
+                  "bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-3 py-2 rounded-lg flex flex-col items-center min-w-[70px] transition-all active:scale-95 shadow-lg font-semibold hover:scale-110 hover:shadow-xl",
+                  processing ? "opacity-60 cursor-not-allowed" : ""
+                )}
                 title={`Robar joker - Necesitas ${
                   sj.requiredCards.length
                 } carta${sj.requiredCards.length !== 1 ? "s" : ""}`}
@@ -71,10 +77,12 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       {isMyTurn && hasDrawn && !isDownMode && canDown && (
         <div className="relative rotate-in">
           <button
-            onClick={onToggleDownMode}
+            onClick={() => !processing && onToggleDownMode()}
+            disabled={processing}
             className={cn(
               "font-bold px-8 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-5 transition-all hover:scale-110 hover:shadow-4xl",
-              "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white ring-4 ring-green-300 glow-pulse text-lg"
+              "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white ring-4 ring-green-300 glow-pulse text-lg",
+              processing ? "opacity-60 cursor-not-allowed" : ""
             )}
           >
             <ArrowDown className="w-6 h-6 animate-bounce" />

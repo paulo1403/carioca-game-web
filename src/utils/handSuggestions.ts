@@ -63,42 +63,40 @@ export const getHandSuggestions = (
   }
 
   for (const [value, cardsOfSameValue] of byValue) {
-    // Unique suits for this value
-    const uniqueSuitsMap = new Map<Suit, Card>();
-    for (const c of cardsOfSameValue) {
-      if (!uniqueSuitsMap.has(c.suit)) {
-        uniqueSuitsMap.set(c.suit, c);
-      }
-    }
-
-    const uniqueSuits = Array.from(uniqueSuitsMap.keys());
-    const uniqueCards = Array.from(uniqueSuitsMap.values());
+    // Use all natural cards of the same value (suits may repeat under new rules)
+    const naturalCards = cardsOfSameValue;
     const jokers = hand.filter(isJoker);
     let availableJokers = [...jokers];
 
-    if (uniqueCards.length >= 2 || (uniqueCards.length === 1 && availableJokers.length >= 2)) {
-      // Logic for Carioca: a group needs at least 3 cards total and Natural >= Jokers
-      // We check if we can reach 3 cards with available jokers
-      const naturalCount = uniqueCards.length;
-      let usedJokers = 0;
+    const naturalCount = naturalCards.length;
 
-      // If we have 2 natural, we can use 1 joker to make 3 (valid: 2 > 1)
-      // If we have 2 natural, we can use 2 jokers to make 4 (valid: 2 == 2)
-      // If we have 1 natural, we cannot make a valid 3+ group (needs at least 2 natural to use 1 joker)
-
-      const potentialTotal = naturalCount + availableJokers.length;
-      if (potentialTotal >= 3 && naturalCount >= Math.ceil(3 / 2)) {
-        // It's a valid potential group
-        const missingForThree = Math.max(0, 3 - naturalCount);
-        const totalValidWithJokers = naturalCount + Math.min(availableJokers.length, naturalCount);
-
-        nearDifferentSuitGroups.push({
-          cards: [...uniqueCards, ...availableJokers.slice(0, Math.min(availableJokers.length, naturalCount))],
-          uniqueSuits: naturalCount,
-          missingCount: totalValidWithJokers >= 3 ? 0 : 3 - naturalCount,
-          missing: { kind: "DIFFERENT_SUIT", suits: uniqueSuits },
-        });
-      }
+    // Consider groups of minimum 3
+    if (naturalCount >= 3) {
+      // Already have a full group
+      nearDifferentSuitGroups.push({
+        cards: naturalCards.slice(0, Math.max(3, naturalCount)),
+        uniqueSuits: naturalCount, // repurpose field as natural count for sorting
+        missingCount: 0,
+        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map(c => c.suit as Suit).slice(0, 3) },
+      });
+    } else if (naturalCount > 0 && naturalCount + availableJokers.length >= 3) {
+      // We can complete a 3-card group with jokers (e.g., 2 naturals + 1 joker or 1 natural + 2 jokers)
+      const needed = 3 - naturalCount;
+      const usedJokers = Math.min(needed, availableJokers.length);
+      nearDifferentSuitGroups.push({
+        cards: [...naturalCards, ...availableJokers.slice(0, usedJokers)],
+        uniqueSuits: naturalCount,
+        missingCount: 0,
+        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map(c => c.suit as Suit) },
+      });
+    } else if (naturalCount > 0) {
+      // Partial suggestion: not enough to complete a group of 3 yet
+      nearDifferentSuitGroups.push({
+        cards: naturalCards.slice(0, Math.min(3, naturalCards.length)),
+        uniqueSuits: naturalCount,
+        missingCount: Math.max(0, 3 - naturalCount),
+        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map(c => c.suit as Suit) },
+      });
     }
   }
 

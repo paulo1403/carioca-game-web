@@ -27,6 +27,12 @@ export async function handleStartNextRound(session: any, playerId: string, playe
     if (session.creatorId !== playerId) return { success: false, error: "Only host can start", status: 403 };
 
     const nextRound = session.currentRound + 1;
+
+    // Defensive logging: detect unexpected jumps
+    if (nextRound > session.currentRound + 1) {
+        console.warn(`[round] Unexpected nextRound jump: session.currentRound=${session.currentRound} computed nextRound=${nextRound}. Clamping to ${session.currentRound + 1}`);
+    }
+
     const newDeck = shuffleDeck(createDeck());
     const newDiscardPile = [newDeck.pop()!];
 
@@ -55,10 +61,21 @@ export async function handleStartNextRound(session: any, playerId: string, playe
                 status: "PLAYING",
                 deck: JSON.stringify(newDeck),
                 discardPile: JSON.stringify(newDiscardPile),
-                readyForNextRound: "[]"
+                readyForNextRound: "[]",
+                // Audit the round start for debugging unexpected jumps
+                lastAction: JSON.stringify({
+                  playerId,
+                  type: "START_NEXT_ROUND",
+                  description: `Inicio Ronda: ${session.currentRound} -> ${nextRound}`,
+                  prevRound: session.currentRound,
+                  nextRound,
+                  timestamp: Date.now(),
+                })
             }
         })
     ]);
+
+    console.info(`[round] startNextRound by ${playerId}: ${session.currentRound} -> ${nextRound}`);
 
     return { success: true, gameStatus: "PLAYING", nextRound };
 }

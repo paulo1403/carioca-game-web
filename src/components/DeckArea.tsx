@@ -14,6 +14,8 @@ interface DeckAreaProps {
   myPlayer: Player | undefined;
   onDrawDeck: () => void;
   onDrawDiscard: () => void;
+  isDrawing?: boolean;
+  isBuying?: boolean;
   handleDiscardPileClick: () => void;
   setShowBuyConfirmDialog: (show: boolean) => void;
   isDiscardUseful: boolean;
@@ -29,6 +31,9 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
   gameState,
   myPlayer,
   onDrawDeck,
+  onDrawDiscard,
+  isDrawing = false,
+  isBuying = false,
   handleDiscardPileClick,
   isDiscardUseful,
   discardReason,
@@ -44,6 +49,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
       {/* Deck */}
       <div
         onClick={() => {
+          if (isDrawing || isBuying) return; // Block interactions while a draw/buy is pending
           if (isMyTurn && !hasDrawn && !isDownMode) {
             onDrawDeck();
             playShuffle();
@@ -89,7 +95,14 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
 
         {isMyTurn && !hasDrawn && !isDownMode && (
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white text-xs font-bold bg-blue-600 px-4 py-2 rounded-xl whitespace-nowrap animate-bounce shadow-xl border border-blue-400">
-            ROBAR CARTA
+            {isDrawing ? (
+              <div className="flex items-center gap-2">
+                <span className="loader w-4 h-4 rounded-full border-2 border-white/50 border-t-white animate-spin" />
+                CARGANDO...
+              </div>
+            ) : (
+              "ROBAR CARTA"
+            )}
           </div>
         )}
       </div>
@@ -133,7 +146,11 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           {/* Buy Counter */}
           {gameState.discardPile.length > 0 && isBuyWindowOpen && (
             <div className="absolute -top-2 -right-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full border border-white/20 w-10 text-center animate-pulse">
-              {7 - (myPlayer?.buysUsed ?? 0)} compras
+              {isBuying ? (
+                <div className="flex items-center justify-center gap-1 text-[10px]"><span className="loader w-3 h-3 rounded-full border-2 border-white/50 border-t-white animate-spin" />...</div>
+              ) : (
+                `${7 - (myPlayer?.buysUsed ?? 0)} compras`
+              )}
             </div>
           )}
 
