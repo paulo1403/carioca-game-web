@@ -615,7 +615,6 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
           onDrawDiscard={handleDrawDiscard}
           isDrawing={gameActions.isDrawing}
           isBuying={gameActions.isBuying}
-          isServerBusy={gameActions.isProcessing}
           onDiscard={handleDiscard}
           onDown={handleGoDown}
           onAddToMeld={handleAddToMeld}

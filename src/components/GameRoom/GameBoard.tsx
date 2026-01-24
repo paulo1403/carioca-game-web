@@ -6,6 +6,7 @@ import { GameState } from "@/types/game";
 import { Board } from "@/components/Board";
 import { ResultsModal } from "@/components/ResultsModal";
 import { Shuffle, Trophy, Star, Users, Clock, Bot, User } from "lucide-react";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 
 interface GameBoardProps {
   gameState: GameState;
@@ -42,7 +43,6 @@ interface GameBoardProps {
   onDrawDiscard: () => void;
   isDrawing?: boolean;
   isBuying?: boolean;
-  isServerBusy?: boolean;
   onDiscard: (cardId: string) => void;
   onDown: (groups: any[][]) => void;
   onAddToMeld: (
@@ -81,7 +81,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onDrawDiscard,
   isDrawing = false,
   isBuying = false,
-  isServerBusy = false,
   onDiscard,
   onDown,
   onAddToMeld,
@@ -99,6 +98,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const isHost = gameState.creatorId === myPlayerId;
   const isRoundEnded = gameState.status === "ROUND_ENDED";
   const isGameFinished = gameState.status === "FINISHED";
+  const [showServerOverlay, setShowServerOverlay] = React.useState(false);
+  const fetchingCount = useIsFetching({ queryKey: ["gameState", roomId] });
+  const mutatingCount = useIsMutating();
 
   const getRoundScore = (player: { roundScores?: number[] }) => {
     const scores = player.roundScores || [];
@@ -117,6 +119,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }
   }, [isGameFinished]);
 
+  React.useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (isDrawing || isBuying || fetchingCount > 0 || mutatingCount > 0) {
+      timer = setTimeout(() => setShowServerOverlay(true), 400);
+    } else {
+      setShowServerOverlay(false);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isDrawing, isBuying, fetchingCount, mutatingCount]);
+
   // Calculate if ready for next round
   const playersReady = gameState.readyForNextRound?.length || 0;
   const totalPlayers = gameState.players.length;
@@ -125,7 +140,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   return (
     <div className="relative">
       {/* Global blocking overlay for slow servers (blocks all player actions during draw/buy) */}
-      {(isDrawing || isBuying || isServerBusy) && (
+      {showServerOverlay && (
         <div
           className="fixed inset-0 z-140 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           aria-busy="true"
