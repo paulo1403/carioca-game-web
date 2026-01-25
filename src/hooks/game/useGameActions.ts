@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { getNextTurnIndex } from "@/utils/turn";
+import { isDifferentSuitGroup, isEscala, isTrio } from "@/utils/rules";
 
 interface UseGameActionsOptions {
   roomId: string;
@@ -421,13 +422,52 @@ export function useGameActions({
         if (player && targetPlayer && targetPlayer.melds?.[meldIndex]) {
           const cardIdx = player.hand.findIndex((c: any) => c.id === cardId);
           const targetMeld = targetPlayer.melds[meldIndex];
-          const jokerIdx = targetMeld.findIndex((c: any) => c.suit === "JOKER" || c.value === 0);
+          const jokerIdx = targetMeld.findIndex(
+            (c: any) => c.suit === "JOKER" || c.value === 0
+          );
 
           if (cardIdx !== -1 && jokerIdx !== -1) {
+            const meldIsEscala = isEscala(targetMeld, targetMeld.length);
+            const meldIsDifferentSuit = isDifferentSuitGroup(targetMeld, targetMeld.length);
+            const meldIsTrio = isTrio(targetMeld, targetMeld.length);
+
             const [card] = player.hand.splice(cardIdx, 1);
             const [joker] = targetMeld.splice(jokerIdx, 1);
-            targetMeld.push(card);
-            player.hand.push(joker);
+
+            if (meldIsEscala) {
+              targetMeld.push(card);
+              player.hand.push(joker);
+            } else if (meldIsDifferentSuit || meldIsTrio) {
+              const baseMeld = [...targetMeld, card];
+
+              let extraIdx = -1;
+              for (let i = 0; i < player.hand.length; i++) {
+                const candidate = player.hand[i];
+                if (candidate.suit === "JOKER" || candidate.value === 0) continue;
+                if (candidate.value !== card.value) continue;
+
+                const isValid = meldIsDifferentSuit
+                  ? isDifferentSuitGroup([...baseMeld, candidate], targetMeld.length + 1)
+                  : isTrio([...baseMeld, candidate], targetMeld.length + 1);
+
+                if (isValid) {
+                  extraIdx = i;
+                  break;
+                }
+              }
+
+              if (extraIdx !== -1) {
+                const [extraCard] = player.hand.splice(extraIdx, 1);
+                targetMeld.push(card, extraCard);
+                player.hand.push(joker);
+              } else {
+                targetMeld.push(joker);
+                player.hand.push(card);
+              }
+            } else {
+              targetMeld.push(joker);
+              player.hand.push(card);
+            }
           }
         }
         queryClient.setQueryData(["gameState", roomId], newState);

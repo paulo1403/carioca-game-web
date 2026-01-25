@@ -247,8 +247,20 @@ export const canStealJoker = (card: Card, meld: Card[], hand: Card[]): boolean =
   ).length;
   if (matchingNaturals < 2) return false;
 
-  if (meldIsDifferentSuit) return isDifferentSuitGroup(newMeld, meld.length);
-  return isTrio(newMeld, meld.length);
+  const extraCandidates = hand.filter(
+    (c) => !isJoker(c) && c.value === groupValue && c.id !== card.id
+  );
+  if (extraCandidates.length === 0) return false;
+
+  if (meldIsDifferentSuit) {
+    return extraCandidates.some((extra) =>
+      isDifferentSuitGroup([...newMeld, extra], meld.length + 1)
+    );
+  }
+
+  return extraCandidates.some((extra) =>
+    isTrio([...newMeld, extra], meld.length + 1)
+  );
 };
 
 export const calculateHandPoints = (hand: Card[]): number => {
