@@ -276,11 +276,15 @@ export const Board: React.FC<BoardProps> = ({
 
   const myEmojiReaction = getEmojiReaction(myPlayerId);
 
+  const wasMyTurnRef = React.useRef(false);
+
   // Highlight turn for human
   React.useEffect(() => {
-    if (isMyTurn && gameState.status === "PLAYING") {
+    const isPlaying = gameState.status === "PLAYING";
+    if (isPlaying && isMyTurn && !wasMyTurnRef.current) {
       playYourTurn();
     }
+    wasMyTurnRef.current = isPlaying && isMyTurn;
   }, [isMyTurn, gameState.status, playYourTurn]);
 
   React.useEffect(() => {

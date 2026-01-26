@@ -121,8 +121,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   React.useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
-    if (isDrawing || isBuying || fetchingCount > 0 || mutatingCount > 0) {
+    const hasManualAction = isDrawing || isBuying;
+    const hasBackgroundSync = fetchingCount > 0 || mutatingCount > 0;
+
+    if (hasManualAction) {
       timer = setTimeout(() => setShowServerOverlay(true), 400);
+    } else if (hasBackgroundSync) {
+      timer = setTimeout(() => setShowServerOverlay(true), 1200);
     } else {
       setShowServerOverlay(false);
     }
