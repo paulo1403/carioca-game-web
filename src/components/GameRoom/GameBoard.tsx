@@ -101,6 +101,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const [showServerOverlay, setShowServerOverlay] = React.useState(false);
   const fetchingCount = useIsFetching({ queryKey: ["gameState", roomId] });
   const mutatingCount = useIsMutating();
+  const currentPlayer = gameState.players[gameState.currentTurn];
+  const isMyTurn = currentPlayer?.id === myPlayerId;
 
   const getRoundScore = (player: { roundScores?: number[] }) => {
     const scores = player.roundScores || [];
@@ -126,7 +128,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     if (hasManualAction) {
       timer = setTimeout(() => setShowServerOverlay(true), 400);
-    } else if (hasBackgroundSync) {
+    } else if (isMyTurn && hasBackgroundSync) {
       timer = setTimeout(() => setShowServerOverlay(true), 1200);
     } else {
       setShowServerOverlay(false);
@@ -135,7 +137,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isDrawing, isBuying, fetchingCount, mutatingCount]);
+  }, [isDrawing, isBuying, fetchingCount, mutatingCount, isMyTurn]);
 
   // Calculate if ready for next round
   const playersReady = gameState.readyForNextRound?.length || 0;
