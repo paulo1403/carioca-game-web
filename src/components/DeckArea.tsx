@@ -64,7 +64,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
             : "opacity-75 grayscale-[0.2]",
         )}
       >
-        <div className="absolute -top-4 -left-4 bg-slate-950 text-white text-xs md:text-sm px-3 py-1.5 rounded-full border border-white/30 shadow-lg shadow-black/40 min-w-[3.25rem] text-center">
+        <div className="absolute -top-4 -left-4 z-10 bg-slate-950 text-white text-xs md:text-sm px-3 py-1.5 rounded-full border border-white/30 shadow-lg shadow-black/40 min-w-[3.25rem] text-center">
           Cartas: {gameState.deck?.length ?? 0}
         </div>
         <div
