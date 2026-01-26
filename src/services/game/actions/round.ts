@@ -27,6 +27,15 @@ export async function handleReadyForNextRound(session: any, playerId: string, pl
 
 export async function handleStartNextRound(session: any, playerId: string, players: Player[]) {
     if (session.creatorId !== playerId) return { success: false, error: "Only host can start", status: 403 };
+    if (session.status !== "ROUND_ENDED") {
+        return { success: false, error: "Round not ended", status: 409 };
+    }
+
+    const readyPlayers = JSON.parse(session.readyForNextRound || "[]") as string[];
+    const allReady = players.every((p) => readyPlayers.includes(p.id));
+    if (!allReady) {
+        return { success: false, error: "Not all players are ready", status: 409 };
+    }
 
     const nextRound = session.currentRound + 1;
 
@@ -53,29 +62,32 @@ export async function handleStartNextRound(session: any, playerId: string, playe
 
     const nextStarter = (players.length - (session.currentRound % players.length)) % players.length;
 
-    await Promise.all([
-        ...playerUpdates,
-        prisma.gameSession.update({
-            where: { id: session.id },
-            data: {
-                currentRound: nextRound,
-                currentTurn: nextStarter,
-                status: "PLAYING",
-                deck: JSON.stringify(newDeck),
-                discardPile: JSON.stringify(newDiscardPile),
-                readyForNextRound: "[]",
-                // Audit the round start for debugging unexpected jumps
-                lastAction: JSON.stringify({
-                  playerId,
-                  type: "START_NEXT_ROUND",
-                  description: `Inicio Ronda: ${session.currentRound} -> ${nextRound}`,
-                  prevRound: session.currentRound,
-                  nextRound,
-                  timestamp: Date.now(),
-                })
-            }
-        })
-    ]);
+    const sessionUpdate = await prisma.gameSession.updateMany({
+        where: { id: session.id, status: "ROUND_ENDED", currentRound: session.currentRound },
+        data: {
+            currentRound: nextRound,
+            currentTurn: nextStarter,
+            status: "PLAYING",
+            deck: JSON.stringify(newDeck),
+            discardPile: JSON.stringify(newDiscardPile),
+            readyForNextRound: "[]",
+            // Audit the round start for debugging unexpected jumps
+            lastAction: JSON.stringify({
+              playerId,
+              type: "START_NEXT_ROUND",
+              description: `Inicio Ronda: ${session.currentRound} -> ${nextRound}`,
+              prevRound: session.currentRound,
+              nextRound,
+              timestamp: Date.now(),
+            })
+        }
+    });
+
+    if (sessionUpdate.count === 0) {
+        return { success: false, error: "Round already started", status: 409 };
+    }
+
+    await Promise.all(playerUpdates);
 
     console.info(`[round] startNextRound by ${playerId}: ${session.currentRound} -> ${nextRound}`);
 

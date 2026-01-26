@@ -57,6 +57,7 @@ interface GameBoardProps {
   ) => void;
   onReadyForNextRound: () => void;
   onStartNextRound: () => void;
+  isStartingNextRound?: boolean;
   onEndGame?: () => void;
   onSkipBotTurn?: () => void;
   onUpdateName: (newName: string) => void;
@@ -87,6 +88,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onStealJoker,
   onReadyForNextRound,
   onStartNextRound,
+  isStartingNextRound = false,
   onEndGame,
   onUpdateName,
   hasDrawn,
@@ -306,6 +308,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               {!isGameFinished ? (
                 <button
                   onClick={() => {
+                    if (isStartingNextRound) return;
                     if (isHost && allReady) {
                       // Host inicia la ronda cuando todos están listos
                       onStartNextRound();
@@ -321,7 +324,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       onCloseRoundWinner();
                     }
                   }}
-                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${isHost && allReady
+                  disabled={isStartingNextRound}
+                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${isStartingNextRound
+                    ? "opacity-60 cursor-not-allowed"
+                    : ""} ${isHost && allReady
                     ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse"
                     : !gameState.readyForNextRound?.includes(myPlayerId)
                       ? "bg-green-600 hover:bg-green-500 text-white"
@@ -431,8 +437,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
               {isHost && allReady && (
                 <button
-                  onClick={onStartNextRound}
-                  className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg animate-pulse"
+                  onClick={() => {
+                    if (isStartingNextRound) return;
+                    onStartNextRound();
+                  }}
+                  disabled={isStartingNextRound}
+                  className={`mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg animate-pulse ${isStartingNextRound
+                    ? "opacity-60 cursor-not-allowed"
+                    : ""}`}
                 >
                   🚀 Iniciar Ronda {gameState.currentRound + 1}
                 </button>

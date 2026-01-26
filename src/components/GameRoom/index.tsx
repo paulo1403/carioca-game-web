@@ -621,6 +621,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
           onStealJoker={handleStealJoker}
           onReadyForNextRound={handleReadyForNextRound}
           onStartNextRound={handleStartNextRound}
+          isStartingNextRound={gameActions.startNextRound.isPending}
           onEndGame={handleEndGame}
           onSkipBotTurn={handleSkipBotTurn}
           onUpdateName={handleUpdateName}
