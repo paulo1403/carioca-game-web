@@ -1,4 +1,4 @@
-import { ArrowDown, Check, Loader2, Wand2, Zap } from "lucide-react";
+import { ArrowDown, Check, Loader2, Wand2 } from "lucide-react";
 import type React from "react";
 import { cn } from "@/lib/utils";
 import type { Card } from "@/types/game";
@@ -44,6 +44,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
     <div className="mt-3 flex gap-3 z-50 flex-wrap justify-center">
       {onBuyIntent && (
         <button
+          type="button"
           onClick={() => !processing && canBuyIntent && onBuyIntent()}
           disabled={processing || !canBuyIntent}
           className={cn(
@@ -70,6 +71,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           </span>
           {stealableJokers.slice(0, 3).map((sj, index) => (
             <button
+              type="button"
               key={`${sj.playerId}-${sj.meldIndex}`}
               onClick={() => !processing && onStealJoker(index)}
               disabled={processing}
@@ -90,6 +92,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       {/* Bajarse Button */}
       {isMyTurn && !isDownMode && canDown && (
         <button
+          type="button"
           onClick={() => !processing && hasDrawn && onToggleDownMode()}
           disabled={processing || !hasDrawn}
           className={cn(
