@@ -1,10 +1,6 @@
 export type TurnOrderDirection = "up" | "down";
 
-export const moveTurnOrder = (
-  order: string[],
-  id: string,
-  direction: TurnOrderDirection
-) => {
+export const moveTurnOrder = (order: string[], id: string, direction: TurnOrderDirection) => {
   const index = order.indexOf(id);
   if (index === -1) return order;
   const target = direction === "up" ? index - 1 : index + 1;

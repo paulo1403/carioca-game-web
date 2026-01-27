@@ -1,12 +1,12 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { Card } from "@/types/game";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Card } from "@/types/game";
 import {
+  canFulfillContract,
+  organizeHandAuto,
   sortCards,
   sortCardsByRank,
-  organizeHandAuto,
-  canFulfillContract,
 } from "@/utils/handAnalyzer";
-import { applyOrder, moveId, normalizeOrder, MoveDirection } from "@/utils/handOrder";
+import { applyOrder, type MoveDirection, moveId, normalizeOrder } from "@/utils/handOrder";
 
 export type SortMode = "rank" | "suit" | "auto" | "manual";
 
@@ -15,7 +15,7 @@ export const useHandManagement = (
   currentRound: number,
   haveMelded: boolean = false,
   boughtCards: Card[] = [],
-  storageKey?: string
+  storageKey?: string,
 ) => {
   const [sortModeState, setSortModeState] = useState<SortMode>(() => {
     if (typeof window === "undefined" || !storageKey) return "suit";
@@ -59,7 +59,7 @@ export const useHandManagement = (
       }
       setSortModeState(mode);
     },
-    [handIds]
+    [handIds],
   );
 
   const moveManualCard = useCallback(
@@ -70,7 +70,7 @@ export const useHandManagement = (
         return moveId(normalized, cardId, direction);
       });
     },
-    [handIds, setSortMode]
+    [handIds, setSortMode],
   );
 
   const sortedHand = useCallback(() => {
@@ -80,9 +80,9 @@ export const useHandManagement = (
       return applyOrder(hand, manualOrder);
     }
 
-    const boughtIds = new Set(boughtCards.map(c => c.id));
-    const oldCards = hand.filter(c => !boughtIds.has(c.id));
-    const newCards = hand.filter(c => boughtIds.has(c.id));
+    const boughtIds = new Set(boughtCards.map((c) => c.id));
+    const oldCards = hand.filter((c) => !boughtIds.has(c.id));
+    const newCards = hand.filter((c) => boughtIds.has(c.id));
 
     let processedOld;
     if (sortModeState === "auto") {

@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { GameLobby } from "./GameLobby";
-import { GameBoard } from "./GameBoard";
-import { toast } from "@/hooks/use-toast";
-import { useGameSounds } from "@/hooks/useGameSounds";
-import { useGameState } from "@/hooks/game/useGameState";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { Modal } from "@/components/Modal";
+import { Toaster } from "@/components/Toaster";
 import { useGameActions } from "@/hooks/game/useGameActions";
 import { useGameLobby } from "@/hooks/game/useGameLobby";
+import { useGameState } from "@/hooks/game/useGameState";
 import { useMyPlayerId } from "@/hooks/game/useMyPlayerId";
-import { Toaster } from "@/components/Toaster";
-import { Modal } from "@/components/Modal";
+import { toast } from "@/hooks/use-toast";
+import { useGameSounds } from "@/hooks/useGameSounds";
 import { EMOJI_DISPLAY_MS } from "@/utils/emojiReactions";
-
+import { GameBoard } from "./GameBoard";
+import { GameLobby } from "./GameLobby";
 
 interface GameRoomProps {
   roomId: string;
@@ -79,12 +79,12 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   } | null>(null);
 
   // Refs
-  const reshuffleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const reshuffleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [buyIntents, setBuyIntents] = useState<Record<string, number>>({});
-  const [emojiReactions, setEmojiReactions] = useState<Record<string, { emoji: string; timestamp: number }>>({});
+  const [emojiReactions, setEmojiReactions] = useState<
+    Record<string, { emoji: string; timestamp: number }>
+  >({});
   const buyIntentTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const emojiTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -130,7 +130,8 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     onBuyIntent: ({ playerId, playerName, timestamp }) => {
       if (!playerId) return;
       if (!gameState) return;
-      const name = playerName || gameState.players.find(p => p.id === playerId)?.name || "Jugador";
+      const name =
+        playerName || gameState.players.find((p) => p.id === playerId)?.name || "Jugador";
       setBuyIntents((prev) => ({ ...prev, [playerId]: timestamp }));
       playBuyIntent();
       toast({
@@ -169,7 +170,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   const handleBuyIntent = async () => {
     if (!myPlayerId) return;
     if (!gameState) return;
-    const myName = gameState.players.find(p => p.id === myPlayerId)?.name || "Jugador";
+    const myName = gameState.players.find((p) => p.id === myPlayerId)?.name || "Jugador";
     await sendBuyIntent?.(myPlayerId, myName);
   };
 
@@ -314,9 +315,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   };
 
   const handleKickPlayer = async (playerIdToKick: string) => {
-    const playerToKick = gameState?.players.find(
-      (p) => p.id === playerIdToKick,
-    );
+    const playerToKick = gameState?.players.find((p) => p.id === playerIdToKick);
     const playerName = playerToKick?.name || "este jugador";
 
     showModal(
@@ -393,11 +392,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     }
   };
 
-  const handleAddToMeld = async (
-    cardId: string,
-    targetPlayerId: string,
-    meldIndex: number,
-  ) => {
+  const handleAddToMeld = async (cardId: string, targetPlayerId: string, meldIndex: number) => {
     try {
       await gameActions.addToMeld.mutateAsync({
         cardId,
@@ -410,11 +405,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
     }
   };
 
-  const handleStealJoker = async (
-    cardId: string,
-    targetPlayerId: string,
-    meldIndex: number,
-  ) => {
+  const handleStealJoker = async (cardId: string, targetPlayerId: string, meldIndex: number) => {
     try {
       await gameActions.stealJoker.mutateAsync({
         cardId,
@@ -523,9 +514,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
       <div className="flex h-screen items-center justify-center bg-surface-0">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="mb-4 text-6xl">❌</div>
-          <h2 className="text-2xl font-bold text-text-primary mb-2">
-            Error al cargar la sala
-          </h2>
+          <h2 className="text-2xl font-bold text-text-primary mb-2">Error al cargar la sala</h2>
           <p className="text-text-secondary mb-4">
             {queryError.message || "No se pudo conectar con el servidor"}
           </p>
@@ -551,11 +540,9 @@ export const GameRoom: React.FC<GameRoomProps> = ({ roomId, playerName }) => {
   }
 
   const me = gameState.players.find((p) => p.id === myPlayerId);
-  const isMyTurn =
-    me && gameState.players[gameState.currentTurn]?.id === myPlayerId;
+  const isMyTurn = me && gameState.players[gameState.currentTurn]?.id === myPlayerId;
   const hasDrawn =
-    optimisticDrawn ||
-    (isMyTurn && gameState.status === "PLAYING" && me && me.hasDrawn);
+    optimisticDrawn || (isMyTurn && gameState.status === "PLAYING" && me && me.hasDrawn);
 
   // Render appropriate view based on game status
   return (

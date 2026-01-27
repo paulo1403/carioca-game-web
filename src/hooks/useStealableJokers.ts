@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Card, GameState, Player } from "@/types/game";
+import { useEffect, useState } from "react";
+import type { Card, GameState, Player } from "@/types/game";
 import { canStealJoker } from "@/utils/rules";
 
 interface StealableJoker {
@@ -14,7 +14,7 @@ export const useStealableJokers = (
   gameState: GameState,
   myPlayer: Player | undefined,
   isMyTurn: boolean,
-  isDownMode: boolean
+  isDownMode: boolean,
 ) => {
   const [stealableJokers, setStealableJokers] = useState<StealableJoker[]>([]);
 
@@ -32,7 +32,7 @@ export const useStealableJokers = (
         const jokerCard = meld.find((c) => c.suit === "JOKER" || c.value === 0);
         if (jokerCard) {
           const requiredCards = myPlayer.hand.filter((card) =>
-            canStealJoker(card, meld, myPlayer.hand)
+            canStealJoker(card, meld, myPlayer.hand),
           );
 
           if (requiredCards.length > 0) {

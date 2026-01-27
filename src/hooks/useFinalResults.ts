@@ -1,6 +1,6 @@
-import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { GameState, Player } from "@/types/game";
+import { useMemo } from "react";
+import type { GameState, Player } from "@/types/game";
 import { getBuyPenalty, getRemainingBuys } from "@/utils/buys";
 
 interface FinalPlayer extends Player {
@@ -30,7 +30,7 @@ export function useFinalResults(players: Player[] | undefined, roomId?: string) 
 
   const sortedPlayers = useMemo(
     () => [...finalPlayers].sort((a, b) => a.finalScore - b.finalScore),
-    [finalPlayers]
+    [finalPlayers],
   );
 
   return { players: finalPlayers, sortedPlayers };

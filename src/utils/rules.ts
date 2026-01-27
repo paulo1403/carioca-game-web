@@ -1,4 +1,4 @@
-import { Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
+import { type Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
 
 const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
 
@@ -7,10 +7,7 @@ const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
  * At least minLength cards with different suits
  * Jokers can be used as wildcards to complete different suits
  */
-export const isDifferentSuitGroup = (
-  cards: Card[],
-  minLength: number = 3,
-): boolean => {
+export const isDifferentSuitGroup = (cards: Card[], minLength: number = 3): boolean => {
   if (cards.length < minLength) return false;
 
   const nonJokers = cards.filter((c) => c.suit !== "JOKER" && c.value !== 0);
@@ -28,7 +25,7 @@ export const isDifferentSuitGroup = (
   // Rule: All natural cards must have different suits
   if (uniqueSuits.size !== nonJokers.length) return false;
 
-  // Since there are only 4 legal suits, we can have at most 4 natural cards 
+  // Since there are only 4 legal suits, we can have at most 4 natural cards
   // in a Different Suit Group. Any additional cards must be Jokers.
   if (nonJokers.length > 4) return false;
 
@@ -93,7 +90,7 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
 
   // 2. Check Ace as High (Ace as 14)
   if (values.includes(1)) {
-    const aceHighValues = values.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+    const aceHighValues = values.map((v) => (v === 1 ? 14 : v)).sort((a, b) => a - b);
     if (isLinearSequence(aceHighValues, jokers.length)) return true;
   }
 
@@ -101,10 +98,12 @@ export const isEscala = (cards: Card[], minLength: number = 4): boolean => {
   // For Carioca, we check if the sequence wraps around King to Ace to 2.
   // We can test this by trying all possible starting points (shifting values).
   for (let shift = 1; shift < 13; shift++) {
-    const shiftedValues = values.map(v => {
-      let shifted = (v + shift) % 13;
-      return shifted === 0 ? 13 : shifted;
-    }).sort((a, b) => a - b);
+    const shiftedValues = values
+      .map((v) => {
+        const shifted = (v + shift) % 13;
+        return shifted === 0 ? 13 : shifted;
+      })
+      .sort((a, b) => a - b);
 
     if (isLinearSequence(shiftedValues, jokers.length)) return true;
   }
@@ -125,11 +124,11 @@ export const validateContract = (
   if (groups.length > totalRequired) {
     return {
       valid: false,
-      error: `Solo puedes bajar exactamente lo que pide el contrato (${reqs.differentSuitGroups || 0} grupos y ${reqs.escalas || 0} escalas).`
+      error: `Solo puedes bajar exactamente lo que pide el contrato (${reqs.differentSuitGroups || 0} grupos y ${reqs.escalas || 0} escalas).`,
     };
   }
 
-  let remainingGroups = [...groups];
+  const remainingGroups = [...groups];
   let requiredDifferentSuitGroups = reqs.differentSuitGroups || 0;
   let requiredEscalas = reqs.escalas || 0;
   const usedIndices = new Set<number>();
@@ -161,9 +160,10 @@ export const validateContract = (
   if (requiredDifferentSuitGroups > 0 || requiredEscalas > 0) {
     const errorMsg = [];
     if (requiredDifferentSuitGroups > 0)
-      errorMsg.push(`${requiredDifferentSuitGroups} grupo(s) de ${reqs.differentSuitSize}+ cartas del mismo valor`);
-    if (requiredEscalas > 0)
-      errorMsg.push(`${requiredEscalas} escala(s) de ${reqs.escalaSize}+`);
+      errorMsg.push(
+        `${requiredDifferentSuitGroups} grupo(s) de ${reqs.differentSuitSize}+ cartas del mismo valor`,
+      );
+    if (requiredEscalas > 0) errorMsg.push(`${requiredEscalas} escala(s) de ${reqs.escalaSize}+`);
     return {
       valid: false,
       error: `No cumples el contrato. Falta: ${errorMsg.join(" y ")}.`,
@@ -173,22 +173,22 @@ export const validateContract = (
   if (usedIndices.size !== groups.length) {
     return {
       valid: false,
-      error: "Uno de los grupos enviados no es válido para cumplir el contrato o estás bajando de más."
+      error:
+        "Uno de los grupos enviados no es válido para cumplir el contrato o estás bajando de más.",
     };
   }
 
   return { valid: true };
 };
 
-export const validateAdditionalDown = (
-  groups: Card[][],
-): { valid: boolean; error?: string } => {
+export const validateAdditionalDown = (groups: Card[][]): { valid: boolean; error?: string } => {
   if (groups.length === 0) return { valid: false, error: "Debes bajar al menos 1 grupo." };
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
-    if (group.length < 3) return { valid: false, error: `El grupo ${i + 1} debe tener al menos 3 cartas.` };
-    
+    if (group.length < 3)
+      return { valid: false, error: `El grupo ${i + 1} debe tener al menos 3 cartas.` };
+
     // For additional downs: accept ANY valid group
     // - isTrio: 3+ cards of same value (any suits allowed)
     // - isEscala: cards in sequence (same suit)
@@ -202,10 +202,10 @@ export const validateAdditionalDown = (
 
 export const canAddToMeld = (card: Card, meld: Card[]): boolean => {
   const isJ = isJoker(card);
-  const nonJokersMeld = meld.filter(c => !isJoker(c));
+  const nonJokersMeld = meld.filter((c) => !isJoker(c));
 
   // If it's a group (DifferentSuitGroup/Trio)
-  if (nonJokersMeld.length > 0 && nonJokersMeld.every(c => c.value === nonJokersMeld[0].value)) {
+  if (nonJokersMeld.length > 0 && nonJokersMeld.every((c) => c.value === nonJokersMeld[0].value)) {
     // If we're adding a Joker, it's always valid for a group
     if (isJ) return true;
     // If we're adding a natural card, it must have the same value
@@ -242,25 +242,21 @@ export const canStealJoker = (card: Card, meld: Card[], hand: Card[]): boolean =
   const groupValue = nonJokers[0].value;
   if (card.value !== groupValue) return false;
 
-  const matchingNaturals = hand.filter(
-    (c) => !isJoker(c) && c.value === groupValue
-  ).length;
+  const matchingNaturals = hand.filter((c) => !isJoker(c) && c.value === groupValue).length;
   if (matchingNaturals < 2) return false;
 
   const extraCandidates = hand.filter(
-    (c) => !isJoker(c) && c.value === groupValue && c.id !== card.id
+    (c) => !isJoker(c) && c.value === groupValue && c.id !== card.id,
   );
   if (extraCandidates.length === 0) return false;
 
   if (meldIsDifferentSuit) {
     return extraCandidates.some((extra) =>
-      isDifferentSuitGroup([...newMeld, extra], meld.length + 1)
+      isDifferentSuitGroup([...newMeld, extra], meld.length + 1),
     );
   }
 
-  return extraCandidates.some((extra) =>
-    isTrio([...newMeld, extra], meld.length + 1)
-  );
+  return extraCandidates.some((extra) => isTrio([...newMeld, extra], meld.length + 1));
 };
 
 export const calculateHandPoints = (hand: Card[]): number => {

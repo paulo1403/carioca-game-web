@@ -1,7 +1,7 @@
-import React from "react";
-import { Card as CardType } from "@/types/game";
+import { Club, Diamond, Ghost, Heart, Spade } from "lucide-react";
+import type React from "react";
 import { cn } from "@/lib/utils";
-import { Heart, Diamond, Club, Spade, Ghost } from "lucide-react";
+import type { Card as CardType } from "@/types/game";
 
 interface CardProps {
   card: CardType;
@@ -21,9 +21,7 @@ export const PlayingCard: React.FC<CardProps> = ({
   disabled = false,
 }) => {
   const getSuitColor = (suit: string) => {
-    return suit === "HEART" || suit === "DIAMOND"
-      ? "text-red-600"
-      : "text-slate-900";
+    return suit === "HEART" || suit === "DIAMOND" ? "text-red-600" : "text-slate-900";
   };
 
   const getSuitIcon = (suit: string, size: string = "w-6 h-6") => {
@@ -100,11 +98,7 @@ export const PlayingCard: React.FC<CardProps> = ({
           <div className="pt-0.5">
             {getSuitIcon(
               card.suit,
-              size === "small"
-                ? "w-3 h-3"
-                : size === "large"
-                  ? "w-5 h-5"
-                  : "w-4 h-4",
+              size === "small" ? "w-3 h-3" : size === "large" ? "w-5 h-5" : "w-4 h-4",
             )}
           </div>
         </div>
@@ -140,11 +134,7 @@ export const PlayingCard: React.FC<CardProps> = ({
           <div className="pt-0.5">
             {getSuitIcon(
               card.suit,
-              size === "small"
-                ? "w-3 h-3"
-                : size === "large"
-                  ? "w-5 h-5"
-                  : "w-4 h-4",
+              size === "small" ? "w-3 h-3" : size === "large" ? "w-5 h-5" : "w-4 h-4",
             )}
           </div>
         </div>

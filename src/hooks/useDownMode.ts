@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Card } from "@/types/game";
+import { useCallback, useState } from "react";
+import type { Card } from "@/types/game";
 
 export const useDownMode = () => {
   const [isDownMode, setIsDownMode] = useState(false);
@@ -26,9 +26,7 @@ export const useDownMode = () => {
 
   const toggleCardInTempGroup = useCallback((card: Card) => {
     setTempGroup((prev) =>
-      prev.some((c) => c.id === card.id)
-        ? prev.filter((c) => c.id !== card.id)
-        : [...prev, card]
+      prev.some((c) => c.id === card.id) ? prev.filter((c) => c.id !== card.id) : [...prev, card],
     );
   }, []);
 

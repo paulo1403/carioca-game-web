@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { createDeck, shuffleDeck } from "@/utils/deck";
 import { v4 as uuidv4 } from "uuid";
-import { GameState, Player } from "@/types/game";
-import { orderPlayersByTurn } from "@/utils/prismaOrder";
-
-import { createGameSchema, validateRequest } from "@/lib/validations";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { createGameSchema, validateRequest } from "@/lib/validations";
+import { GameState, type Player } from "@/types/game";
+import { createDeck, shuffleDeck } from "@/utils/deck";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -99,9 +98,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error creating game:", error);
-    return NextResponse.json(
-      { error: "Failed to create game" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create game" }, { status: 500 });
   }
 }

@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { orderPlayersByTurn } from "@/utils/prismaOrder";
-import { Card } from "@/types/game";
 import { checkAndProcessBotTurns } from "@/services/gameService";
+import type { Card } from "@/types/game";
+import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {
@@ -49,9 +46,7 @@ export async function GET(
             roundBuys: JSON.parse(p.roundBuys || "[]") as number[],
           })),
           readyForNextRound: JSON.parse(updatedSession.readyForNextRound || "[]"),
-          lastAction: updatedSession.lastAction
-            ? JSON.parse(updatedSession.lastAction)
-            : undefined,
+          lastAction: updatedSession.lastAction ? JSON.parse(updatedSession.lastAction) : undefined,
         };
         return NextResponse.json({ gameState });
       }
@@ -71,17 +66,12 @@ export async function GET(
         roundBuys: JSON.parse(p.roundBuys || "[]") as number[],
       })),
       readyForNextRound: JSON.parse(session.readyForNextRound || "[]"),
-      lastAction: session.lastAction
-        ? JSON.parse(session.lastAction)
-        : undefined,
+      lastAction: session.lastAction ? JSON.parse(session.lastAction) : undefined,
     };
 
     return NextResponse.json({ gameState });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: "Failed to fetch state" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch state" }, { status: 500 });
   }
 }

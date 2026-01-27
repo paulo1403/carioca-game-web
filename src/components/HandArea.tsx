@@ -1,9 +1,9 @@
 import React from "react";
-import { Card, GameState, Player } from "@/types/game";
-import { CardWrapper } from "./CardWrapper";
+import type { SortMode } from "@/hooks/useHandManagement";
 import { cn } from "@/lib/utils";
-import { SortMode } from "@/hooks/useHandManagement";
-import { MoveDirection } from "@/utils/handOrder";
+import { type Card, GameState, Player } from "@/types/game";
+import type { MoveDirection } from "@/utils/handOrder";
+import { CardWrapper } from "./CardWrapper";
 
 interface HandAreaProps {
   sortedHand: Card[];
@@ -56,9 +56,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
   const cardWidth = isMobile ? 80 : 96;
   const step = isMobile ? 50 : 64;
   const contentWidth =
-    visibleHand.length <= 1
-      ? cardWidth
-      : cardWidth + (visibleHand.length - 1) * step;
+    visibleHand.length <= 1 ? cardWidth : cardWidth + (visibleHand.length - 1) * step;
 
   return (
     <div className="w-full flex flex-col gap-3">
@@ -74,12 +72,14 @@ export const HandArea: React.FC<HandAreaProps> = ({
         {showSortControls && (
           <div className="flex flex-col gap-2 items-center">
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {([
-                { id: "suit", label: "Palo" },
-                { id: "rank", label: "Valor" },
-                { id: "auto", label: "Auto" },
-                { id: "manual", label: "Manual" },
-              ] as { id: SortMode; label: string }[]).map((opt) => (
+              {(
+                [
+                  { id: "suit", label: "Palo" },
+                  { id: "rank", label: "Valor" },
+                  { id: "auto", label: "Auto" },
+                  { id: "manual", label: "Manual" },
+                ] as { id: SortMode; label: string }[]
+              ).map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
@@ -88,7 +88,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                     "px-3 py-2 rounded-full text-xs md:text-sm font-semibold border transition-colors",
                     sortMode === opt.id
                       ? "bg-blue-600 text-white border-blue-400"
-                      : "bg-slate-900/40 text-slate-200 border-slate-600/60 hover:bg-slate-700/40"
+                      : "bg-slate-900/40 text-slate-200 border-slate-600/60 hover:bg-slate-700/40",
                   )}
                 >
                   {opt.label}
@@ -106,7 +106,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                     "px-3 py-2 rounded-full text-xs md:text-sm font-semibold border",
                     !selectedCardId || !canReorder
                       ? "bg-slate-800/40 text-slate-500 border-slate-700/60"
-                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60"
+                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60",
                   )}
                 >
                   ⏮
@@ -119,7 +119,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                     "px-3 py-2 rounded-full text-xs md:text-sm font-semibold border",
                     !selectedCardId || !canReorder
                       ? "bg-slate-800/40 text-slate-500 border-slate-700/60"
-                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60"
+                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60",
                   )}
                 >
                   ◀
@@ -132,7 +132,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                     "px-3 py-2 rounded-full text-xs md:text-sm font-semibold border",
                     !selectedCardId || !canReorder
                       ? "bg-slate-800/40 text-slate-500 border-slate-700/60"
-                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60"
+                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60",
                   )}
                 >
                   ▶
@@ -145,7 +145,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                     "px-3 py-2 rounded-full text-xs md:text-sm font-semibold border",
                     !selectedCardId || !canReorder
                       ? "bg-slate-800/40 text-slate-500 border-slate-700/60"
-                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60"
+                      : "bg-slate-900/60 text-white border-slate-600/60 hover:bg-slate-700/60",
                   )}
                 >
                   ⏭
@@ -209,9 +209,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
       <div className="flex justify-center">
         <div className="bg-gradient-to-r from-blue-600/80 to-blue-700/80 backdrop-blur-sm border-2 border-blue-400/50 rounded-full px-6 py-2 shadow-lg">
           <div className="flex items-center gap-3">
-            <span className="text-white/80 text-sm font-semibold">
-              Puntos en mano:
-            </span>
+            <span className="text-white/80 text-sm font-semibold">Puntos en mano:</span>
             <span className="text-white font-bold text-xl bg-blue-900/50 px-4 py-1 rounded-full border border-blue-400/30">
               {handPoints}
             </span>

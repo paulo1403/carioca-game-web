@@ -1,5 +1,5 @@
-import { Card } from "@/types/game";
-import { validateContract, validateAdditionalDown } from "@/utils/rules";
+import type { Card } from "@/types/game";
+import { validateAdditionalDown, validateContract } from "@/utils/rules";
 
 export interface DownValidationResult {
   isValid: boolean;
@@ -44,9 +44,7 @@ export const useDownValidation = () => {
       error: undefined,
       canConfirm: true,
       handWarning:
-        cardsRemaining === 1
-          ? "Cuidado: Te quedará solo 1 carta después de bajar"
-          : undefined,
+        cardsRemaining === 1 ? "Cuidado: Te quedará solo 1 carta después de bajar" : undefined,
     };
   };
 

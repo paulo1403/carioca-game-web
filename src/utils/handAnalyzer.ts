@@ -1,4 +1,4 @@
-import { Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
+import { type Card, ROUND_CONTRACTS, ROUND_CONTRACTS_DATA } from "@/types/game";
 
 // Helper to sort cards for display/logic
 export const sortCards = (cards: Card[]) => {
@@ -30,14 +30,11 @@ export const isValidTrio = (cards: Card[]): boolean => {
   if (!nonJokers.every((c) => c.value === targetValue)) return false;
 
   // New Carioca Rule: Different Suits
-  const suits = new Set(nonJokers.map(c => c.suit));
+  const suits = new Set(nonJokers.map((c) => c.suit));
   return suits.size === nonJokers.length;
 };
 
-export const isValidEscala = (
-  cards: Card[],
-  minLength: number = 4,
-): boolean => {
+export const isValidEscala = (cards: Card[], minLength: number = 4): boolean => {
   if (cards.length < minLength) return false;
   if (cards.length > 13) return false;
 
@@ -57,14 +54,16 @@ export const isValidEscala = (
     };
     if (isLinear(vals.sort((a, b) => a - b))) return true;
     if (vals.includes(1)) {
-      const highAce = vals.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+      const highAce = vals.map((v) => (v === 1 ? 14 : v)).sort((a, b) => a - b);
       if (isLinear(highAce)) return true;
     }
     for (let shift = 1; shift < 13; shift++) {
-      const shifted = vals.map(v => {
-        let s = (v + shift) % 13;
-        return s === 0 ? 13 : s;
-      }).sort((a, b) => a - b);
+      const shifted = vals
+        .map((v) => {
+          const s = (v + shift) % 13;
+          return s === 0 ? 13 : s;
+        })
+        .sort((a, b) => a - b);
       if (isLinear(shifted)) return true;
     }
     return false;
@@ -75,12 +74,12 @@ export const isValidEscala = (
 
 export const findPotentialContractGroups = (
   hand: Card[],
-  round: number
-): { trios: Card[][], escalas: Card[][] } => {
+  round: number,
+): { trios: Card[][]; escalas: Card[][] } => {
   const reqs = ROUND_CONTRACTS_DATA[round];
   if (!reqs) return { trios: [], escalas: [] };
 
-  const nonJokers = hand.filter(c => !isJoker(c));
+  const nonJokers = hand.filter((c) => !isJoker(c));
   const jokers = hand.filter(isJoker);
   let availableJokers = [...jokers];
 
@@ -90,7 +89,7 @@ export const findPotentialContractGroups = (
   // Trios Logic (updated): groups are 3+ cards of same value (jokers allowed), suits may repeat
   if (reqs.differentSuitGroups > 0) {
     const byValue = new Map<number, Card[]>();
-    nonJokers.forEach(c => {
+    nonJokers.forEach((c) => {
       const list = byValue.get(c.value) ?? [];
       list.push(c);
       byValue.set(c.value, list);
@@ -98,7 +97,7 @@ export const findPotentialContractGroups = (
 
     for (const [val, cards] of byValue) {
       const naturalCards = cards as Card[]; // same value, suits may repeat
-      const cardNames = naturalCards.map(c => `${c.value}${c.suit}`).join(", ");
+      const cardNames = naturalCards.map((c) => `${c.value}${c.suit}`).join(", ");
 
       if (naturalCards.length >= reqs.differentSuitSize) {
         const group = naturalCards.slice(0, reqs.differentSuitSize);
@@ -118,7 +117,7 @@ export const findPotentialContractGroups = (
   // Escalas Logic
   if (reqs.escalas > 0) {
     const bySuit = new Map<string, Card[]>();
-    nonJokers.forEach(c => {
+    nonJokers.forEach((c) => {
       const list = bySuit.get(c.suit) ?? [];
       list.push(c);
       bySuit.set(c.suit, list);
@@ -126,7 +125,10 @@ export const findPotentialContractGroups = (
 
     for (const [suit, cards] of bySuit) {
       for (let start = 1; start <= 13; start++) {
-        const windowValues = Array.from({ length: reqs.escalaSize }, (_, i) => ((start + i - 1) % 13) + 1);
+        const windowValues = Array.from(
+          { length: reqs.escalaSize },
+          (_, i) => ((start + i - 1) % 13) + 1,
+        );
         const usedValues = new Set<number>();
         const cardsInWindow: Card[] = [];
         for (const c of cards) {
@@ -138,7 +140,10 @@ export const findPotentialContractGroups = (
 
         // Simplified check
         const needed = reqs.escalaSize - cardsInWindow.length;
-        if (needed <= availableJokers.length && isValidEscala([...cardsInWindow, ...availableJokers.slice(0, needed)], reqs.escalaSize)) {
+        if (
+          needed <= availableJokers.length &&
+          isValidEscala([...cardsInWindow, ...availableJokers.slice(0, needed)], reqs.escalaSize)
+        ) {
           const jokerGroup = availableJokers.slice(0, needed);
           foundEscalas.push([...cardsInWindow, ...jokerGroup]);
           // Consume the jokers used
@@ -151,9 +156,9 @@ export const findPotentialContractGroups = (
   return { trios: foundTrios, escalas: foundEscalas };
 };
 
-export const findAllValidGroups = (hand: Card[]): { trios: Card[][], escalas: Card[][] } => {
+export const findAllValidGroups = (hand: Card[]): { trios: Card[][]; escalas: Card[][] } => {
   // For additional downs: find ANY 3-card group (3+ same value, or valid escala)
-  const nonJokers = hand.filter(c => !isJoker(c));
+  const nonJokers = hand.filter((c) => !isJoker(c));
   const jokers = hand.filter(isJoker);
   let availableJokers = [...jokers];
   const foundTrios: Card[][] = [];
@@ -161,7 +166,7 @@ export const findAllValidGroups = (hand: Card[]): { trios: Card[][], escalas: Ca
 
   // Trios: 3+ cards of same value (any suits - jokers allowed, but require at least 2 naturals when using jokers)
   const byValue = new Map<number, Card[]>();
-  nonJokers.forEach(c => {
+  nonJokers.forEach((c) => {
     const list = byValue.get(c.value) ?? [];
     list.push(c);
     byValue.set(c.value, list);
@@ -188,7 +193,7 @@ export const findAllValidGroups = (hand: Card[]): { trios: Card[][], escalas: Ca
 
   // Escalas (simplified) - still need same suit for sequences, jokers may help
   const bySuit = new Map<string, Card[]>();
-  nonJokers.forEach(c => {
+  nonJokers.forEach((c) => {
     const list = bySuit.get(c.suit) ?? [];
     list.push(c);
     bySuit.set(c.suit, list);
@@ -202,7 +207,7 @@ export const findAllValidGroups = (hand: Card[]): { trios: Card[][], escalas: Ca
   }
 
   return { trios: foundTrios, escalas: foundEscalas };
-}
+};
 
 /**
  * Check if can do initial down (fulfilling round contract)
@@ -217,10 +222,7 @@ export const canDoInitialDown = (
   if (trios.length >= reqs.differentSuitGroups && escalas.length >= reqs.escalas) {
     return {
       canDown: true,
-      groups: [
-        ...trios.slice(0, reqs.differentSuitGroups),
-        ...escalas.slice(0, reqs.escalas)
-      ]
+      groups: [...trios.slice(0, reqs.differentSuitGroups), ...escalas.slice(0, reqs.escalas)],
     };
   }
 
@@ -238,20 +240,19 @@ export const canDoAdditionalDown = (
   // For additional downs, we need ANY valid group, not following round contract
   // Just check if there's at least 1 valid trio or escala using findAllValidGroups
   const { trios, escalas } = findAllValidGroups(hand);
-  
+
   // For additional downs, need at least 1 trio OR 1 escala
   const hasValidGroup = trios.length > 0 || escalas.length > 0;
-  
+
   if (hasValidGroup) {
     // Return just the first available group
     const groups: Card[][] = [];
     if (trios.length > 0) {
       groups.push(trios[0]);
-    }
-    else if (escalas.length > 0) {
+    } else if (escalas.length > 0) {
       groups.push(escalas[0]);
     }
-    
+
     return { canDown: true, groups };
   }
 

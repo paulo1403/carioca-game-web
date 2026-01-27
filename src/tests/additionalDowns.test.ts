@@ -1,4 +1,4 @@
-import { Card } from "@/types/game";
+import type { Card } from "@/types/game";
 import { canDoAdditionalDown } from "@/utils/handAnalyzer";
 
 const createCard = (suit: string, value: number, id: string): Card => ({
@@ -21,7 +21,7 @@ describe("Additional down detection", () => {
     expect(res.groups.length).toBeGreaterThan(0);
     // group should include the joker (or at least be a trio of value 4)
     const group = res.groups[0];
-    const values = group.map(c => c.value).sort((a, b) => a - b);
-    expect(values.filter(v => v === 4).length).toBeGreaterThanOrEqual(2);
+    const values = group.map((c) => c.value).sort((a, b) => a - b);
+    expect(values.filter((v) => v === 4).length).toBeGreaterThanOrEqual(2);
   });
 });

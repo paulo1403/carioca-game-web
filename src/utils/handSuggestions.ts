@@ -1,4 +1,4 @@
-import { Card, Suit } from "@/types/game";
+import type { Card, Suit } from "@/types/game";
 import { canAddToMeld } from "./rules";
 
 const isJoker = (c: Card) => c.suit === "JOKER" || c.value === 0;
@@ -66,7 +66,7 @@ export const getHandSuggestions = (
     // Use all natural cards of the same value (suits may repeat under new rules)
     const naturalCards = cardsOfSameValue;
     const jokers = hand.filter(isJoker);
-    let availableJokers = [...jokers];
+    const availableJokers = [...jokers];
 
     const naturalCount = naturalCards.length;
 
@@ -77,7 +77,10 @@ export const getHandSuggestions = (
         cards: naturalCards.slice(0, Math.max(3, naturalCount)),
         uniqueSuits: naturalCount, // repurpose field as natural count for sorting
         missingCount: 0,
-        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map(c => c.suit as Suit).slice(0, 3) },
+        missing: {
+          kind: "DIFFERENT_SUIT",
+          suits: naturalCards.map((c) => c.suit as Suit).slice(0, 3),
+        },
       });
     } else if (naturalCount > 0 && naturalCount + availableJokers.length >= 3) {
       // We can complete a 3-card group with jokers (e.g., 2 naturals + 1 joker or 1 natural + 2 jokers)
@@ -87,7 +90,7 @@ export const getHandSuggestions = (
         cards: [...naturalCards, ...availableJokers.slice(0, usedJokers)],
         uniqueSuits: naturalCount,
         missingCount: 0,
-        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map(c => c.suit as Suit) },
+        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map((c) => c.suit as Suit) },
       });
     } else if (naturalCount > 0) {
       // Partial suggestion: not enough to complete a group of 3 yet
@@ -95,7 +98,7 @@ export const getHandSuggestions = (
         cards: naturalCards.slice(0, Math.min(3, naturalCards.length)),
         uniqueSuits: naturalCount,
         missingCount: Math.max(0, 3 - naturalCount),
-        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map(c => c.suit as Suit) },
+        missing: { kind: "DIFFERENT_SUIT", suits: naturalCards.map((c) => c.suit as Suit) },
       });
     }
   }
@@ -118,27 +121,15 @@ export const getHandSuggestions = (
   }
 
   const nearEscalas: EscalaSuggestion[] = [];
-  const suitsArray: Array<Exclude<Suit, "JOKER">> = [
-    "HEART",
-    "DIAMOND",
-    "CLUB",
-    "SPADE",
-  ];
+  const suitsArray: Array<Exclude<Suit, "JOKER">> = ["HEART", "DIAMOND", "CLUB", "SPADE"];
   for (const suit of suitsArray) {
     const valuesToCard = bySuitEscala.get(suit) ?? new Map<number, Card>();
     if (valuesToCard.size < 3) continue;
 
     // Try all 13 starting positions for a 4-card window
     for (let start = 1; start <= 13; start++) {
-      const window = [
-        start,
-        (start % 13) + 1,
-        ((start + 1) % 13) + 1,
-        ((start + 2) % 13) + 1,
-      ];
-      const found = window
-        .map((v) => valuesToCard.get(v))
-        .filter((c) => c !== undefined) as Card[];
+      const window = [start, (start % 13) + 1, ((start + 1) % 13) + 1, ((start + 2) % 13) + 1];
+      const found = window.map((v) => valuesToCard.get(v)).filter((c) => c !== undefined) as Card[];
 
       if (found.length === 3) {
         const missing = window.find((v) => !valuesToCard.has(v))!;
@@ -170,7 +161,7 @@ export const getHandSuggestions = (
   const addableToTable: Card[] = [];
   if (boardMelds.length > 0) {
     for (const card of hand) {
-      if (boardMelds.some(meld => canAddToMeld(card, meld))) {
+      if (boardMelds.some((meld) => canAddToMeld(card, meld))) {
         addableToTable.push(card);
       }
     }

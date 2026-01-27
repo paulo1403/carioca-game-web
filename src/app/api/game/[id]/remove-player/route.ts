@@ -1,11 +1,8 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { playerIdToRemove, requesterId } = await request.json();
 
@@ -20,42 +17,42 @@ export async function POST(
     });
 
     if (!session) {
-      return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+      return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
 
-    if (session.status !== 'WAITING') {
-      return NextResponse.json({ error: 'Cannot remove players during game' }, { status: 400 });
+    if (session.status !== "WAITING") {
+      return NextResponse.json({ error: "Cannot remove players during game" }, { status: 400 });
     }
 
     // Check permissions
-    const requester = session.players.find(p => p.id === requesterId);
+    const requester = session.players.find((p) => p.id === requesterId);
     const isHost = session.creatorId === requesterId;
     const isSelf = playerIdToRemove === requesterId;
 
     if (!requester) {
-      return NextResponse.json({ error: 'Requester not in game' }, { status: 403 });
+      return NextResponse.json({ error: "Requester not in game" }, { status: 403 });
     }
 
     // Only allow removal if:
     // 1. Requester is the Host (can kick anyone)
     // 2. Requester is removing themselves (leave game)
     if (!isHost && !isSelf) {
-      return NextResponse.json({ error: 'Only host can remove other players' }, { status: 403 });
+      return NextResponse.json({ error: "Only host can remove other players" }, { status: 403 });
     }
 
     // Get removed player's name (for notification), then delete
     const playerToRemove = await prisma.player.findUnique({ where: { id: playerIdToRemove } });
 
     await prisma.player.delete({
-      where: { id: playerIdToRemove }
+      where: { id: playerIdToRemove },
     });
 
-    const remaining = session.players.filter(p => p.id !== playerIdToRemove);
+    const remaining = session.players.filter((p) => p.id !== playerIdToRemove);
     const reindexUpdates = remaining.map((p, idx) =>
       prisma.player.update({
         where: { id: p.id },
         data: { turnOrder: idx } as any,
-      })
+      }),
     );
 
     if (reindexUpdates.length > 0) {
@@ -78,9 +75,8 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true, removedPlayer: playerToRemove });
-
   } catch (error) {
-    console.error('Error removing player:', error);
-    return NextResponse.json({ error: 'Failed to remove player' }, { status: 500 });
+    console.error("Error removing player:", error);
+    return NextResponse.json({ error: "Failed to remove player" }, { status: 500 });
   }
 }

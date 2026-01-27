@@ -1,8 +1,8 @@
-import React from "react";
-import { Card } from "@/types/game";
-import { PlayingCard } from "./Card";
+import type React from "react";
 import { cn } from "@/lib/utils";
+import type { Card } from "@/types/game";
 import { isDifferentSuitGroup, isEscala } from "@/utils/rules";
+import { PlayingCard } from "./Card";
 
 interface MeldGroupProps {
   group: Card[];
@@ -47,17 +47,15 @@ export const MeldGroup: React.FC<MeldGroupProps> = ({
         onClick={onClick}
         className={cn(
           "flex p-3 rounded-xl transition-all items-center justify-start bg-black/40 border border-white/5 min-h-[100px] overflow-x-auto custom-scrollbar",
-          onClick ? "cursor-pointer hover:bg-black/60 hover:border-blue-500/30 hover:ring-1 hover:ring-blue-500/20 active:scale-[0.98]" : "",
+          onClick
+            ? "cursor-pointer hover:bg-black/60 hover:border-blue-500/30 hover:ring-1 hover:ring-blue-500/20 active:scale-[0.98]"
+            : "",
           spacing,
         )}
       >
         {group.map((card, i) => (
           <div key={card.id} style={{ zIndex: i }}>
-            <PlayingCard
-              card={card}
-              size={cardSize}
-              className="shadow-xl ring-1 ring-black/20"
-            />
+            <PlayingCard card={card} size={cardSize} className="shadow-xl ring-1 ring-black/20" />
           </div>
         ))}
       </div>

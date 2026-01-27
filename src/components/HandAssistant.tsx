@@ -1,13 +1,10 @@
-import React, { useMemo } from "react";
-import { Eye, Layers, Sparkles, ArrowRight, Zap } from "lucide-react";
-import { Card, ROUND_CONTRACTS_DATA } from "@/types/game";
+import { ArrowRight, Eye, Layers, Sparkles, Zap } from "lucide-react";
+import type React from "react";
+import { useMemo } from "react";
+import type { SortMode } from "@/hooks/useHandManagement";
 import { cn } from "@/lib/utils";
-import {
-  formatCardShort,
-  formatWatchCard,
-  getHandSuggestions,
-} from "@/utils/handSuggestions";
-import { SortMode } from "@/hooks/useHandManagement";
+import { type Card, ROUND_CONTRACTS_DATA } from "@/types/game";
+import { formatCardShort, formatWatchCard, getHandSuggestions } from "@/utils/handSuggestions";
 
 interface HandAssistantProps {
   hand: Card[];
@@ -66,7 +63,9 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
     if (!reqs) return null;
     const need = reqs.differentSuitGroups;
     const size = reqs.differentSuitSize;
-    const complete = nearDifferentSuitGroups.filter(g => g.missingCount === 0 && g.cards.length >= size).length;
+    const complete = nearDifferentSuitGroups.filter(
+      (g) => g.missingCount === 0 && g.cards.length >= size,
+    ).length;
     if (complete >= need) return null;
     return { need, size, complete, missing: need - complete };
   }, [currentRound, nearDifferentSuitGroups]);
@@ -114,9 +113,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
             }
             aria-pressed={sortMode !== "auto"}
             aria-label={
-              sortMode === "auto"
-                ? "Cambiar a: Ordenar por palo"
-                : "Cambiar a: Modo auto"
+              sortMode === "auto" ? "Cambiar a: Ordenar por palo" : "Cambiar a: Modo auto"
             }
           >
             {sortMode === "auto" ? "Cambiar a: Ordenar por palo" : "Cambiar a: Agrupar mano"}
@@ -144,7 +141,11 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
 
         {!haveMelded && contractStatus && (
           <div className="w-full mt-2 px-3 py-2 rounded-md border border-amber-500/20 bg-amber-900/5 text-amber-300 text-sm font-semibold">
-            Contrato R{currentRound}: necesitas <span className="font-bold">{contractStatus.need}</span> grupo(s) de <span className="font-bold">{contractStatus.size}</span>. Tienes <span className="font-bold">{contractStatus.complete}</span>. Falta <span className="font-bold">{contractStatus.missing}</span>.
+            Contrato R{currentRound}: necesitas{" "}
+            <span className="font-bold">{contractStatus.need}</span> grupo(s) de{" "}
+            <span className="font-bold">{contractStatus.size}</span>. Tienes{" "}
+            <span className="font-bold">{contractStatus.complete}</span>. Falta{" "}
+            <span className="font-bold">{contractStatus.missing}</span>.
           </div>
         )}
       </div>
@@ -197,7 +198,9 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
             <div className="space-y-2">
               {additionalGroups.map((g, idx) => (
                 <div key={`addg-${idx}`} className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-bold text-slate-200">{g.map(formatCardShort).join(" ")}</div>
+                  <div className="text-sm font-bold text-slate-200">
+                    {g.map(formatCardShort).join(" ")}
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => onPrefillDownMode && onPrefillDownMode(g)}
@@ -225,9 +228,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
               Grupos con diferentes palos
             </div>
             {nearDifferentSuitGroups.length === 0 ? (
-              <div className="text-sm text-slate-500">
-                Sin grupos de diferentes palos.
-              </div>
+              <div className="text-sm text-slate-500">Sin grupos de diferentes palos.</div>
             ) : (
               <div className="space-y-2">
                 {nearDifferentSuitGroups.map((g, idx) => (
@@ -235,9 +236,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                     key={`group-${idx}`}
                     className={cn(
                       "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
-                      canInteract
-                        ? "text-slate-200 hover:bg-white/5"
-                        : "text-slate-500",
+                      canInteract ? "text-slate-200 hover:bg-white/5" : "text-slate-500",
                     )}
                     onClick={() => onPrefillDownMode(g.cards)}
                     disabled={!canInteract}
@@ -247,9 +246,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                         : "Solo disponible en tu turno después de robar"
                     }
                   >
-                    <span className="font-bold">
-                      {g.cards.map(formatCardShort).join(" ")}
-                    </span>
+                    <span className="font-bold">{g.cards.map(formatCardShort).join(" ")}</span>
                     {g.missingCount > 0 && (
                       <>
                         <ArrowRight className="w-4 h-4 text-slate-500" />
@@ -260,9 +257,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                       </>
                     )}
                     {g.missingCount === 0 && (
-                      <span className="text-green-400 text-xs font-bold">
-                        ✓ Completo
-                      </span>
+                      <span className="text-green-400 text-xs font-bold">✓ Completo</span>
                     )}
                   </button>
                 ))}
@@ -278,9 +273,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
               Escaleras (casi)
             </div>
             {nearEscalas.length === 0 ? (
-              <div className="text-sm text-slate-500">
-                Sin escaleras casi listas.
-              </div>
+              <div className="text-sm text-slate-500">Sin escaleras casi listas.</div>
             ) : (
               <div className="space-y-2">
                 {nearEscalas.map((e, idx) => (
@@ -288,9 +281,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                     key={`escala-${idx}`}
                     className={cn(
                       "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
-                      canInteract
-                        ? "text-slate-200 hover:bg-white/5"
-                        : "text-slate-500",
+                      canInteract ? "text-slate-200 hover:bg-white/5" : "text-slate-500",
                     )}
                     onClick={() => onPrefillDownMode(e.cards)}
                     disabled={!canInteract}
@@ -300,13 +291,9 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                         : "Solo disponible en tu turno después de robar"
                     }
                   >
-                    <span className="font-bold">
-                      {e.cards.map(formatCardShort).join(" ")}
-                    </span>
+                    <span className="font-bold">{e.cards.map(formatCardShort).join(" ")}</span>
                     <ArrowRight className="w-4 h-4 text-slate-500" />
-                    <span className="text-slate-300">
-                      Falta {formatWatchCard(e.missing)}
-                    </span>
+                    <span className="text-slate-300">Falta {formatWatchCard(e.missing)}</span>
                   </button>
                 ))}
               </div>
@@ -326,9 +313,7 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                   key={`escala-${idx}`}
                   className={cn(
                     "w-full text-left flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors",
-                    canInteract
-                      ? "text-slate-200 hover:bg-white/5"
-                      : "text-slate-500",
+                    canInteract ? "text-slate-200 hover:bg-white/5" : "text-slate-500",
                   )}
                   onClick={() => onPrefillDownMode(e.cards)}
                   disabled={!canInteract}
@@ -338,13 +323,9 @@ export const HandAssistant: React.FC<HandAssistantProps> = ({
                       : "Solo disponible en tu turno después de robar"
                   }
                 >
-                  <span className="font-bold">
-                    {e.cards.map(formatCardShort).join(" ")}
-                  </span>
+                  <span className="font-bold">{e.cards.map(formatCardShort).join(" ")}</span>
                   <ArrowRight className="w-4 h-4 text-slate-500" />
-                  <span className="text-slate-300">
-                    Falta {formatWatchCard(e.missing)}
-                  </span>
+                  <span className="text-slate-300">Falta {formatWatchCard(e.missing)}</span>
                 </button>
               ))}
             </div>

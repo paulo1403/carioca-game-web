@@ -1,11 +1,7 @@
-import { GameRoom } from "@/components/GameRoom";
 import { auth } from "@/auth";
+import { GameRoom } from "@/components/GameRoom";
 
-export default async function GamePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function GamePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   // Get the authenticated user's name if available

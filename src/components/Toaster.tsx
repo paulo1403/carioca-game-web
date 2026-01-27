@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useToast, Toast } from '@/hooks/use-toast';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from "lucide-react";
+import React from "react";
+import { type Toast, useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export const Toaster = () => {
   const { toasts, dismiss } = useToast();
@@ -18,7 +18,7 @@ export const Toaster = () => {
 };
 
 const ToastItem = ({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) => {
-  const { type = 'info', title, description } = toast;
+  const { type = "info", title, description } = toast;
 
   const icons = {
     success: <CheckCircle className="w-5 h-5 text-green-400" />,
@@ -28,17 +28,17 @@ const ToastItem = ({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   };
 
   const bgColors = {
-    success: 'bg-green-950/90 border-green-500/50',
-    error: 'bg-red-950/90 border-red-500/50',
-    warning: 'bg-yellow-950/90 border-yellow-500/50',
-    info: 'bg-slate-900/90 border-slate-700/50',
+    success: "bg-green-950/90 border-green-500/50",
+    error: "bg-red-950/90 border-red-500/50",
+    warning: "bg-yellow-950/90 border-yellow-500/50",
+    info: "bg-slate-900/90 border-slate-700/50",
   };
 
   return (
     <div
       className={cn(
         "pointer-events-auto flex w-full items-start gap-3 rounded-lg border p-4 shadow-lg backdrop-blur-md transition-all animate-in slide-in-from-right-full duration-300",
-        bgColors[type]
+        bgColors[type],
       )}
     >
       <div className="flex-shrink-0 mt-0.5">{icons[type]}</div>

@@ -4,15 +4,15 @@
  */
 
 interface EmailTemplateParams {
-    url: string
-    host: string
-    email: string
+  url: string;
+  host: string;
+  email: string;
 }
 
 export function html({ url, host, email }: EmailTemplateParams) {
-    const escapedEmail = email.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  const escapedEmail = email.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -106,11 +106,11 @@ export function html({ url, host, email }: EmailTemplateParams) {
   </table>
 </body>
 </html>
-`
+`;
 }
 
 export function text({ url, host }: EmailTemplateParams) {
-    return `
+  return `
 Inicia sesión en Carioca
 
 Hola,
@@ -127,5 +127,5 @@ Si no solicitaste este correo, puedes ignorarlo.
 ---
 Carioca
 ${host}
-`
+`;
 }

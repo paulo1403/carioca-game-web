@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { GameState } from '@/types/game';
+import fs from "fs";
+import path from "path";
+import type { GameState } from "@/types/game";
 
 // Define the shape of our "Database"
 interface DatabaseSchema {
@@ -10,7 +10,7 @@ interface DatabaseSchema {
       createdAt: number;
       updatedAt: number;
       gameState: GameState;
-      status: 'waiting' | 'playing' | 'finished';
+      status: "waiting" | "playing" | "finished";
     };
   };
   history: {
@@ -22,7 +22,7 @@ interface DatabaseSchema {
   }[];
 }
 
-const DB_PATH = path.join(process.cwd(), 'data', 'db.json');
+const DB_PATH = path.join(process.cwd(), "data", "db.json");
 
 // Initialize DB if not exists
 if (!fs.existsSync(DB_PATH)) {
@@ -37,7 +37,7 @@ if (!fs.existsSync(DB_PATH)) {
 
 export const getDB = (): DatabaseSchema => {
   try {
-    const data = fs.readFileSync(DB_PATH, 'utf-8');
+    const data = fs.readFileSync(DB_PATH, "utf-8");
     return JSON.parse(data);
   } catch (error) {
     return { sessions: {}, history: [] };
@@ -60,7 +60,7 @@ export const db = {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       gameState,
-      status: 'playing',
+      status: "playing",
     };
     saveDB(data);
     return data.sessions[id];
@@ -85,18 +85,18 @@ export const db = {
         sessionId: id,
         playedAt: Date.now(),
         winnerId,
-        participants: session.gameState.players.map(p => ({
+        participants: session.gameState.players.map((p) => ({
           id: p.id,
           name: p.name,
-          score: p.score
-        }))
+          score: p.score,
+        })),
       });
-      
+
       // Delete from active sessions
       delete data.sessions[id];
       saveDB(data);
       return true;
     }
     return false;
-  }
+  },
 };

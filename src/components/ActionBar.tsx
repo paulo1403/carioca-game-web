@@ -1,7 +1,7 @@
-import React from "react";
-import { Wand2, Zap, ArrowDown, Loader2, Check } from "lucide-react";
-import { Card } from "@/types/game";
+import { ArrowDown, Check, Loader2, Wand2, Zap } from "lucide-react";
+import type React from "react";
 import { cn } from "@/lib/utils";
+import type { Card } from "@/types/game";
 
 interface StealableJoker {
   playerId: string;
@@ -65,7 +65,9 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       {/* Steal Joker Buttons */}
       {isMyTurn && hasDrawn && stealableJokers.length > 0 && !isDownMode && (
         <div className="flex gap-2 bg-red-900/70 p-2 rounded-full border border-red-500/50 items-center">
-          <span className="text-red-200 text-xs font-semibold px-2">🃏 {stealableJokers.length}</span>
+          <span className="text-red-200 text-xs font-semibold px-2">
+            🃏 {stealableJokers.length}
+          </span>
           {stealableJokers.slice(0, 3).map((sj, index) => (
             <button
               key={`${sj.playerId}-${sj.meldIndex}`}
@@ -73,7 +75,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
               disabled={processing}
               className={cn(
                 "bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-full text-xs font-semibold active:scale-95",
-                processing ? "opacity-60 cursor-not-allowed" : ""
+                processing ? "opacity-60 cursor-not-allowed" : "",
               )}
               title={`Robar joker - Necesitas ${
                 sj.requiredCards.length
@@ -95,7 +97,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
             hasDrawn
               ? "bg-green-500 hover:bg-green-400 text-white"
               : "bg-slate-800/60 text-slate-400 cursor-not-allowed",
-            processing ? "opacity-60 cursor-not-allowed" : ""
+            processing ? "opacity-60 cursor-not-allowed" : "",
           )}
         >
           {processing ? (

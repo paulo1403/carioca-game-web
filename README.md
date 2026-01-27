@@ -1,314 +1,286 @@
-# 🃏 Carioca Game Web
+# Carioca Game Web
 
-Juego de cartas Carioca multijugador en tiempo real construido con Next.js 15, React 19 y TypeScript.
+A multiplayer real-time card game built with Next.js 15, React 19, and TypeScript.
 
-## 🔒 Seguridad y Autenticación
+## Security and Authentication
 
-Este proyecto está en proceso de implementar un sistema robusto de seguridad y autenticación. Consulta la documentación detallada:
+This project is in the process of implementing a robust security and authentication system. Please refer to the detailed documentation for more information.
 
-- 📊 **[Resumen Ejecutivo](./docs/EXECUTIVE_SUMMARY.md)** - Visión general y justificación
-- 🔐 **[Plan de Seguridad](./docs/SECURITY_PLAN.md)** - Plan completo de seguridad y prevención de trampas
-- 🔑 **[Implementación de Autenticación](./docs/AUTH_IMPLEMENTATION.md)** - Guía paso a paso de NextAuth.js
-- 🗺️ **[Roadmap](./docs/ROADMAP.md)** - Timeline detallado día a día
+### Upcoming Security Improvements
 
-### Próximas Mejoras de Seguridad
+- Mandatory authentication with NextAuth.js (Google, GitHub, Magic Links)
+- JWT token system for game sessions
+- Rate limiting to prevent DoS attacks
+- Complete server-side validation (anti-cheat)
+- Logging and auditing system
+- Protection against race conditions
+- Automatic detection of suspicious activity
 
-- ✅ Autenticación obligatoria con NextAuth.js (Google, GitHub, Magic Links)
-- ✅ Sistema de tokens JWT para sesiones de juego
-- ✅ Rate limiting para prevenir ataques DoS
-- ✅ Validación server-side completa (anti-trampa)
-- ✅ Sistema de logging y auditoría
-- ✅ Protección contra race conditions
-- ✅ Detección automática de actividad sospechosa
+## Features
 
-## 🚀 Características
+- Real-time multiplayer game (3-5 players)
+- Bots with 3 difficulty levels (Easy, Medium, Hard)
+- Responsive design optimized for mobile and desktop
+- Unified color system with dark theme
+- Optimized with React Query for minimal network usage
+- Adaptive polling based on game state
+- Game history
+- Touch targets optimized for mobile devices (≥44px)
 
-- 🎮 Juego multijugador en tiempo real (3-5 jugadores)
-- 🤖 Bots con 3 niveles de dificultad (Fácil, Medio, Difícil)
-- 📱 Diseño responsive optimizado para móvil y desktop
-- 🎨 Sistema de colores unificado con tema oscuro
-- ⚡ Optimizado con React Query para mínimo uso de red
-- 🔄 Polling adaptativo según estado del juego
-- 📊 Historial de partidas
-- 🎯 Touch targets optimizados para móviles (≥44px)
-
-## 🛠️ Stack Tecnológico
+## Technology Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **UI**: React 19, Tailwind CSS 4
-- **Base de datos**: PostgreSQL con Prisma
-- **Estado**: React Query (TanStack Query)
+- **Database**: PostgreSQL with Prisma
+- **State Management**: React Query (TanStack Query)
 - **TypeScript**: 5.x
-- **Sonidos**: use-sound
+- **Audio**: use-sound
 
-## 🛠️ Guía de Despliegue y Configuración
+## Deployment and Configuration Guide
 
-### 💻 Ambiente Local (Desde Cero)
+### Local Environment Setup (From Scratch)
 
-Sigue estos pasos para configurar el proyecto en tu máquina local por primera vez.
+Follow these steps to set up the project on your local machine for the first time.
 
-**Prerrequisitos:**
-- [Node.js](https://nodejs.org/) (v18 o superior)
-- [PostgreSQL](https://www.postgresql.org/) (Instalado y corriendo)
+**Prerequisites:**
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [pnpm](https://pnpm.io/) (package manager)
+- [PostgreSQL](https://www.postgresql.org/) (installed and running)
 - Git
 
-**Pasos:**
+**Steps:**
 
-1.  **Clonar el repositorio**
-    ```bash
-    git clone <repository-url>
-    cd carioca-game-web
-    ```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd carioca-game-web
+   ```
 
-2.  **Instalar dependencias**
-    ```bash
-    npm install
-    ```
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-3.  **Configurar Variables de Entorno**
-    Crea un archivo `.env` basado en el ejemplo:
-    ```bash
-    cp .env.example .env
-    ```
-    Abre el archivo `.env` y configura tu conexión a la base de datos:
-    ```env
-    DATABASE_URL="postgresql://usuario:password@localhost:5432/carioca_game?schema=public"
-    ```
+3. **Configure Environment Variables**
+   Create a `.env` file based on the example:
+   ```bash
+   cp .env.example .env
+   ```
+   Open the `.env` file and configure your database connection:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/carioca_game?schema=public"
+   ```
 
-4.  **Configurar Base de Datos**
-    Ejecuta las migraciones para crear las tablas:
-    ```bash
-    npm run db:migrate
-    ```
+4. **Configure Database**
+   Run migrations to create the tables:
+   ```bash
+   pnpm run db:migrate
+   ```
 
-5.  **Iniciar Servidor de Desarrollo**
-    ```bash
-    npm run dev
-    ```
-    El juego estará disponible en [http://localhost:3000](http://localhost:3000).
+5. **Start Development Server**
+   ```bash
+   pnpm run dev
+   ```
+   The game will be available at [http://localhost:3000](http://localhost:3000).
 
-### 🚀 Ambiente QAS / Producción (Vercel)
+### QAS / Production Environment (Vercel)
 
-Despliegue recomendado usando [Vercel](https://vercel.com) con Supabase.
+Recommended deployment using [Vercel](https://vercel.com) with Supabase.
 
-**1. Configuración de Variables en Vercel**
-Ve a tu proyecto en Vercel > Settings > Environment Variables y agrega las siguientes:
+**1. Environment Variables Configuration in Vercel**
+Go to your project in Vercel > Settings > Environment Variables and add the following:
 
-| Variable | Descripción | Valor / Origen |
+| Variable | Description | Value / Source |
 |:---|:---|:---|
-| `DATABASE_URL` | Conexión (Pooler) | Supabase > Settings > Database > Connection Pooling (Transaction) |
-| `DIRECT_URL` | Conexión Directa | Supabase > Settings > Database > Direct connection |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL de la API | Supabase > Settings > API > Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Llave Pública | Supabase > Settings > API > anon / public |
-| `AUTH_SECRET` | Llave secreta Auth | Generar con `openssl rand -base64 32` |
-| `AUTH_TRUST_HOST` | Confianza en host | `true` (necesario para Vercel) |
-| `EMAIL_HOST` | Host SMTP | `smtp.gmail.com` |
-| `EMAIL_USER` | Usuario SMTP | Tu correo (ej: `cariocagameweb@gmail.com`) |
-| `EMAIL_PASS` | Password SMTP | Tu contraseña de aplicación |
-| `EMAIL_FROM` | Remitente | Tu correo (ej: `cariocagameweb@gmail.com`) |
+| `DATABASE_URL` | Connection (Pooler) | Supabase > Settings > Database > Connection Pooling (Transaction) |
+| `DIRECT_URL` | Direct Connection | Supabase > Settings > Database > Direct connection |
+| `NEXT_PUBLIC_SUPABASE_URL` | API URL | Supabase > Settings > API > Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Key | Supabase > Settings > API > anon / public |
+| `AUTH_SECRET` | Auth Secret Key | Generate with `openssl rand -base64 32` |
+| `AUTH_TRUST_HOST` | Trust Host | `true` (required for Vercel) |
+| `EMAIL_HOST` | SMTP Host | `smtp.gmail.com` |
+| `EMAIL_USER` | SMTP User | Your email (e.g., `cariocagameweb@gmail.com`) |
+| `EMAIL_PASS` | SMTP Password | Your app password |
+| `EMAIL_FROM` | Sender | Your email (e.g., `cariocagameweb@gmail.com`) |
 
-**Nota**: Asegúrate de reemplazar `[YOUR-PASSWORD]` por tu contraseña real de Supabase en `DATABASE_URL` y `DIRECT_URL`.
+**Note**: Make sure to replace `[YOUR-PASSWORD]` with your actual Supabase password in `DATABASE_URL` and `DIRECT_URL`.
 
-**2. Despliegue**
-Conecta tu repositorio de GitHub a Vercel. Vercel detectará automáticamente que es un proyecto Next.js.
+**2. Deployment**
+Connect your GitHub repository to Vercel. Vercel will automatically detect that it is a Next.js project.
 - **Build Command**: `next build` (default)
-- **Install Command**: `npm install` o `pnpm install` (default)
+- **Install Command**: `pnpm install` (default)
 - **Output Directory**: `.next` (default)
 
-Al hacer push a `main`, Vercel iniciará el despliegue automáticamente.
+When pushing to `main`, Vercel will automatically start the deployment.
 
-**3. Migraciones de Base de Datos**
-Vercel no ejecuta migraciones automáticamente. Puedes hacerlo desde tu local conectándote a la DB de producción o agregar un paso en el build (no recomendado para producción crítica, pero útil en hobby).
+**3. Database Migrations**
+Vercel does not run migrations automatically. You can do this from your local machine by connecting to the production database or add a build step (not recommended for critical production, but useful for hobby projects).
 
-Para correr migraciones manualmente desde tu PC a la DB de Supabase:
+To run migrations manually from your PC to the Supabase database:
 ```bash
-# Asegúrate de tener las credenciales de Supabase en tu .env local
+# Ensure you have Supabase credentials in your local .env
 npx prisma migrate deploy
 ```
 
-## 🎮 Cómo Jugar
+## How to Play
 
-1. **Crear Sala**: Crea una nueva sala desde la página principal
-2. **Invitar Jugadores**: Comparte el código de sala o el QR code
-3. **Añadir Bots** (opcional): Añade bots para completar jugadores
-4. **Iniciar Partida**: Se requieren mínimo 3 jugadores
-5. **Jugar**: Sigue las reglas de Carioca para completar las 7 rondas
+1. **Create Room**: Create a new room from the main page
+2. **Invite Players**: Share the room code or QR code
+3. **Add Bots** (optional): Add bots to complete players
+4. **Start Game**: Minimum 3 players required
+5. **Play**: Follow Carioca rules to complete the 7 rounds
 
-### Reglas Básicas
+### Basic Rules
 
-- **Objetivo**: Completar los contratos de cada ronda y tener la menor puntuación
-- **Compras**: Máximo 7 compras por partida
-- **Jokers**: Pueden sustituir cualquier carta (robables si tienes la carta real)
-- **7 Rondas** con contratos progresivamente más difíciles
+- **Objective**: Complete the contracts of each round and have the lowest score
+- **Buys**: Maximum 7 buys per game
+- **Jokers**: Can replace any card (stealable if you have the real card)
+- **7 Rounds** with progressively more difficult contracts
 
-## 📁 Estructura del Proyecto
+## Project Structure
 
 ```
 carioca-game-web/
 ├── src/
-│   ├── app/                    # App Router de Next.js
+│   ├── app/                    # Next.js App Router
 │   │   ├── api/               # API Routes
-│   │   ├── game/[id]/         # Página de juego
-│   │   └── history/           # Historial de partidas
-│   ├── components/            # Componentes React
-│   │   ├── GameRoom/          # Componentes de sala de juego
-│   │   │   ├── index.tsx      # Orquestador principal
-│   │   │   ├── GameLobby.tsx  # Sala de espera (WAITING)
-│   │   │   └── GameBoard.tsx  # Tablero de juego (PLAYING)
-│   │   ├── Card.tsx           # Componente de carta
-│   │   ├── Board.tsx          # Tablero principal
-│   │   └── ...                # Otros componentes
+│   │   ├── game/[id]/         # Game page
+│   │   └── history/           # Game history
+│   ├── components/            # React components
+│   │   ├── GameRoom/          # Game room components
+│   │   │   ├── index.tsx      # Main orchestrator
+│   │   │   ├── GameLobby.tsx  # Waiting room (WAITING)
+│   │   │   └── GameBoard.tsx  # Game board (PLAYING)
+│   │   ├── Card.tsx           # Card component
+│   │   ├── Board.tsx          # Main board
+│   │   └── ...                # Other components
 │   ├── hooks/                 # Custom hooks
-│   │   ├── game/              # Hooks de lógica de juego
-│   │   │   ├── useGameState.ts    # Estado del juego con React Query
-│   │   │   └── useGameActions.ts  # Acciones del juego
+│   │   ├── game/              # Game logic hooks
+│   │   │   ├── useGameState.ts    # Game state with React Query
+│   │   │   └── useGameActions.ts  # Game actions
 │   │   └── ...
-│   ├── services/              # Lógica de negocio
-│   │   └── gameService.ts     # Servicio principal del juego
-│   └── types/                 # Tipos TypeScript
-├── prisma/                    # Esquema y migraciones de DB
-└── public/                    # Assets estáticos
+│   ├── services/              # Business logic
+│   │   └── gameService.ts     # Main game service
+│   └── types/                 # TypeScript types
+├── prisma/                    # Database schema and migrations
+└── public/                    # Static assets
 ```
 
-## 🎨 Cambios Recientes
+## Recent Changes
 
-### ✅ Optimización de Requests (~70% reducción)
+### Request Optimization (~70% reduction)
 
-- **Eliminado polling duplicado**: Migración completa a React Query
-- **Polling adaptativo**:
-  - Sala de espera: cada 8 segundos (~7.5 req/min)
-  - Jugando: cada 3 segundos (~20 req/min)
-  - Juego terminado: 0 requests
-- **Antes**: ~24-60 requests/min → **Después**: ~7.5-20 requests/min
+- **Eliminated duplicate polling**: Complete migration to React Query
+- **Adaptive polling**:
+  - Waiting room: every 8 seconds (~7.5 req/min)
+  - Playing: every 3 seconds (~20 req/min)
+  - Game finished: 0 requests
+- **Before**: ~24-60 requests/min → **After**: ~7.5-20 requests/min
 
-### 🎯 UI Mejorada
+### Improved UI
 
-- **Cartas responsive**: Tamaños optimizados para touch (80x112px en móvil)
-- **Layout móvil**: Grid 2x2 para 5 jugadores, mejor uso del espacio
-- **Barra flotante**: Estado persistente al terminar ronda
-- **Botón "Continuar"**: Ahora marca automáticamente como listo
+- **Responsive cards**: Sizes optimized for touch (80x112px on mobile)
+- **Mobile layout**: 2x2 grid for 5 players, better space usage
+- **Floating bar**: Persistent state when round ends
+- **Continue button**: Now automatically marks as ready
 
-### 🏗️ Refactoring
+### Refactoring
 
-- **GameRoom** dividido en 3 componentes (GameLobby, GameBoard, index)
-- Sistema de colores unificado con CSS variables
-- Mejor organización y mantenibilidad
+- **GameRoom** split into 3 components (GameLobby, GameBoard, index)
+- Unified color system with CSS variables
+- Better organization and maintainability
 
-## 🚀 Scripts Disponibles
+## Available Scripts
 
 ```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build de producción
-npm start            # Iniciar servidor de producción
-npm run lint         # Ejecutar ESLint
-npm run format       # Formatear código con Prettier
+pnpm run dev          # Development server
+pnpm run build        # Production build
+pnpm start            # Start production server
+pnpm run lint         # Run Biome linter
+pnpm run format       # Format code with Biome
 ```
 
-## 📖 Documentación
-
-### Para Usuarios
-- [Cómo Jugar](#-cómo-jugar) - Reglas básicas del juego
-- [Guía de Despliegue](#-guía-de-despliegue-y-configuración) - Setup del proyecto
-
-### Para Desarrolladores
-- [Estructura del Proyecto](#-estructura-del-proyecto) - Organización del código
-- [Scripts Disponibles](#-scripts-disponibles) - Comandos útiles
-- [Performance](#-performance) - Métricas y optimización
-- **[Auditoría React Query](./REACT_QUERY_AUDIT.md)** - Migración completa a React Query
-
-### Seguridad
-- **[Resumen Ejecutivo](./docs/EXECUTIVE_SUMMARY.md)** - ROI y justificación
-- **[Plan de Seguridad](./docs/SECURITY_PLAN.md)** - Implementación completa
-- **[Autenticación](./docs/AUTH_IMPLEMENTATION.md)** - NextAuth.js setup
-- **[Roadmap](./docs/ROADMAP.md)** - Timeline de implementación
-
-## 🔧 Configuración de Base de Datos
+## Database Configuration
 
 ```bash
-# Crear migración
-npx prisma migrate dev --name nombre_migracion
+# Create migration
+npx prisma migrate dev --name migration_name
 
-# Sincronizar schema sin migración
+# Sync schema without migration
 npx prisma db push
 
-# Abrir Prisma Studio
+# Open Prisma Studio
 npx prisma studio
 
-# Generar cliente de Prisma
+# Generate Prisma client
 npx prisma generate
 ```
 
-## 📱 Responsive Design
+## Responsive Design
 
 - **Mobile**: ≥320px (iPhone SE)
 - **Tablet**: ≥768px
 - **Desktop**: ≥1024px
 
-Características móviles:
-- Touch targets ≥44px (estándar iOS/Android)
-- Cards 25% más grandes en móvil
-- Safe areas para iPhone con notch
-- Grid layout optimizado para 5 jugadores
+Mobile features:
+- Touch targets ≥44px (iOS/Android standard)
+- Cards 25% larger on mobile
+- Safe areas for iPhone with notch
+- Grid layout optimized for 5 players
 
-## 🐛 Debugging
+## Debugging
 
 ### React Query DevTools
 
-En modo desarrollo, accede a las DevTools en la esquina inferior izquierda para:
-- Ver queries activas
-- Verificar intervalos de refetch
-- Inspeccionar cache
-- Debug de mutaciones
+In development mode, access DevTools in the bottom left corner to:
+- View active queries
+- Verify refetch intervals
+- Inspect cache
+- Debug mutations
 
 ### Network Monitoring
 
-Verifica los requests en DevTools del navegador:
-- Filtrar por "state" para ver polling
-- Debería haber ~1 request cada 3-8 segundos
-- Sin requests duplicados
+Check requests in browser DevTools:
+- Filter by "state" to see polling
+- Should have ~1 request every 3-8 seconds
+- No duplicate requests
 
-## 📈 Performance
+## Performance
 
-- **Build time**: ~3-4 segundos
-- **Initial load**: Optimizado con Next.js App Router
-- **Code splitting**: Automático por ruta
-- **Caching**: React Query con staleTime de 1s
+- **Build time**: ~3-4 seconds
+- **Initial load**: Optimized with Next.js App Router
+- **Code splitting**: Automatic per route
+- **Caching**: React Query with 1s staleTime
 
-## 🤝 Contribuir
+## Contributing
 
-1. Fork el proyecto
-2. Crea tu feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la branch (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📝 Licencia
+## License
 
-Este proyecto es de código abierto y está disponible bajo la licencia MIT.
+This project is open source and available under the MIT license.
 
-## 🔐 Estado de Seguridad
+## Security Status
 
-| Aspecto | Estado | Próximo |
+| Aspect | Status | Next |
 |---------|--------|---------|
-| Autenticación | ⏳ Planificado | NextAuth.js |
-| Autorización | ⏳ Planificado | JWT Tokens |
-| Rate Limiting | ⏳ Planificado | LRU Cache |
-| Validación | ⚠️ Parcial | Validadores completos |
-| Logging | ❌ No implementado | Auditoría completa |
-| Anti-trampa | ⚠️ Básico | Validación server-side |
+| Authentication | Planned | NextAuth.js |
+| Authorization | Planned | JWT Tokens |
+| Rate Limiting | Planned | LRU Cache |
+| Validation | Partial | Complete validators |
+| Logging | Not implemented | Full audit |
+| Anti-cheat | Basic | Server-side validation |
 
-**Consulta [SECURITY_PLAN.md](./docs/SECURITY_PLAN.md) para más detalles.**
-
-## 👤 Autor
+## Author
 
 Paulo - [GitHub Profile](https://github.com/paulo1403)
 
-## 🙏 Agradecimientos
+## Acknowledgments
 
-- Inspirado en el juego tradicional de cartas Carioca
-- Iconos de [Lucide React](https://lucide.dev)
-- Sonidos de [use-sound](https://github.com/joshwcomeau/use-sound)
-
----
-
-**¡Disfruta jugando Carioca! 🎉🃏**
+- Inspired by the traditional Carioca card game
+- Icons from [Lucide React](https://lucide.dev)
+- Sounds from [use-sound](https://github.com/joshwcomeau/use-sound)

@@ -1,18 +1,11 @@
 "use client";
 
+import { Music, Volume2, VolumeX } from "lucide-react";
 import { useBackgroundMusicContext } from "@/components/BackgroundMusicProvider";
-import { Volume2, VolumeX, Music } from "lucide-react";
 
 export const MusicControls = () => {
-  const {
-    isPlaying,
-    isMuted,
-    currentTrack,
-    availableTracks,
-    togglePlay,
-    toggleMute,
-    changeTrack,
-  } = useBackgroundMusicContext();
+  const { isPlaying, isMuted, currentTrack, availableTracks, togglePlay, toggleMute, changeTrack } =
+    useBackgroundMusicContext();
 
   const getTrackName = (trackPath: string) => {
     if (trackPath === "/songs/background-music.mp3") {
@@ -55,11 +48,7 @@ export const MusicControls = () => {
             className="bg-transparent text-white text-sm border border-white/20 rounded px-2 py-1 focus:outline-none focus:border-white/40"
           >
             {availableTracks.map((track) => (
-              <option
-                key={track}
-                value={track}
-                className="bg-gray-800 text-white"
-              >
+              <option key={track} value={track} className="bg-gray-800 text-white">
                 {getTrackName(track)}
               </option>
             ))}
@@ -69,9 +58,7 @@ export const MusicControls = () => {
 
       {/* Current Track Display */}
       {availableTracks.length === 1 && (
-        <span className="text-white text-sm opacity-80">
-          {getTrackName(currentTrack)}
-        </span>
+        <span className="text-white text-sm opacity-80">{getTrackName(currentTrack)}</span>
       )}
     </div>
   );

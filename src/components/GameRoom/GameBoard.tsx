@@ -1,12 +1,12 @@
 "use client";
 
-import React from "react";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
+import { Bot, Clock, Shuffle, Star, Trophy, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { GameState } from "@/types/game";
+import React from "react";
 import { Board } from "@/components/Board";
 import { ResultsModal } from "@/components/ResultsModal";
-import { Shuffle, Trophy, Star, Users, Clock, Bot, User } from "lucide-react";
-import { useIsFetching, useIsMutating } from "@tanstack/react-query";
+import type { GameState } from "@/types/game";
 
 interface GameBoardProps {
   gameState: GameState;
@@ -45,16 +45,8 @@ interface GameBoardProps {
   isBuying?: boolean;
   onDiscard: (cardId: string) => void;
   onDown: (groups: any[][]) => void;
-  onAddToMeld: (
-    cardId: string,
-    targetPlayerId: string,
-    meldIndex: number,
-  ) => void;
-  onStealJoker: (
-    cardId: string,
-    targetPlayerId: string,
-    meldIndex: number,
-  ) => void;
+  onAddToMeld: (cardId: string, targetPlayerId: string, meldIndex: number) => void;
+  onStealJoker: (cardId: string, targetPlayerId: string, meldIndex: number) => void;
   onReadyForNextRound: () => void;
   onStartNextRound: () => void;
   isStartingNextRound?: boolean;
@@ -169,8 +161,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
-
-
       {/* Reshuffle Banner */}
       {reshuffleBanner && (
         <div className="fixed inset-0 z-120 pointer-events-none flex items-start justify-center p-4 pt-10">
@@ -187,11 +177,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   ¡Se rebarajó el mazo!
                 </div>
                 <div className="text-slate-300 text-sm leading-snug">
-                  El descarte se mezcló y volvió al mazo. Rebarajadas esta
-                  ronda:{" "}
-                  <span className="font-bold text-amber-300">
-                    {reshuffleBanner.count}/3
-                  </span>
+                  El descarte se mezcló y volvió al mazo. Rebarajadas esta ronda:{" "}
+                  <span className="font-bold text-amber-300">{reshuffleBanner.count}/3</span>
                 </div>
               </div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -202,9 +189,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
-
-
-
       {/* Round Winner Modal */}
       {roundWinnerModal.isOpen && (
         <div className="fixed inset-0 z-130 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
@@ -214,12 +198,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-1">
-                ¡Ronda Completada!
-              </h2>
+              <h2 className="text-2xl font-bold text-white mb-1">¡Ronda Completada!</h2>
               <p className="text-yellow-100">
-                {roundWinnerModal.winnerName} ganó la ronda{" "}
-                {gameState.currentRound}
+                {roundWinnerModal.winnerName} ganó la ronda {gameState.currentRound}
               </p>
             </div>
 
@@ -239,27 +220,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   .map((player, idx) => (
                     <div
                       key={player.name}
-                      className={`flex items-center justify-between p-3 rounded-xl ${idx === 0
-                        ? "bg-yellow-500/10 border border-yellow-500/30"
-                        : "bg-slate-800/50 border border-slate-700"
-                        }`}
+                      className={`flex items-center justify-between p-3 rounded-xl ${
+                        idx === 0
+                          ? "bg-yellow-500/10 border border-yellow-500/30"
+                          : "bg-slate-800/50 border border-slate-700"
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${idx === 0
-                            ? "bg-yellow-500 text-white"
-                            : idx === 1
-                              ? "bg-slate-400 text-white"
-                              : idx === 2
-                                ? "bg-amber-700 text-white"
-                                : "bg-slate-600 text-slate-300"
-                            }`}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            idx === 0
+                              ? "bg-yellow-500 text-white"
+                              : idx === 1
+                                ? "bg-slate-400 text-white"
+                                : idx === 2
+                                  ? "bg-amber-700 text-white"
+                                  : "bg-slate-600 text-slate-300"
+                          }`}
                         >
                           {idx + 1}
                         </div>
-                        <span className="font-medium text-slate-200">
-                          {player.name}
-                        </span>
+                        <span className="font-medium text-slate-200">{player.name}</span>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
@@ -313,9 +294,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       // Host inicia la ronda cuando todos están listos
                       onStartNextRound();
                       onCloseRoundWinner();
-                    } else if (
-                      !gameState.readyForNextRound?.includes(myPlayerId)
-                    ) {
+                    } else if (!gameState.readyForNextRound?.includes(myPlayerId)) {
                       // Marcar como listo y cerrar
                       onReadyForNextRound();
                       onCloseRoundWinner();
@@ -325,14 +304,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     }
                   }}
                   disabled={isStartingNextRound}
-                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${isStartingNextRound
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""} ${isHost && allReady
-                    ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse"
-                    : !gameState.readyForNextRound?.includes(myPlayerId)
-                      ? "bg-green-600 hover:bg-green-500 text-white"
-                      : "bg-slate-700 hover:bg-slate-600 text-slate-200"
-                    }`}
+                  className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-all ${
+                    isStartingNextRound ? "opacity-60 cursor-not-allowed" : ""
+                  } ${
+                    isHost && allReady
+                      ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse"
+                      : !gameState.readyForNextRound?.includes(myPlayerId)
+                        ? "bg-green-600 hover:bg-green-500 text-white"
+                        : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+                  }`}
                 >
                   {isHost && allReady
                     ? `🚀 Iniciar Ronda ${roundWinnerModal.nextRound}`
@@ -394,10 +374,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   {gameState.players.map((player: any) => (
                     <div
                       key={player.id}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${gameState.readyForNextRound?.includes(player.id)
-                        ? "bg-green-500/20 border border-green-500/30"
-                        : "bg-slate-700/50 border border-slate-600"
-                        }`}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                        gameState.readyForNextRound?.includes(player.id)
+                          ? "bg-green-500/20 border border-green-500/30"
+                          : "bg-slate-700/50 border border-slate-600"
+                      }`}
                     >
                       {player.isBot ? (
                         <Bot className="w-4 h-4 text-purple-400" />
@@ -411,9 +392,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       {gameState.readyForNextRound?.includes(player.id) ? (
                         <span className="text-green-400 text-xs">✓ Listo</span>
                       ) : (
-                        <span className="text-slate-500 text-xs">
-                          Esperando...
-                        </span>
+                        <span className="text-slate-500 text-xs">Esperando...</span>
                       )}
                     </div>
                   ))}
@@ -442,9 +421,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     onStartNextRound();
                   }}
                   disabled={isStartingNextRound}
-                  className={`mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg animate-pulse ${isStartingNextRound
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""}`}
+                  className={`mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg animate-pulse ${
+                    isStartingNextRound ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
                 >
                   🚀 Iniciar Ronda {gameState.currentRound + 1}
                 </button>

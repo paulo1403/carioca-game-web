@@ -1,4 +1,4 @@
-import { Card } from "@/types/game";
+import type { Card } from "@/types/game";
 
 export type MoveDirection = "left" | "right" | "start" | "end";
 

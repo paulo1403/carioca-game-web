@@ -1,4 +1,4 @@
-import { Card, Player } from "@/types/game";
+import type { Card, Player } from "@/types/game";
 import { canAddToMeld, canStealJoker } from "@/utils/rules";
 
 interface BestMove {
@@ -13,7 +13,7 @@ interface BestMove {
 export const findBestCardMove = (
   card: Card,
   myPlayer: Player,
-  otherPlayers: Player[]
+  otherPlayers: Player[],
 ): BestMove | null => {
   const isJokerCard = card.suit === "JOKER" || card.value === 0;
 
@@ -54,13 +54,11 @@ export const findBestCardMove = (
 export const findStealableJokerForCard = (
   card: Card,
   gameState: any,
-  myPlayer: Player | undefined
+  myPlayer: Player | undefined,
 ): { playerId: string; meldIndex: number } | null => {
   if (!myPlayer) return null;
 
-  const otherPlayers = gameState.players.filter(
-    (p: Player) => p.id !== myPlayer.id
-  );
+  const otherPlayers = gameState.players.filter((p: Player) => p.id !== myPlayer.id);
 
   for (const player of otherPlayers) {
     if (player.melds) {

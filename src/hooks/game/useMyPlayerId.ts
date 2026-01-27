@@ -8,10 +8,7 @@ interface UseMyPlayerIdOptions {
   enabled?: boolean;
 }
 
-export function useMyPlayerId({
-  roomId,
-  enabled = true,
-}: UseMyPlayerIdOptions) {
+export function useMyPlayerId({ roomId, enabled = true }: UseMyPlayerIdOptions) {
   const queryClient = useQueryClient();
 
   // Obtener playerId de localStorage como fallback

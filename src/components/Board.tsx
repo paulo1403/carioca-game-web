@@ -1,39 +1,40 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Card, GameState } from "@/types/game";
-import { cn } from "@/lib/utils";
-
+import React, { useMemo, useState } from "react";
+import { useAddableCards } from "@/hooks/useAddableCards";
+import { useDiscardHint } from "@/hooks/useDiscardHint";
+import { useDownMode } from "@/hooks/useDownMode";
+import { useDownValidation } from "@/hooks/useDownValidation";
+import { useGameSounds } from "@/hooks/useGameSounds";
 // Hooks
 import { useGameState } from "@/hooks/useGameState";
+import { type SortMode, useHandManagement } from "@/hooks/useHandManagement";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useDownMode } from "@/hooks/useDownMode";
-import { useAddableCards } from "@/hooks/useAddableCards";
 import { useStealableJokers } from "@/hooks/useStealableJokers";
-import { useDiscardHint } from "@/hooks/useDiscardHint";
-import { useHandManagement, SortMode } from "@/hooks/useHandManagement";
-import { MoveDirection } from "@/utils/handOrder";
-import { useGameSounds } from "@/hooks/useGameSounds";
-import { useDownValidation } from "@/hooks/useDownValidation";
-
+import { cn } from "@/lib/utils";
+import { type Card, type GameState, ROUND_CONTRACTS_DATA } from "@/types/game";
+import { MAX_BUYS } from "@/utils/buys";
+import { findBestCardMove } from "@/utils/cardMoveHelper";
+import {
+  EMOJI_COOLDOWN_MS,
+  EMOJI_DISPLAY_MS,
+  EMOJI_REACTIONS,
+  isEmojiReaction,
+} from "@/utils/emojiReactions";
+import { findAllValidGroups, findPotentialContractGroups } from "@/utils/handAnalyzer";
+import type { MoveDirection } from "@/utils/handOrder";
+// Utils
+import { canAddToMeld, canStealJoker } from "@/utils/rules";
+import { ActionBar } from "./ActionBar";
+import { BuyConfirmDialog } from "./BuyConfirmDialog";
+import { DeckArea } from "./DeckArea";
+import { DownModeControls } from "./DownModeControls";
+import { GameHeader } from "./GameHeader";
+import { HandArea } from "./HandArea";
+import { HandAssistant } from "./HandAssistant";
+import { MeldGroup } from "./MeldGroup";
 // Components
 import { PlayerBadge } from "./PlayerBadge";
-import { MeldGroup } from "./MeldGroup";
-import { DeckArea } from "./DeckArea";
-import { ActionBar } from "./ActionBar";
-import { HandArea } from "./HandArea";
-import { DownModeControls } from "./DownModeControls";
-import { BuyConfirmDialog } from "./BuyConfirmDialog";
-import { HandAssistant } from "./HandAssistant";
-import { GameHeader } from "./GameHeader";
-
-// Utils
-import { canStealJoker, canAddToMeld } from "@/utils/rules";
-import { findBestCardMove } from "@/utils/cardMoveHelper";
-import { findPotentialContractGroups, findAllValidGroups } from "@/utils/handAnalyzer";
-import { ROUND_CONTRACTS_DATA } from "@/types/game";
-import { EMOJI_COOLDOWN_MS, EMOJI_REACTIONS, EMOJI_DISPLAY_MS, isEmojiReaction } from "@/utils/emojiReactions";
-import { MAX_BUYS } from "@/utils/buys";
 
 // Types and interfaces
 interface BoardProps {
@@ -46,16 +47,8 @@ interface BoardProps {
   isBuying?: boolean;
   onDiscard: (cardId: string) => void;
   onDown: (groups: Card[][]) => void;
-  onAddToMeld: (
-    cardId: string,
-    targetPlayerId: string,
-    meldIndex: number,
-  ) => void;
-  onStealJoker: (
-    cardId: string,
-    targetPlayerId: string,
-    meldIndex: number,
-  ) => void;
+  onAddToMeld: (cardId: string, targetPlayerId: string, meldIndex: number) => void;
+  onStealJoker: (cardId: string, targetPlayerId: string, meldIndex: number) => void;
   onEndGame?: () => void;
   onUpdateName: (newName: string) => void;
   hasDrawn: boolean;
@@ -86,8 +79,10 @@ export const Board: React.FC<BoardProps> = ({
   onEmojiReaction,
 }) => {
   // Game state
-  const { myPlayer, otherPlayers, isMyTurn, myHandPoints, haveMelded } =
-    useGameState(gameState, myPlayerId);
+  const { myPlayer, otherPlayers, isMyTurn, myHandPoints, haveMelded } = useGameState(
+    gameState,
+    myPlayerId,
+  );
 
   // UI state
   const { isMobile } = useIsMobile();
@@ -129,12 +124,7 @@ export const Board: React.FC<BoardProps> = ({
   );
 
   // Stealable jokers
-  const stealableJokers = useStealableJokers(
-    gameState,
-    myPlayer,
-    isMyTurn,
-    isDownMode,
-  );
+  const stealableJokers = useStealableJokers(gameState, myPlayer, isMyTurn, isDownMode);
 
   // Discard hint + reason
   const { suggestedDiscardCardId, isDiscardUseful, discardReason } = useDiscardHint(
@@ -151,18 +141,23 @@ export const Board: React.FC<BoardProps> = ({
     if (!myPlayer) return set;
     if (haveMelded) {
       const { trios, escalas } = findAllValidGroups(myPlayer.hand);
-      [...trios, ...escalas].forEach(g => g.forEach(c => set.add(c.id)));
+      [...trios, ...escalas].forEach((g) => g.forEach((c) => set.add(c.id)));
     } else {
       const { trios, escalas } = findPotentialContractGroups(myPlayer.hand, gameState.currentRound);
 
       // Only highlight if overall contract requirement can be met.
-      const reqs = ROUND_CONTRACTS_DATA[gameState.currentRound] || { differentSuitGroups: 0, escalas: 0 };
+      const reqs = ROUND_CONTRACTS_DATA[gameState.currentRound] || {
+        differentSuitGroups: 0,
+        escalas: 0,
+      };
       const hasEnoughTrios = trios.length >= (reqs.differentSuitGroups || 0);
       const hasEnoughEscalas = escalas.length >= (reqs.escalas || 0);
 
       if (hasEnoughTrios && hasEnoughEscalas) {
         // Only include the exact groups needed for the contract to avoid over-highlighting.
-        [...trios.slice(0, reqs.differentSuitGroups), ...escalas.slice(0, reqs.escalas)].forEach(g => g.forEach(c => set.add(c.id)));
+        [...trios.slice(0, reqs.differentSuitGroups), ...escalas.slice(0, reqs.escalas)].forEach(
+          (g) => g.forEach((c) => set.add(c.id)),
+        );
       }
     }
     return set;
@@ -230,9 +225,7 @@ export const Board: React.FC<BoardProps> = ({
   };
 
   const canEmojiReact =
-    !!onEmojiReaction &&
-    gameState.status === "PLAYING" &&
-    Date.now() > emojiCooldownUntil;
+    !!onEmojiReaction && gameState.status === "PLAYING" && Date.now() > emojiCooldownUntil;
 
   const handleEmojiReaction = (emoji: string) => {
     if (!canEmojiReact || !isEmojiReaction(emoji)) return;
@@ -415,10 +408,7 @@ export const Board: React.FC<BoardProps> = ({
   const handleConfirmDown = () => {
     if (groupsToMeld.length === 0) return;
 
-    const totalCardsToMeld = groupsToMeld.reduce(
-      (sum, group) => sum + group.length,
-      0,
-    );
+    const totalCardsToMeld = groupsToMeld.reduce((sum, group) => sum + group.length, 0);
     const cardsInHand = myPlayer?.hand.length || 0;
     const alreadyMelded = (myPlayer?.melds?.length ?? 0) > 0;
 
@@ -475,9 +465,7 @@ export const Board: React.FC<BoardProps> = ({
     const stealingCard = myPlayer?.hand.find((card) =>
       canStealJoker(
         card,
-        gameState.players.find((p) => p.id === sj.playerId)?.melds?.[
-        sj.meldIndex
-        ] || [],
+        gameState.players.find((p) => p.id === sj.playerId)?.melds?.[sj.meldIndex] || [],
         myPlayer.hand,
       ),
     );
@@ -942,22 +930,19 @@ export const Board: React.FC<BoardProps> = ({
               </div>
             )}
 
-            {haveMelded &&
-              myPlayer &&
-              myPlayer.melds &&
-              myPlayer.melds.length > 0 && (
-                <div className="flex justify-center gap-4 flex-wrap">
-                  {myPlayer.melds.map((group, gIdx) => (
-                    <MeldGroup
-                      key={gIdx}
-                      group={group}
-                      playerId={myPlayer.id}
-                      meldIndex={gIdx}
-                      size="large"
-                    />
-                  ))}
-                </div>
-              )}
+            {haveMelded && myPlayer && myPlayer.melds && myPlayer.melds.length > 0 && (
+              <div className="flex justify-center gap-4 flex-wrap">
+                {myPlayer.melds.map((group, gIdx) => (
+                  <MeldGroup
+                    key={gIdx}
+                    group={group}
+                    playerId={myPlayer.id}
+                    meldIndex={gIdx}
+                    size="large"
+                  />
+                ))}
+              </div>
+            )}
 
             <HandArea
               sortedHand={sortedHand}
@@ -996,8 +981,7 @@ export const Board: React.FC<BoardProps> = ({
                 canConfirmDown={
                   myPlayer
                     ? myPlayer.hand.length -
-                      (groupsToMeld.reduce((sum, g) => sum + g.length, 0) +
-                        tempGroup.length) >
+                        (groupsToMeld.reduce((sum, g) => sum + g.length, 0) + tempGroup.length) >
                       0
                     : false
                 }
@@ -1010,7 +994,11 @@ export const Board: React.FC<BoardProps> = ({
       <BuyConfirmDialog
         show={showBuyConfirmDialog}
         myPlayer={myPlayer}
-        discardCard={gameState.discardPile.length > 0 ? gameState.discardPile[gameState.discardPile.length - 1] : undefined}
+        discardCard={
+          gameState.discardPile.length > 0
+            ? gameState.discardPile[gameState.discardPile.length - 1]
+            : undefined
+        }
         currentRound={gameState.currentRound}
         onConfirm={() => {
           setShowBuyConfirmDialog(false);

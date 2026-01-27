@@ -1,18 +1,11 @@
 "use client";
 
-import React from "react";
+import { ArrowLeft, Calendar, History as HistoryIcon, Loader2, Trophy, Users } from "lucide-react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Trophy,
-  Calendar,
-  Users,
-  History as HistoryIcon,
-  Loader2,
-} from "lucide-react";
-import { useIsMobile } from "@/hooks/useIsMobile";
-import { useGameHistory, GameHistoryEntry } from "@/hooks/useGameHistory";
 import { useSession } from "next-auth/react";
+import React from "react";
+import { type GameHistoryEntry, useGameHistory } from "@/hooks/useGameHistory";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function HistoryPage() {
   const { isMobile } = useIsMobile();
@@ -59,82 +52,59 @@ export default function HistoryPage() {
             <p className="text-lg md:text-xl text-slate-500 mb-2">
               No hay partidas registradas aún
             </p>
-            <p className="text-sm text-slate-600">
-              ¡Juega tu primera partida para comenzar!
-            </p>
+            <p className="text-sm text-slate-600">¡Juega tu primera partida para comenzar!</p>
           </div>
         ) : (
           <div className="space-y-3 md:space-y-4">
             {/* Stats Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
               <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-blue-400">
-                  {games.length}
-                </div>
-                <div className="text-xs md:text-sm text-slate-400">
-                  Partidas
-                </div>
+                <div className="text-2xl font-bold text-blue-400">{games.length}</div>
+                <div className="text-xs md:text-sm text-slate-400">Partidas</div>
               </div>
               <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4 text-center">
                 <div className="text-2xl font-bold text-green-400">
-                  {
-                    games.filter((g) =>
-                      g.participants.find((p) => p.id === g.winnerId),
-                    ).length
-                  }
+                  {games.filter((g) => g.participants.find((p) => p.id === g.winnerId)).length}
                 </div>
-                <div className="text-xs md:text-sm text-slate-400">
-                  Completadas
-                </div>
+                <div className="text-xs md:text-sm text-slate-400">Completadas</div>
               </div>
               <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4 text-center">
                 <div className="text-2xl font-bold text-yellow-400">
-                  {
-                    new Set(
-                      games.flatMap((g) => g.participants.map((p) => p.name)),
-                    ).size
-                  }
+                  {new Set(games.flatMap((g) => g.participants.map((p) => p.name))).size}
                 </div>
-                <div className="text-xs md:text-sm text-slate-400">
-                  Jugadores
-                </div>
+                <div className="text-xs md:text-sm text-slate-400">Jugadores</div>
               </div>
               <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4 text-center">
                 <div className="text-2xl font-bold text-purple-400">
                   {Math.round(
-                    games.reduce((sum, g) => sum + g.participants.length, 0) /
-                    games.length,
+                    games.reduce((sum, g) => sum + g.participants.length, 0) / games.length,
                   ) || 0}
                 </div>
-                <div className="text-xs md:text-sm text-slate-400">
-                  Promedio
-                </div>
+                <div className="text-xs md:text-sm text-slate-400">Promedio</div>
               </div>
             </div>
 
             {/* Games List */}
             <div className="space-y-3 md:space-y-4">
               {games.map((game) => {
-                const winner = game.participants.find(
-                  (p) => p.id === game.winnerId,
-                );
+                const winner = game.participants.find((p) => p.id === game.winnerId);
                 const date = new Date(game.playedAt);
                 const formattedDate = isMobile
                   ? date.toLocaleDateString("es-CL", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   : date.toLocaleDateString("es-CL", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
 
                 return (
                   <div
@@ -180,14 +150,13 @@ export default function HistoryPage() {
                             {game.participants.map((p) => (
                               <span
                                 key={p.id}
-                                className={`text-xs px-2 py-1 rounded-full border whitespace-nowrap ${p.id === game.winnerId
+                                className={`text-xs px-2 py-1 rounded-full border whitespace-nowrap ${
+                                  p.id === game.winnerId
                                     ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 font-medium"
                                     : "bg-slate-800/70 border-slate-700/70 text-slate-400"
-                                  }`}
+                                }`}
                               >
-                                {p.name.length > 12
-                                  ? `${p.name.slice(0, 12)}...`
-                                  : p.name}
+                                {p.name.length > 12 ? `${p.name.slice(0, 12)}...` : p.name}
                               </span>
                             ))}
                           </div>
@@ -228,10 +197,11 @@ export default function HistoryPage() {
                             {game.participants.map((p) => (
                               <span
                                 key={p.id}
-                                className={`text-sm px-3 py-1.5 rounded-full border ${p.id === game.winnerId
+                                className={`text-sm px-3 py-1.5 rounded-full border ${
+                                  p.id === game.winnerId
                                     ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500 font-medium"
                                     : "bg-slate-800 border-slate-700 text-slate-400"
-                                  }`}
+                                }`}
                               >
                                 {p.name}
                               </span>

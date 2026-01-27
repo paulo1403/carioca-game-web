@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { getNextTurnIndex } from "@/utils/turn";
 import { isDifferentSuitGroup, isEscala, isTrio } from "@/utils/rules";
+import { getNextTurnIndex } from "@/utils/turn";
 
 interface UseGameActionsOptions {
   roomId: string;
@@ -13,12 +13,7 @@ interface UseGameActionsOptions {
   onError?: (error: Error) => void;
 }
 
-export function useGameActions({
-  roomId,
-  myPlayerId,
-  onSuccess,
-  onError,
-}: UseGameActionsOptions) {
+export function useGameActions({ roomId, myPlayerId, onSuccess, onError }: UseGameActionsOptions) {
   const queryClient = useQueryClient();
 
   // Helper para invalidar el cache
@@ -422,9 +417,7 @@ export function useGameActions({
         if (player && targetPlayer && targetPlayer.melds?.[meldIndex]) {
           const cardIdx = player.hand.findIndex((c: any) => c.id === cardId);
           const targetMeld = targetPlayer.melds[meldIndex];
-          const jokerIdx = targetMeld.findIndex(
-            (c: any) => c.suit === "JOKER" || c.value === 0
-          );
+          const jokerIdx = targetMeld.findIndex((c: any) => c.suit === "JOKER" || c.value === 0);
 
           if (cardIdx !== -1 && jokerIdx !== -1) {
             const meldIsEscala = isEscala(targetMeld, targetMeld.length);

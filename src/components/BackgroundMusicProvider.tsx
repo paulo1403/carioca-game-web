@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 
 interface BackgroundMusicContextType {
   isPlaying: boolean;
@@ -12,30 +12,20 @@ interface BackgroundMusicContextType {
   changeTrack: (track: string) => void;
 }
 
-const BackgroundMusicContext = createContext<
-  BackgroundMusicContextType | undefined
->(undefined);
+const BackgroundMusicContext = createContext<BackgroundMusicContextType | undefined>(undefined);
 
 export const useBackgroundMusicContext = () => {
   const context = useContext(BackgroundMusicContext);
   if (!context) {
-    throw new Error(
-      "useBackgroundMusicContext must be used within a BackgroundMusicProvider"
-    );
+    throw new Error("useBackgroundMusicContext must be used within a BackgroundMusicProvider");
   }
   return context;
 };
 
-export const BackgroundMusicProvider = ({
-  children,
-}: {
-  children: ReactNode;
-}) => {
+export const BackgroundMusicProvider = ({ children }: { children: ReactNode }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(
-    "/songs/background-music.mp3"
-  );
+  const [currentTrack, setCurrentTrack] = useState("/songs/background-music.mp3");
   const availableTracks = ["/songs/background-music.mp3"];
 
   const togglePlay = () => setIsPlaying(!isPlaying);

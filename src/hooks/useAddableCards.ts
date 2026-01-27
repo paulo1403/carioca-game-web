@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Card, GameState, Player } from "@/types/game";
+import { type Card, GameState, type Player } from "@/types/game";
 import { canAddToMeld } from "@/utils/rules";
 
 export const useAddableCards = (
@@ -8,7 +8,7 @@ export const useAddableCards = (
   isDownMode: boolean,
   myPlayer: Player | undefined,
   otherPlayers: Player[],
-  haveMelded: boolean
+  haveMelded: boolean,
 ) => {
   return useMemo(() => {
     if (!isMyTurn || !hasDrawn || isDownMode || !myPlayer || !haveMelded) {

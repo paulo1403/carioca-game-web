@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
 // Simple unique ID generator
 let count = 0;
@@ -7,7 +7,7 @@ function genId() {
   return count.toString();
 }
 
-type ToastType = 'success' | 'error' | 'info' | 'warning';
+type ToastType = "success" | "error" | "info" | "warning";
 
 export interface Toast {
   id: string;
@@ -21,30 +21,35 @@ export interface Toast {
 const listeners: Array<(state: Toast[]) => void> = [];
 let memoryState: Toast[] = [];
 
-function dispatch(action: { type: 'ADD'; toast: Toast } | { type: 'REMOVE'; toastId: string } | { type: 'REMOVE_ALL' }) {
-  if (action.type === 'ADD') {
+function dispatch(
+  action:
+    | { type: "ADD"; toast: Toast }
+    | { type: "REMOVE"; toastId: string }
+    | { type: "REMOVE_ALL" },
+) {
+  if (action.type === "ADD") {
     memoryState = [...memoryState, action.toast];
-  } else if (action.type === 'REMOVE') {
+  } else if (action.type === "REMOVE") {
     memoryState = memoryState.filter((t) => t.id !== action.toastId);
-  } else if (action.type === 'REMOVE_ALL') {
+  } else if (action.type === "REMOVE_ALL") {
     memoryState = [];
   }
   listeners.forEach((listener) => listener(memoryState));
 }
 
-export function toast(props: Omit<Toast, 'id'>) {
+export function toast(props: Omit<Toast, "id">) {
   const id = genId();
   const newToast = {
     ...props,
     id,
     duration: props.duration ?? 5000,
   };
-  
-  dispatch({ type: 'ADD', toast: newToast });
+
+  dispatch({ type: "ADD", toast: newToast });
 
   if (newToast.duration !== Infinity) {
     setTimeout(() => {
-      dispatch({ type: 'REMOVE', toastId: id });
+      dispatch({ type: "REMOVE", toastId: id });
     }, newToast.duration);
   }
 
@@ -67,7 +72,7 @@ export function useToast() {
   return {
     toasts: state,
     toast,
-    dismiss: (toastId: string) => dispatch({ type: 'REMOVE', toastId }),
-    dismissAll: () => dispatch({ type: 'REMOVE_ALL' }),
+    dismiss: (toastId: string) => dispatch({ type: "REMOVE", toastId }),
+    dismissAll: () => dispatch({ type: "REMOVE_ALL" }),
   };
 }

@@ -1,28 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
-import { GameState } from "@/types/game";
-import Link from "next/link";
 import {
-  Copy,
-  LinkIcon,
-  LogOut,
-  User,
   Bot,
-  UserMinus,
-  Play,
-  Loader2,
-  Gamepad2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
   Crown,
-  QrCode,
+  Gamepad2,
   Home,
+  LinkIcon,
+  Loader2,
+  LogOut,
+  Play,
+  QrCode,
+  Settings,
+  User,
+  UserMinus,
   Users,
   Zap,
-  Settings,
-  ChevronUp,
-  ChevronDown,
 } from "lucide-react";
+import Link from "next/link";
+import React, { useState } from "react";
 import QRCode from "react-qr-code";
+import type { GameState } from "@/types/game";
 import { moveTurnOrder } from "@/utils/turnOrder";
 
 interface GameLobbyProps {
@@ -93,10 +93,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
     onUpdateTurnOrder(next);
   };
 
-  const inviteUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/game/${roomId}`
-      : "";
+  const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/game/${roomId}` : "";
 
   const botDifficulties = [
     {
@@ -124,10 +121,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-800/50 bg-slate-950/60 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="text-slate-400 hover:text-slate-200 transition-colors"
-          >
+          <Link href="/" className="text-slate-400 hover:text-slate-200 transition-colors">
             <Home className="w-6 h-6" />
           </Link>
           <div>
@@ -136,9 +130,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               Sala de Espera
             </h1>
             <p className="text-sm text-slate-400">
-              {playersNeeded > 0
-                ? `Faltan ${playersNeeded} jugadores`
-                : "¡Listos para jugar!"}
+              {playersNeeded > 0 ? `Faltan ${playersNeeded} jugadores` : "¡Listos para jugar!"}
             </p>
           </div>
         </div>
@@ -157,30 +149,22 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {/* Room ID Card */}
             <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-slate-400 mb-2">
-                ID de Sala
-              </h3>
+              <h3 className="text-sm font-medium text-slate-400 mb-2">ID de Sala</h3>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-lg font-bold text-slate-100">
-                  {roomId}
-                </span>
+                <span className="font-mono text-lg font-bold text-slate-100">{roomId}</span>
                 <button
                   onClick={onCopyRoomId}
                   className="text-slate-400 hover:text-blue-400 transition-colors"
                   title="Copiar ID"
                 >
-                  <Copy
-                    className={`w-4 h-4 ${isRoomIdCopied ? "text-green-400" : ""}`}
-                  />
+                  <Copy className={`w-4 h-4 ${isRoomIdCopied ? "text-green-400" : ""}`} />
                 </button>
               </div>
             </div>
 
             {/* Invite Link Card */}
             <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-slate-400 mb-2">
-                Invitar Amigos
-              </h3>
+              <h3 className="text-sm font-medium text-slate-400 mb-2">Invitar Amigos</h3>
               <div className="flex items-center gap-2">
                 <button
                   onClick={onCopyInviteLink}
@@ -201,17 +185,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
             {/* Players Count Card */}
             <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-slate-400 mb-2">
-                Jugadores
-              </h3>
+              <h3 className="text-sm font-medium text-slate-400 mb-2">Jugadores</h3>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-400" />
-                <span className="text-lg font-bold">
-                  {gameState.players.length}/5
-                </span>
-                {canStart && (
-                  <div className="w-2 h-2 rounded-full bg-green-500 ml-auto"></div>
-                )}
+                <span className="text-lg font-bold">{gameState.players.length}/5</span>
+                {canStart && <div className="w-2 h-2 rounded-full bg-green-500 ml-auto"></div>}
               </div>
             </div>
           </div>
@@ -259,18 +237,18 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                     const player = gameState.players.find((p) => p.id === id);
                     if (!player) return null;
                     return (
-                    <div
-                      key={player.id}
-                      className="bg-slate-800/50 rounded-xl p-4 flex items-center justify-between group hover:bg-slate-800/70 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="flex flex-col items-center justify-center w-10">
-                          <span className="text-xs text-slate-400">Turno</span>
-                          <span className="text-lg font-bold text-slate-100">{idx + 1}</span>
-                        </div>
-                        {/* Avatar */}
-                        <div
-                          className={`
+                      <div
+                        key={player.id}
+                        className="bg-slate-800/50 rounded-xl p-4 flex items-center justify-between group hover:bg-slate-800/70 transition-colors"
+                      >
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="flex flex-col items-center justify-center w-10">
+                            <span className="text-xs text-slate-400">Turno</span>
+                            <span className="text-lg font-bold text-slate-100">{idx + 1}</span>
+                          </div>
+                          {/* Avatar */}
+                          <div
+                            className={`
                           w-12 h-12 rounded-xl flex items-center justify-center shrink-0
                           ${
                             player.isBot
@@ -278,100 +256,94 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                               : "bg-blue-500/20 border border-blue-500/30"
                           }
                         `}
-                        >
-                          {player.isBot ? (
-                            <Bot className="w-6 h-6 text-purple-400" />
-                          ) : (
-                            <span className="text-lg font-bold text-blue-400">
-                              {player.name.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Player Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-slate-200 truncate">
-                              {player.name}
-                            </span>
-                            {player.id === myPlayerId && (
-                              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
-                                Tú
+                          >
+                            {player.isBot ? (
+                              <Bot className="w-6 h-6 text-purple-400" />
+                            ) : (
+                              <span className="text-lg font-bold text-blue-400">
+                                {player.name.charAt(0).toUpperCase()}
                               </span>
                             )}
-                            {idx === 0 && (
-                              <Crown className="w-4 h-4 text-yellow-500" />
+                          </div>
+
+                          {/* Player Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-slate-200 truncate">
+                                {player.name}
+                              </span>
+                              {player.id === myPlayerId && (
+                                <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
+                                  Tú
+                                </span>
+                              )}
+                              {idx === 0 && <Crown className="w-4 h-4 text-yellow-500" />}
+                            </div>
+
+                            {/* Bot Difficulty */}
+                            {player.isBot && (
+                              <div className="text-xs text-purple-400/80 flex items-center gap-1">
+                                <Settings className="w-3 h-3" />
+                                {player.difficulty === "EASY" && "Principiante"}
+                                {player.difficulty === "MEDIUM" && "Intermedio"}
+                                {player.difficulty === "HARD" && "Profesional"}
+                              </div>
                             )}
                           </div>
 
-                          {/* Bot Difficulty */}
-                          {player.isBot && (
-                            <div className="text-xs text-purple-400/80 flex items-center gap-1">
-                              <Settings className="w-3 h-3" />
-                              {player.difficulty === "EASY" && "Principiante"}
-                              {player.difficulty === "MEDIUM" && "Intermedio"}
-                              {player.difficulty === "HARD" && "Profesional"}
+                          {/* Status */}
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                              <span className="text-xs text-green-400 font-medium">Listo</span>
                             </div>
-                          )}
-                        </div>
-
-                        {/* Status */}
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                            <span className="text-xs text-green-400 font-medium">
-                              Listo
-                            </span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Actions */}
-                      {isHost && (
-                        <div className="flex items-center gap-1 mr-2">
+                        {/* Actions */}
+                        {isHost && (
+                          <div className="flex items-center gap-1 mr-2">
+                            <button
+                              onClick={() => movePlayer(player.id, "up")}
+                              disabled={idx === 0}
+                              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 disabled:text-slate-600 disabled:hover:bg-transparent"
+                              title="Subir"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => movePlayer(player.id, "down")}
+                              disabled={idx === orderIds.length - 1}
+                              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 disabled:text-slate-600 disabled:hover:bg-transparent"
+                              title="Bajar"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        {isHost && player.id !== myPlayerId && (
                           <button
-                            onClick={() => movePlayer(player.id, "up")}
-                            disabled={idx === 0}
-                            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 disabled:text-slate-600 disabled:hover:bg-transparent"
-                            title="Subir"
+                            onClick={() => onKickPlayer(player.id)}
+                            className="opacity-0 group-hover:opacity-100 ml-2 p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
+                            title="Expulsar jugador"
                           >
-                            <ChevronUp className="w-4 h-4" />
+                            <UserMinus className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => movePlayer(player.id, "down")}
-                            disabled={idx === orderIds.length - 1}
-                            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 disabled:text-slate-600 disabled:hover:bg-transparent"
-                            title="Bajar"
-                          >
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                      {isHost && player.id !== myPlayerId && (
-                        <button
-                          onClick={() => onKickPlayer(player.id)}
-                          className="opacity-0 group-hover:opacity-100 ml-2 p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
-                          title="Expulsar jugador"
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  );
+                        )}
+                      </div>
+                    );
                   })}
 
                   {/* Empty Slots */}
-                  {Array.from({ length: 5 - gameState.players.length }).map(
-                    (_, i) => (
-                      <div
-                        key={i}
-                        className="border-2 border-dashed border-slate-700 rounded-xl p-4 flex items-center justify-center text-slate-500"
-                      >
-                        <User className="w-5 h-5 mr-2 opacity-50" />
-                        <span className="text-sm">Esperando jugador...</span>
-                      </div>
-                    ),
-                  )}
+                  {Array.from({ length: 5 - gameState.players.length }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="border-2 border-dashed border-slate-700 rounded-xl p-4 flex items-center justify-center text-slate-500"
+                    >
+                      <User className="w-5 h-5 mr-2 opacity-50" />
+                      <span className="text-sm">Esperando jugador...</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -392,22 +364,16 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                         <button
                           key={bot.id}
                           onClick={() => onAddBot(bot.id)}
-                          disabled={
-                            isAddingBot || gameState.players.length >= 5
-                          }
+                          disabled={isAddingBot || gameState.players.length >= 5}
                           className="w-full p-3 rounded-xl text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600"
                         >
                           <div className="flex items-center gap-3">
-                            <div
-                              className={`w-3 h-3 rounded-full ${bot.color}`}
-                            ></div>
+                            <div className={`w-3 h-3 rounded-full ${bot.color}`}></div>
                             <div className="flex-1">
                               <div className="text-sm font-medium text-slate-200 group-hover:text-white">
                                 {bot.label}
                               </div>
-                              <div className="text-xs text-slate-400">
-                                {bot.description}
-                              </div>
+                              <div className="text-xs text-slate-400">{bot.description}</div>
                             </div>
                             {isAddingBot ? (
                               <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
@@ -484,15 +450,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden max-w-sm w-full mx-4">
             <div className="p-6 text-center">
-              <h3 className="text-white font-bold text-xl mb-4">
-                Código QR de la Sala
-              </h3>
+              <h3 className="text-white font-bold text-xl mb-4">Código QR de la Sala</h3>
               <div className="bg-white p-4 rounded-xl mb-4">
-                <QRCode
-                  value={inviteUrl}
-                  size={200}
-                  className="w-full h-auto"
-                />
+                <QRCode value={inviteUrl} size={200} className="w-full h-auto" />
               </div>
               <p className="text-slate-400 text-sm mb-4">
                 Escanea este código para unirte a la sala

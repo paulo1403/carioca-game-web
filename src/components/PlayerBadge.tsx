@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import { Check, Layers, Pencil, X, Zap } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Player, Card } from "@/types/game";
-import { MeldGroup } from "./MeldGroup";
 import { cn } from "@/lib/utils";
-import { X, Layers, Zap, Pencil, Check } from "lucide-react";
+import type { Card, Player } from "@/types/game";
+import { MeldGroup } from "./MeldGroup";
 
 interface PlayerBadgeProps {
   player: Player;
@@ -109,16 +110,10 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
             )}
           </div>
         )}
-        <div className="text-[10px] md:text-xs">
-          {player.hand.length} cartas
-        </div>
-        <div className="text-[10px] md:text-xs text-blue-300">
-          Compras: {player.buysUsed}
-        </div>
+        <div className="text-[10px] md:text-xs">{player.hand.length} cartas</div>
+        <div className="text-[10px] md:text-xs text-blue-300">Compras: {player.buysUsed}</div>
         {!isOwnPlayer && gameStatus === "PLAYING" ? (
-          <div className="text-[10px] md:text-xs text-white/50 italic">
-            Pts: ???
-          </div>
+          <div className="text-[10px] md:text-xs text-white/50 italic">Pts: ???</div>
         ) : (
           <div className="text-[10px] md:text-xs">Pts: {player.score}</div>
         )}
@@ -173,8 +168,7 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
                 <h3 className="font-bold text-lg md:text-xl text-white flex items-center gap-2">
                   <Layers className="w-5 h-5 text-yellow-400" />
                   <span>
-                    Juegos de{" "}
-                    <span className="text-yellow-400">{player.name}</span>
+                    Juegos de <span className="text-yellow-400">{player.name}</span>
                   </span>
                 </h3>
                 <button
@@ -189,40 +183,41 @@ export const PlayerBadge: React.FC<PlayerBadgeProps> = ({
               <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="flex flex-col gap-8 w-full">
                   {(() => {
-                // Deduplicate identical melds (defensive UI fix for visual glitches)
-                const seen = new Set<string>();
-                const unique: Card[][] = [];
-                (player.melds || []).forEach((group: Card[]) => {
-                  const key = group.map(c => c.id).sort().join(",");
-                  if (!seen.has(key)) {
-                    seen.add(key);
-                    unique.push(group);
-                  }
-                });
+                    // Deduplicate identical melds (defensive UI fix for visual glitches)
+                    const seen = new Set<string>();
+                    const unique: Card[][] = [];
+                    (player.melds || []).forEach((group: Card[]) => {
+                      const key = group
+                        .map((c) => c.id)
+                        .sort()
+                        .join(",");
+                      if (!seen.has(key)) {
+                        seen.add(key);
+                        unique.push(group);
+                      }
+                    });
 
-                return unique.map((group: Card[], gIdx: number) => (
-                  <div
-                    key={gIdx}
-                    className="bg-black/20 p-2 rounded-xl w-full border border-white/5"
-                  >
-                    <MeldGroup
-                      group={group}
-                      playerId={player.id}
-                      meldIndex={gIdx}
-                      size="large"
-                      onClick={() => onMeldClick && onMeldClick(player.id, gIdx)}
-                    />
-                  </div>
-                ));
-              })()}
+                    return unique.map((group: Card[], gIdx: number) => (
+                      <div
+                        key={gIdx}
+                        className="bg-black/20 p-2 rounded-xl w-full border border-white/5"
+                      >
+                        <MeldGroup
+                          group={group}
+                          playerId={player.id}
+                          meldIndex={gIdx}
+                          size="large"
+                          onClick={() => onMeldClick && onMeldClick(player.id, gIdx)}
+                        />
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
 
               {/* Footer hint */}
               <div className="p-3 bg-black/20 text-center border-t border-white/5">
-                <p className="text-xs text-white/40">
-                  Haz clic fuera para cerrar
-                </p>
+                <p className="text-xs text-white/40">Haz clic fuera para cerrar</p>
               </div>
             </div>
           </div>,

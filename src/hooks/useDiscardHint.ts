@@ -1,22 +1,20 @@
-import { useState, useEffect } from "react";
-import { Card, Player, GameState } from "@/types/game";
+import { useEffect, useState } from "react";
+import type { Card, GameState, Player } from "@/types/game";
 import {
-  findPotentialContractGroups,
   canFulfillContract,
   findAllValidGroups,
+  findPotentialContractGroups,
 } from "@/utils/handAnalyzer";
-import { getCardPoints, canAddToMeld } from "@/utils/rules";
+import { canAddToMeld, getCardPoints } from "@/utils/rules";
 
 export const useDiscardHint = (
   myPlayer: Player | undefined,
   isMyTurn: boolean,
   hasDrawn: boolean,
   isDownMode: boolean,
-  gameState?: GameState
+  gameState?: GameState,
 ) => {
-  const [suggestedDiscardCardId, setSuggestedDiscardCardId] = useState<
-    string | null
-  >(null);
+  const [suggestedDiscardCardId, setSuggestedDiscardCardId] = useState<string | null>(null);
   const [isDiscardUseful, setIsDiscardUseful] = useState(false);
   const [discardReason, setDiscardReason] = useState<string | null>(null);
 
@@ -39,7 +37,11 @@ export const useDiscardHint = (
       const withDiscardCard = [...myPlayer.hand, discardCard];
 
       // IMPORTANT: If player's current hand already allows going down, do NOT suggest buying
-      const currentCanDown = canFulfillContract(myPlayer.hand, gameState.currentRound, alreadyMelded).canDown;
+      const currentCanDown = canFulfillContract(
+        myPlayer.hand,
+        gameState.currentRound,
+        alreadyMelded,
+      ).canDown;
       if (currentCanDown) {
         setIsDiscardUseful(false);
         // No suggestion to buy since already have a group
@@ -53,7 +55,7 @@ export const useDiscardHint = (
         const { canDown, groups } = canFulfillContract(
           withDiscardCard,
           gameState.currentRound,
-          false // alreadyMelded = false, checking initial down
+          false, // alreadyMelded = false, checking initial down
         );
 
         // Heuristic: mark useful if it immediately allows going down, OR it increases
@@ -61,14 +63,25 @@ export const useDiscardHint = (
         let useful = canDown;
         let reason: string | null = null;
         if (!useful) {
-          if (after.trios.length > before.trios.length || after.escalas.length > before.escalas.length) {
+          if (
+            after.trios.length > before.trios.length ||
+            after.escalas.length > before.escalas.length
+          ) {
             useful = true;
             reason = `Aumenta grupos potenciales (${before.trios.length}/${before.escalas.length} → ${after.trios.length}/${after.escalas.length})`;
           } else {
             // Check unique suit increase for discard value
             const val = discardCard.value;
-            const uniqueSuitsBefore = new Set((myPlayer.hand.filter(c => c.value === val && !(c.suit === 'JOKER' || c.value === 0))).map(c => c.suit)).size;
-            const uniqueSuitsAfter = new Set(([...myPlayer.hand, discardCard].filter(c => c.value === val && !(c.suit === 'JOKER' || c.value === 0))).map(c => c.suit)).size;
+            const uniqueSuitsBefore = new Set(
+              myPlayer.hand
+                .filter((c) => c.value === val && !(c.suit === "JOKER" || c.value === 0))
+                .map((c) => c.suit),
+            ).size;
+            const uniqueSuitsAfter = new Set(
+              [...myPlayer.hand, discardCard]
+                .filter((c) => c.value === val && !(c.suit === "JOKER" || c.value === 0))
+                .map((c) => c.suit),
+            ).size;
             if (uniqueSuitsAfter > uniqueSuitsBefore) {
               useful = true;
               reason = `Aumenta variedad de palos para ${val} (${uniqueSuitsBefore} → ${uniqueSuitsAfter})`;
@@ -87,12 +100,15 @@ export const useDiscardHint = (
         const { canDown, groups } = canFulfillContract(
           withDiscardCard,
           gameState.currentRound,
-          true // alreadyMelded = true, checking additional down
+          true, // alreadyMelded = true, checking additional down
         );
 
         let useful = canDown;
         if (!useful) {
-          if (after.trios.length > before.trios.length || after.escalas.length > before.escalas.length) {
+          if (
+            after.trios.length > before.trios.length ||
+            after.escalas.length > before.escalas.length
+          ) {
             useful = true;
           }
         }
@@ -106,7 +122,7 @@ export const useDiscardHint = (
       const { canDown } = canFulfillContract(
         withDiscardCard,
         gameState.currentRound,
-        alreadyMelded
+        alreadyMelded,
       );
       setIsDiscardUseful(canDown);
       setDiscardReason(canDown ? "Hace que puedas bajar" : null);
@@ -137,23 +153,21 @@ export const useDiscardHint = (
     });
 
     // ALSO: Cards that can be added to melds on the table are useful
-    myPlayer.hand.forEach(card => {
+    myPlayer.hand.forEach((card) => {
       // Check my melds
-      if (myPlayer.melds?.some(meld => canAddToMeld(card, meld))) {
+      if (myPlayer.melds?.some((meld) => canAddToMeld(card, meld))) {
         usefulCardIds.add(card.id);
       }
-      // Check others melds 
-      gameState.players.forEach(p => {
-        if (p.id !== myPlayer.id && p.melds?.some(meld => canAddToMeld(card, meld))) {
+      // Check others melds
+      gameState.players.forEach((p) => {
+        if (p.id !== myPlayer.id && p.melds?.some((meld) => canAddToMeld(card, meld))) {
           usefulCardIds.add(card.id);
         }
       });
     });
 
     // Find cards NOT in any group (these are safe to discard)
-    const discardableCandidates = myPlayer.hand.filter(
-      (card) => !usefulCardIds.has(card.id)
-    );
+    const discardableCandidates = myPlayer.hand.filter((card) => !usefulCardIds.has(card.id));
 
     // If no discardable candidates, suggest the highest point card
     let suggested: Card | null = null;
@@ -184,9 +198,7 @@ export const useDiscardHint = (
       })[0];
     } else if (myPlayer.hand.length > 0) {
       // If all cards are in groups, suggest the lowest value card
-      suggested = [...myPlayer.hand].sort(
-        (a, b) => getCardPoints(a) - getCardPoints(b)
-      )[0];
+      suggested = [...myPlayer.hand].sort((a, b) => getCardPoints(a) - getCardPoints(b))[0];
     }
 
     setSuggestedDiscardCardId(suggested?.id ?? null);

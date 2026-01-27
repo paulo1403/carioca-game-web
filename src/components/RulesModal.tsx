@@ -1,8 +1,8 @@
-import React from "react";
-import { PlayingCard } from "./Card";
-import { BookOpen, Trophy, Info, Zap } from "lucide-react";
-import { Modal } from "./Modal";
+import { BookOpen, Info, Trophy, Zap } from "lucide-react";
+import type React from "react";
 import { ROUND_CONTRACTS } from "@/types/game";
+import { PlayingCard } from "./Card";
+import { Modal } from "./Modal";
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -29,10 +29,9 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
             Objetivo del Juego
           </h3>
           <p className="text-slate-300 leading-relaxed">
-            Deshazte de todas tus cartas antes que los demás. El juego se divide
-            en <span className="text-white font-bold">8 rondas</span>. En cada
-            ronda, debes cumplir un contrato específico (tríos o escalas) para
-            poder "bajarte".
+            Deshazte de todas tus cartas antes que los demás. El juego se divide en{" "}
+            <span className="text-white font-bold">8 rondas</span>. En cada ronda, debes cumplir un
+            contrato específico (tríos o escalas) para poder "bajarte".
           </p>
         </section>
 
@@ -52,9 +51,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   {contract.round}
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm tracking-tight">
-                    {contract.name}
-                  </div>
+                  <div className="text-white font-bold text-sm tracking-tight">{contract.name}</div>
                   <div className="text-[10px] text-slate-500 font-medium">
                     {contract.description}
                   </div>
@@ -68,21 +65,15 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
             <Zap className="w-5 h-5 text-yellow-500 mb-2" />
-            <h4 className="text-white font-bold text-sm mb-1">
-              Grupo (Rondas 1-7)
-            </h4>
+            <h4 className="text-white font-bold text-sm mb-1">Grupo (Rondas 1-7)</h4>
             <p className="text-[11px] text-slate-400">
               Cartas del <strong>mismo valor</strong>. Los palos pueden repetirse. Ejemplo: 5♥ 5♦ 5♣
             </p>
           </div>
           <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
             <BookOpen className="w-5 h-5 text-blue-400 mb-2" />
-            <h4 className="text-white font-bold text-sm mb-1">
-              Escala (Ronda 8)
-            </h4>
-            <p className="text-[11px] text-slate-400">
-              7+ cartas consecutivas del MISMO palo.
-            </p>
+            <h4 className="text-white font-bold text-sm mb-1">Escala (Ronda 8)</h4>
+            <p className="text-[11px] text-slate-400">7+ cartas consecutivas del MISMO palo.</p>
           </div>
           <div className="bg-slate-950/30 rounded-2xl p-4 border border-white/5">
             <Info className="w-5 h-5 text-purple-400 mb-2" />
@@ -109,16 +100,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   { id: "g2", value: 5, suit: "DIAMOND", displayValue: "5" },
                   { id: "g3", value: 5, suit: "CLUB", displayValue: "5" },
                 ].map((c) => (
-                  <PlayingCard
-                    key={c.id}
-                    card={c as any}
-                    className="w-12 h-18 scale-90"
-                  />
+                  <PlayingCard key={c.id} card={c as any} className="w-12 h-18 scale-90" />
                 ))}
               </div>
-              <p className="text-[9px] text-slate-400 ml-2">
-                Mismo valor: 5 5 5 ✓
-              </p>
+              <p className="text-[9px] text-slate-400 ml-2">Mismo valor: 5 5 5 ✓</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -131,16 +116,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   { id: "g5", value: 3, suit: "DIAMOND", displayValue: "3" },
                   { id: "g6", value: 0, suit: "JOKER", displayValue: "J" },
                 ].map((c) => (
-                  <PlayingCard
-                    key={c.id}
-                    card={c as any}
-                    className="w-12 h-18 scale-90"
-                  />
+                  <PlayingCard key={c.id} card={c as any} className="w-12 h-18 scale-90" />
                 ))}
               </div>
-              <p className="text-[9px] text-slate-400 ml-2">
-                Dos cartas del mismo valor + Joker ✓
-              </p>
+              <p className="text-[9px] text-slate-400 ml-2">Dos cartas del mismo valor + Joker ✓</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -153,11 +132,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   { id: "b2", value: 8, suit: "HEART", displayValue: "8" },
                   { id: "b3", value: 13, suit: "CLUB", displayValue: "K" },
                 ].map((c) => (
-                  <PlayingCard
-                    key={c.id}
-                    card={c as any}
-                    className="w-12 h-18 scale-90"
-                  />
+                  <PlayingCard key={c.id} card={c as any} className="w-12 h-18 scale-90" />
                 ))}
               </div>
               <p className="text-[9px] text-slate-400 ml-2">
@@ -177,11 +152,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                   { id: "e4", value: 7, suit: "HEART", displayValue: "7" },
                   { id: "e5", value: 8, suit: "HEART", displayValue: "8" },
                 ].map((c) => (
-                  <PlayingCard
-                    key={c.id}
-                    card={c as any}
-                    className="w-12 h-18 scale-90"
-                  />
+                  <PlayingCard key={c.id} card={c as any} className="w-12 h-18 scale-90" />
                 ))}
               </div>
               <p className="text-[9px] text-slate-400 ml-2">
@@ -193,12 +164,9 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
         <div className="bg-blue-600/10 rounded-2xl p-5 border border-blue-500/20">
           <p className="text-[11px] text-blue-300 leading-relaxed italic">
-            <span className="font-bold uppercase not-italic mr-1">
-              Pro Tip:
-            </span>
-            Solo puedes bajar grupos adicionales después de cumplir tu contrato
-            inicial. Una vez bajado, puedes "botar" cartas en los juegos de
-            otros jugadores.
+            <span className="font-bold uppercase not-italic mr-1">Pro Tip:</span>
+            Solo puedes bajar grupos adicionales después de cumplir tu contrato inicial. Una vez
+            bajado, puedes "botar" cartas en los juegos de otros jugadores.
           </p>
         </div>
       </div>

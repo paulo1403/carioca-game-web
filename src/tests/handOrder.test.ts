@@ -1,5 +1,5 @@
-import { normalizeOrder, moveId, applyOrder } from "@/utils/handOrder";
-import { Card } from "@/types/game";
+import type { Card } from "@/types/game";
+import { applyOrder, moveId, normalizeOrder } from "@/utils/handOrder";
 
 describe("handOrder utilities", () => {
   const cards: Card[] = [

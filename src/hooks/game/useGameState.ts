@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { GameState } from "@/types/game";
 import { useEffect, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import type { GameState } from "@/types/game";
 
 interface UseGameStateOptions {
   roomId: string;
@@ -12,11 +12,7 @@ interface UseGameStateOptions {
   enabled?: boolean;
   onPlayerJoined?: (playerName: string) => void;
   onPlayerLeft?: (playerName: string) => void;
-  onRoundWinner?: (data: {
-    winnerName: string;
-    nextRound: number;
-    scores: any[];
-  }) => void;
+  onRoundWinner?: (data: { winnerName: string; nextRound: number; scores: any[] }) => void;
   onReshuffle?: (count: number) => void;
   onBuyIntent?: (data: { playerId: string; playerName?: string; timestamp: number }) => void;
   onEmojiReaction?: (data: { playerId: string; emoji: string; timestamp: number }) => void;
@@ -48,162 +44,145 @@ export function useGameState({
       try {
         const channel = supabase
           .channel(`game:${roomId}`)
-      // GameSession updates (existing behavior)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "GameSession",
-          filter: `id=eq.${roomId}`,
-        },
-        (payload) => {
-          // Invalida el cache inmediatamente al detectar un cambio en DB
-          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          // Force immediate refetch to avoid waiting for stale timers
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      // Also listen to Player table changes so inserts/deletes are received
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Player",
-          filter: `gameSessionId=eq.${roomId}`,
-        },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "Player",
-          filter: `gameSessionId=eq.${roomId}`,
-        },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      // Also handle player updates (e.g., rename)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "Player",
-          filter: `gameSessionId=eq.${roomId}`,
-        },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      // Fallback: listen for custom broadcasts (player_change) sent by clients when they join
-      .on(
-        "broadcast",
-        { event: "player_change" },
-        (payload) => {
-          const msg = payload?.payload ?? payload;
+          // GameSession updates (existing behavior)
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "GameSession",
+              filter: `id=eq.${roomId}`,
+            },
+            (payload) => {
+              // Invalida el cache inmediatamente al detectar un cambio en DB
+              queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+              // Force immediate refetch to avoid waiting for stale timers
+              queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+            },
+          )
+          // Also listen to Player table changes so inserts/deletes are received
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "Player",
+              filter: `gameSessionId=eq.${roomId}`,
+            },
+            (payload) => {
+              queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+              queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+            },
+          )
+          .on(
+            "postgres_changes",
+            {
+              event: "DELETE",
+              schema: "public",
+              table: "Player",
+              filter: `gameSessionId=eq.${roomId}`,
+            },
+            (payload) => {
+              queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+              queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+            },
+          )
+          // Also handle player updates (e.g., rename)
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "Player",
+              filter: `gameSessionId=eq.${roomId}`,
+            },
+            (payload) => {
+              queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+              queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+            },
+          )
+          // Fallback: listen for custom broadcasts (player_change) sent by clients when they join
+          .on("broadcast", { event: "player_change" }, (payload) => {
+            const msg = payload?.payload ?? payload;
 
-          // Handle join with full player object for immediate optimistic update
-          if (msg?.action === "join" && msg?.player) {
-            const createdPlayer = msg.player;
-            queryClient.setQueryData(["gameState", roomId], (old: any) => {
-              if (!old) return old;
-              const exists = old.players.some((p: any) => p.id === createdPlayer.id);
-              if (exists) return old;
-              const parsedPlayer = {
-                ...createdPlayer,
-                hand: JSON.parse(createdPlayer.hand || "[]"),
-                melds: JSON.parse(createdPlayer.melds || "[]"),
-                boughtCards: JSON.parse(createdPlayer.boughtCards || "[]"),
-                roundScores: JSON.parse(createdPlayer.roundScores || "[]"),
-                roundBuys: JSON.parse(createdPlayer.roundBuys || "[]"),
-              };
-              return { ...old, players: [...old.players, parsedPlayer] };
-            });
-            // Also trigger authoritative refetch
+            // Handle join with full player object for immediate optimistic update
+            if (msg?.action === "join" && msg?.player) {
+              const createdPlayer = msg.player;
+              queryClient.setQueryData(["gameState", roomId], (old: any) => {
+                if (!old) return old;
+                const exists = old.players.some((p: any) => p.id === createdPlayer.id);
+                if (exists) return old;
+                const parsedPlayer = {
+                  ...createdPlayer,
+                  hand: JSON.parse(createdPlayer.hand || "[]"),
+                  melds: JSON.parse(createdPlayer.melds || "[]"),
+                  boughtCards: JSON.parse(createdPlayer.boughtCards || "[]"),
+                  roundScores: JSON.parse(createdPlayer.roundScores || "[]"),
+                  roundBuys: JSON.parse(createdPlayer.roundBuys || "[]"),
+                };
+                return { ...old, players: [...old.players, parsedPlayer] };
+              });
+              // Also trigger authoritative refetch
+              queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+              return;
+            }
+
+            // Handle leave
+            if (msg?.action === "leave" && msg?.playerId) {
+              queryClient.setQueryData(["gameState", roomId], (old: any) => {
+                if (!old) return old;
+                return { ...old, players: old.players.filter((p: any) => p.id !== msg.playerId) };
+              });
+              queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+              return;
+            }
+
+            // Fallback: invalidate + refetch          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
             queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-            return;
-          }
-
-          // Handle leave
-          if (msg?.action === "leave" && msg?.playerId) {
-            queryClient.setQueryData(["gameState", roomId], (old: any) => {
-              if (!old) return old;
-              return { ...old, players: old.players.filter((p: any) => p.id !== msg.playerId) };
-            });
+          })
+          // Listen for game_started broadcast
+          .on("broadcast", { event: "game_started" }, (payload) => {
+            // Immediately invalidate and refetch the game state
+            queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
             queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-            return;
-          }
-
-          // Fallback: invalidate + refetch          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      // Listen for game_started broadcast
-      .on(
-        "broadcast",
-        { event: "game_started" },
-        (payload) => {
-          // Immediately invalidate and refetch the game state
-          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      // Listen for game_ended broadcast
-      .on(
-        "broadcast",
-        { event: "game_ended" },
-        (payload) => {
-          // Immediately invalidate and refetch the game state
-          queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
-          queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-        }
-      )
-      .on(
-        "broadcast",
-        { event: "buy_intent" },
-        (payload) => {
-          const data = payload?.payload ?? payload;
-          if (data?.playerId) {
-            onBuyIntent?.({
-              playerId: data.playerId,
-              playerName: data.playerName,
-              timestamp: data.timestamp || Date.now(),
-            });
-          }
-        }
-      )
-      .on(
-        "broadcast",
-        { event: "emoji_reaction" },
-        (payload) => {
-          const data = payload?.payload ?? payload;
-          if (data?.playerId && data?.emoji) {
-            onEmojiReaction?.({
-              playerId: data.playerId,
-              emoji: data.emoji,
-              timestamp: data.timestamp || Date.now(),
-            });
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") {
-          console.warn("[useGameState] Realtime subscription failed, using polling fallback", status);
-          realtimeFailedRef.current = true;
-        } else {
-          realtimeFailedRef.current = false;
-        }
-      });
+          })
+          // Listen for game_ended broadcast
+          .on("broadcast", { event: "game_ended" }, (payload) => {
+            // Immediately invalidate and refetch the game state
+            queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });
+            queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
+          })
+          .on("broadcast", { event: "buy_intent" }, (payload) => {
+            const data = payload?.payload ?? payload;
+            if (data?.playerId) {
+              onBuyIntent?.({
+                playerId: data.playerId,
+                playerName: data.playerName,
+                timestamp: data.timestamp || Date.now(),
+              });
+            }
+          })
+          .on("broadcast", { event: "emoji_reaction" }, (payload) => {
+            const data = payload?.payload ?? payload;
+            if (data?.playerId && data?.emoji) {
+              onEmojiReaction?.({
+                playerId: data.playerId,
+                emoji: data.emoji,
+                timestamp: data.timestamp || Date.now(),
+              });
+            }
+          })
+          .subscribe((status) => {
+            if (status !== "SUBSCRIBED") {
+              console.warn(
+                "[useGameState] Realtime subscription failed, using polling fallback",
+                status,
+              );
+              realtimeFailedRef.current = true;
+            } else {
+              realtimeFailedRef.current = false;
+            }
+          });
 
         subscription = channel;
         channelRef.current = channel;
@@ -308,10 +287,7 @@ export function useGameState({
     }
 
     // Handle game actions and notifications
-    if (
-      gameState.lastAction &&
-      gameState.lastAction.timestamp > lastActionTimestampRef.current
-    ) {
+    if (gameState.lastAction && gameState.lastAction.timestamp > lastActionTimestampRef.current) {
       lastActionTimestampRef.current = gameState.lastAction.timestamp;
 
       const action = gameState.lastAction;
@@ -330,9 +306,7 @@ export function useGameState({
     const prevIds = prevPlayersRef.current.map((p: any) => p.id);
 
     // Players who left
-    const leftPlayers = prevPlayersRef.current.filter(
-      (p: any) => !currentIds.includes(p.id),
-    );
+    const leftPlayers = prevPlayersRef.current.filter((p: any) => !currentIds.includes(p.id));
     if (leftPlayers.length > 0 && prevPlayersRef.current.length > 0) {
       leftPlayers.forEach((p: any) => {
         onPlayerLeft?.(p.name);
@@ -345,9 +319,7 @@ export function useGameState({
     }
 
     // Players who joined
-    const newPlayers = gameState.players.filter(
-      (p: any) => !prevIds.includes(p.id),
-    );
+    const newPlayers = gameState.players.filter((p: any) => !prevIds.includes(p.id));
     if (newPlayers.length > 0 && prevPlayersRef.current.length > 0) {
       newPlayers.forEach((p: any) => {
         onPlayerJoined?.(p.name);
@@ -360,14 +332,7 @@ export function useGameState({
     }
 
     prevPlayersRef.current = gameState.players;
-  }, [
-    gameState,
-    myPlayerId,
-    onPlayerJoined,
-    onPlayerLeft,
-    onRoundWinner,
-    onReshuffle,
-  ]);
+  }, [gameState, myPlayerId, onPlayerJoined, onPlayerLeft, onRoundWinner, onReshuffle]);
 
   const invalidateGameState = () => {
     queryClient.invalidateQueries({ queryKey: ["gameState", roomId] });

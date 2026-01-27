@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Scanner } from "@yudiel/react-qr-scanner";
+import {
+  Dices,
+  HelpCircle,
+  History as HistoryIcon,
+  Loader2,
+  LogOut,
+  Scan,
+  Sparkles,
+  User as UserIcon,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { PlayingCard } from "@/components/Card";
-import { RulesModal } from "@/components/RulesModal";
-import { ProfileModal } from "@/components/ProfileModal";
 import { ChangelogModal } from "@/components/ChangelogModal";
+import { ProfileModal } from "@/components/ProfileModal";
+import { RulesModal } from "@/components/RulesModal";
 import { useCreateGame } from "@/hooks/useCreateGame";
-import { useSession, signOut } from "next-auth/react";
-import {
-  HelpCircle,
-  Loader2,
-  Dices,
-  History as HistoryIcon,
-  Scan,
-  X,
-  LogOut,
-  User as UserIcon,
-  Sparkles,
-} from "lucide-react";
-import { Scanner } from "@yudiel/react-qr-scanner";
 
 export default function Home() {
   const router = useRouter();
@@ -132,9 +132,11 @@ export default function Home() {
                 <UserIcon className="w-5 h-5 text-blue-400" />
               </div>
               <div className="text-left hidden sm:block">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Jugador</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">
+                  Jugador
+                </p>
                 <p className="text-sm font-bold text-white leading-none">
-                  {session.user.name || session.user.email?.split('@')[0]}
+                  {session.user.name || session.user.email?.split("@")[0]}
                 </p>
               </div>
             </button>
@@ -169,7 +171,6 @@ export default function Home() {
       </div>
 
       <div className="max-w-md w-full surface-1 backdrop-blur-2xl p-8 rounded-3xl shadow-2xl border border-slate-700/70 text-center relative z-10 animate-in fade-in zoom-in-95 duration-700">
-
         {/* Logo / Title */}
         <div className="mb-10 relative h-44 md:h-48 flex justify-center items-center group">
           <div className="absolute -rotate-15 -translate-x-14 md:-translate-x-18 transition-transform duration-700 group-hover:-translate-x-20 group-hover:-rotate-22 hover:drop-shadow-lg">
@@ -212,7 +213,9 @@ export default function Home() {
               className="w-full surface-0 border border-slate-700/70 rounded-xl px-4 py-4 text-primary placeholder-tertiary focus:outline-none focus:border-blue-500/80 focus:surface-2 transition-all text-center"
             />
             {session?.user && !hostName && (
-              <p className="text-[10px] text-blue-400/60 font-medium">Se usará tu nombre de cuenta por defecto</p>
+              <p className="text-[10px] text-blue-400/60 font-medium">
+                Se usará tu nombre de cuenta por defecto
+              </p>
             )}
             <button
               onClick={createGame}
@@ -224,9 +227,7 @@ export default function Home() {
               ) : (
                 <Dices className="w-8 h-8 group-hover:rotate-12 transition-transform" />
               )}
-              {createGameMutation.isPending
-                ? "Creando Sala..."
-                : "Crear Nueva Partida"}
+              {createGameMutation.isPending ? "Creando Sala..." : "Crear Nueva Partida"}
             </button>
           </div>
 
@@ -295,9 +296,7 @@ export default function Home() {
               </button>
             </div>
             <div className="p-4 md:p-6 text-center">
-              <h3 className="text-primary font-bold text-lg md:text-xl mb-4">
-                Escanear Código QR
-              </h3>
+              <h3 className="text-primary font-bold text-lg md:text-xl mb-4">Escanear Código QR</h3>
               <div className="rounded-xl overflow-hidden aspect-square surface-2 relative border-2 border-slate-700">
                 <Scanner
                   onScan={(result) => {
@@ -328,9 +327,7 @@ export default function Home() {
                 />
               </div>
               <div className="mt-4 space-y-2">
-                <p className="text-secondary text-sm">
-                  Apunta la cámara al código QR de la sala
-                </p>
+                <p className="text-secondary text-sm">Apunta la cámara al código QR de la sala</p>
                 <div className="flex gap-2 text-xs text-tertiary">
                   <span>📱 Mantén la cámara estable</span>
                   <span>💡 Asegúrate de tener buena luz</span>

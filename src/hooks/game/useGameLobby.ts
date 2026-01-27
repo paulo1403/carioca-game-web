@@ -11,12 +11,7 @@ interface UseGameLobbyOptions {
   onError?: (error: Error) => void;
 }
 
-export function useGameLobby({
-  roomId,
-  myPlayerId,
-  onSuccess,
-  onError,
-}: UseGameLobbyOptions) {
+export function useGameLobby({ roomId, myPlayerId, onSuccess, onError }: UseGameLobbyOptions) {
   const queryClient = useQueryClient();
 
   // Helper para invalidar el cache
@@ -77,8 +72,7 @@ export function useGameLobby({
             player: createdPlayer,
           },
         });
-      } catch (err) {
-      }
+      } catch (err) {}
 
       onSuccess?.();
     },
@@ -134,8 +128,7 @@ export function useGameLobby({
           event: "player_change",
           payload: { action: "join", player: createdBot },
         });
-      } catch (err) {
-      }
+      } catch (err) {}
 
       onSuccess?.();
     },
@@ -181,8 +174,7 @@ export function useGameLobby({
           event: "player_change",
           payload: { action: "leave", playerId: playerIdToKick },
         });
-      } catch (err) {
-      }
+      } catch (err) {}
 
       onSuccess?.();
     },
@@ -215,7 +207,7 @@ export function useGameLobby({
       invalidateGameState();
       // Refetch inmediatamente para que todos vean el juego iniciado
       queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-      
+
       // Broadcast a otros jugadores que el juego inició
       try {
         supabase.channel(`game:${roomId}`).subscribe((status) => {
@@ -227,9 +219,8 @@ export function useGameLobby({
             });
           }
         });
-      } catch (err) {
-      }
-      
+      } catch (err) {}
+
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -280,8 +271,7 @@ export function useGameLobby({
           event: "player_change",
           payload: { action: "reorder" },
         });
-      } catch (err) {
-      }
+      } catch (err) {}
 
       onSuccess?.();
     },
@@ -321,7 +311,7 @@ export function useGameLobby({
       invalidateGameState();
       // Refetch inmediatamente para que todos vean que el juego terminó
       queryClient.refetchQueries({ queryKey: ["gameState", roomId] });
-      
+
       // Broadcast a otros jugadores que el juego terminó
       try {
         supabase.channel(`game:${roomId}`).subscribe((status) => {
@@ -333,9 +323,8 @@ export function useGameLobby({
             });
           }
         });
-      } catch (err) {
-      }
-      
+      } catch (err) {}
+
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -387,8 +376,7 @@ export function useGameLobby({
             event: "player_change",
             payload: { action: "leave", playerId: leavingId },
           });
-        } catch (err) {
-        }
+        } catch (err) {}
       }
 
       // Clear localStorage and redirect handled by component

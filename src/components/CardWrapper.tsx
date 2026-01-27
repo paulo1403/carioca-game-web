@@ -1,7 +1,7 @@
-import React from "react";
-import { Card } from "@/types/game";
-import { PlayingCard } from "./Card";
+import type React from "react";
 import { cn } from "@/lib/utils";
+import type { Card } from "@/types/game";
+import { PlayingCard } from "./Card";
 
 interface CardWrapperProps {
   card: Card;
@@ -16,7 +16,7 @@ interface CardWrapperProps {
   onClick?: () => void;
   isMobile?: boolean;
   size?: "small" | "normal" | "large" | "touch";
-} 
+}
 
 export const CardWrapper: React.FC<CardWrapperProps> = ({
   card,
@@ -64,19 +64,12 @@ export const CardWrapper: React.FC<CardWrapperProps> = ({
           "shadow-xl transition-all duration-300",
           isSelected && "ring-4 ring-yellow-400 border-yellow-500 card-glow",
           isTempSelected && "ring-4 ring-green-400 border-green-500",
-          isAddable &&
-          !isSelected &&
-          !isTempSelected &&
-          "border-blue-500 card-pulse",
-          isSuggestedDiscard &&
-          !isSelected &&
-          !isTempSelected &&
-          !isAddable &&
-          "border-red-500",
+          isAddable && !isSelected && !isTempSelected && "border-blue-500 card-pulse",
+          isSuggestedDiscard && !isSelected && !isTempSelected && !isAddable && "border-red-500",
           isNew &&
-          !isSelected &&
-          !isTempSelected &&
-          "ring-4 ring-emerald-400 border-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.5)]",
+            !isSelected &&
+            !isTempSelected &&
+            "ring-4 ring-emerald-400 border-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.5)]",
         )}
       />
       {isAddable && !isSelected && !isTempSelected && (

@@ -1,26 +1,19 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { joinGameSchema, validateRequest } from "@/lib/validations";
 import { Card } from "@/types/game";
 import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
-import { joinGameSchema, validateRequest } from "@/lib/validations";
-import { auth } from "@/auth";
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
 
   // 1. Validar con JOI
   const { value, error } = await validateRequest(joinGameSchema, body);
   if (error) {
-    return NextResponse.json(
-      { error: "Invalid input", details: error },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid input", details: error }, { status: 400 });
   }
 
   const { name } = value;
@@ -44,10 +37,7 @@ export async function POST(
     }
 
     if (session.status !== "WAITING") {
-      return NextResponse.json(
-        { error: "Game already started" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Game already started" }, { status: 400 });
     }
 
     // Check if user is already in the game (if authenticated)

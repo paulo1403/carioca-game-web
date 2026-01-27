@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { requesterId, order } = await request.json();
 
@@ -49,7 +46,7 @@ export async function POST(
       prisma.player.update({
         where: { id: playerId },
         data: { turnOrder: idx } as any,
-      })
+      }),
     );
 
     await prisma.$transaction([

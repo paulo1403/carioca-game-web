@@ -1,13 +1,10 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createDeck, shuffleDeck } from '@/utils/deck';
-import { getInitialDiscardPile } from '@/utils/gameSetup';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { createDeck, shuffleDeck } from "@/utils/deck";
+import { getInitialDiscardPile } from "@/utils/gameSetup";
 import { orderPlayersByTurn } from "@/utils/prismaOrder";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {
@@ -21,15 +18,15 @@ export async function POST(
     });
 
     if (!session) {
-      return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+      return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
 
-    if (session.status !== 'WAITING') {
-      return NextResponse.json({ error: 'Game already started' }, { status: 400 });
+    if (session.status !== "WAITING") {
+      return NextResponse.json({ error: "Game already started" }, { status: 400 });
     }
 
     if (session.players.length < 3) {
-      return NextResponse.json({ error: 'Minimum 3 players required' }, { status: 400 });
+      return NextResponse.json({ error: "Minimum 3 players required" }, { status: 400 });
     }
 
     // Deal Cards
@@ -37,15 +34,15 @@ export async function POST(
     const discardPile = getInitialDiscardPile();
 
     // Deal 11 cards to each player
-    const updates = session.players.map(player => {
+    const updates = session.players.map((player) => {
       const hand = deck.splice(0, 11);
       return prisma.player.update({
         where: { id: player.id },
         data: {
           hand: JSON.stringify(hand),
-          melds: '[]', // Reset melds on start
-          hasDrawn: false
-        }
+          melds: "[]", // Reset melds on start
+          hasDrawn: false,
+        },
       });
     });
 
@@ -53,12 +50,12 @@ export async function POST(
     const updateSession = prisma.gameSession.update({
       where: { id },
       data: {
-        status: 'PLAYING',
+        status: "PLAYING",
         deck: JSON.stringify(deck),
         discardPile: JSON.stringify(discardPile),
         currentTurn: 0,
         reshuffleCount: 0,
-        direction: 'counter-clockwise',
+        direction: "counter-clockwise",
         pendingBuyIntents: "[]",
         pendingDiscardIntents: "[]",
         lastAction: JSON.stringify({
@@ -67,7 +64,7 @@ export async function POST(
           description: "¡Partida iniciada!",
           timestamp: Date.now(),
         }),
-      }
+      },
     });
 
     await prisma.$transaction([...updates, updateSession]);
@@ -77,9 +74,8 @@ export async function POST(
     await checkAndProcessBotTurns(id);
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
-    console.error('Error starting game:', error);
-    return NextResponse.json({ error: 'Failed to start game' }, { status: 500 });
+    console.error("Error starting game:", error);
+    return NextResponse.json({ error: "Failed to start game" }, { status: 500 });
   }
 }

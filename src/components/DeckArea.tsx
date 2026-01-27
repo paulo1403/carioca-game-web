@@ -1,11 +1,11 @@
-import React from "react";
+import { Lightbulb } from "lucide-react";
+import type React from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { cn } from "@/lib/utils";
+import { Card, type GameState, type Player } from "@/types/game";
+import { getRemainingBuys, MAX_BUYS } from "@/utils/buys";
 import { PlayingCard } from "./Card";
 import { DiscardPileWrapper } from "./DiscardPileWrapper";
-import { cn } from "@/lib/utils";
-import { Lightbulb } from "lucide-react";
-import { Card, GameState, Player } from "@/types/game";
-import { useIsMobile } from "@/hooks/useIsMobile";
-import { MAX_BUYS, getRemainingBuys } from "@/utils/buys";
 
 interface DeckAreaProps {
   isMyTurn: boolean;
@@ -126,7 +126,9 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
               ? "cursor-pointer hover:scale-105 hover:ring-4 hover:ring-yellow-400 rounded-lg hover:-translate-y-2"
               : "",
             // Highlight when discard is useful for this player
-            isDiscardUseful && isBuyWindowOpen ? "ring-6 ring-yellow-300 shadow-[0_0_30px_rgba(250,204,21,0.28)] animate-pulse" : ""
+            isDiscardUseful && isBuyWindowOpen
+              ? "ring-6 ring-yellow-300 shadow-[0_0_30px_rgba(250,204,21,0.28)] animate-pulse"
+              : "",
           )}
         >
           {gameState.discardPile.length > 0 ? (
@@ -135,7 +137,7 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
               size={isMobile ? "touch" : "normal"}
               className={cn(
                 "transition-all duration-300",
-                !isBuyWindowOpen && "opacity-60 grayscale-[0.3]"
+                !isBuyWindowOpen && "opacity-60 grayscale-[0.3]",
               )}
             />
           ) : (
@@ -153,7 +155,10 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
           {gameState.discardPile.length > 0 && isBuyWindowOpen && (
             <div className="absolute -top-2 -right-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full border border-white/20 w-10 text-center animate-pulse">
               {isBuying ? (
-                <div className="flex items-center justify-center gap-1 text-[10px]"><span className="loader w-3 h-3 rounded-full border-2 border-white/50 border-t-white animate-spin" />...</div>
+                <div className="flex items-center justify-center gap-1 text-[10px]">
+                  <span className="loader w-3 h-3 rounded-full border-2 border-white/50 border-t-white animate-spin" />
+                  ...
+                </div>
               ) : (
                 `${getRemainingBuys(myPlayer?.buysUsed ?? 0)} compras`
               )}
@@ -169,13 +174,15 @@ export const DeckArea: React.FC<DeckAreaProps> = ({
                   "absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs font-bold px-2 py-1 rounded whitespace-nowrap animate-bounce rotate-in",
                   isDiscardUseful
                     ? "bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 shadow-lg scale-105"
-                    : "bg-black/50 text-white"
+                    : "bg-black/50 text-white",
                 )}
-                title={isDiscardUseful ? (discardReason ?? "¡Esta carta te permite bajar!") : undefined}
+                title={
+                  isDiscardUseful ? (discardReason ?? "¡Esta carta te permite bajar!") : undefined
+                }
               >
-              <Lightbulb className="w-4 h-4" />
-            </div>
-          )}
+                <Lightbulb className="w-4 h-4" />
+              </div>
+            )}
         </div>
       </DiscardPileWrapper>
     </div>

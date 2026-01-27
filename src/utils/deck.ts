@@ -1,6 +1,6 @@
-import { Card, Suit } from '@/types/game';
+import type { Card, Suit } from "@/types/game";
 
-const SUITS: Suit[] = ['HEART', 'DIAMOND', 'CLUB', 'SPADE'];
+const SUITS: Suit[] = ["HEART", "DIAMOND", "CLUB", "SPADE"];
 
 export const createDeck = (): Card[] => {
   const deck: Card[] = [];
@@ -11,10 +11,10 @@ export const createDeck = (): Card[] => {
     SUITS.forEach((suit) => {
       for (let value = 1; value <= 13; value++) {
         let displayValue = String(value);
-        if (value === 1) displayValue = 'A';
-        if (value === 11) displayValue = 'J';
-        if (value === 12) displayValue = 'Q';
-        if (value === 13) displayValue = 'K';
+        if (value === 1) displayValue = "A";
+        if (value === 11) displayValue = "J";
+        if (value === 12) displayValue = "Q";
+        if (value === 13) displayValue = "K";
 
         deck.push({
           id: `${suit.charAt(0)}${value}-${i}`, // e.g., H1-0, D12-1
@@ -29,9 +29,9 @@ export const createDeck = (): Card[] => {
     for (let j = 0; j < 2; j++) {
       deck.push({
         id: `JOKER-${i}-${j}`,
-        suit: 'JOKER',
+        suit: "JOKER",
         value: 0,
-        displayValue: 'Joker',
+        displayValue: "Joker",
       });
     }
   }

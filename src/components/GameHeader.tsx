@@ -1,22 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
-import { GameState, ROUND_CONTRACTS } from "@/types/game";
-import { RulesModal } from "@/components/RulesModal";
 import {
+  Bot,
+  HelpCircle,
+  History,
+  LogOut,
+  Menu,
   Trophy,
   User,
-  Bot,
-  Zap,
-  Menu,
-  X,
-  LogOut,
-  History,
   Users,
-  HelpCircle,
+  X,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type React from "react";
+import { useState } from "react";
+import { RulesModal } from "@/components/RulesModal";
+import { type GameState, ROUND_CONTRACTS } from "@/types/game";
 
 interface GameHeaderProps {
   gameState: GameState;
@@ -111,12 +112,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-400" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-slate-200 truncate">
-                    {myPlayer?.name}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {isHost ? "Anfitrión" : "Jugador"}
-                  </div>
+                  <div className="text-sm font-bold text-slate-200 truncate">{myPlayer?.name}</div>
+                  <div className="text-xs text-slate-400">{isHost ? "Anfitrión" : "Jugador"}</div>
                 </div>
               </div>
             </div>
@@ -142,9 +139,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                 className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-slate-800/50 transition-colors text-slate-200"
               >
                 <Users className="w-4 h-4 text-slate-400" />
-                <span className="text-sm">
-                  Jugadores ({gameState.players.length})
-                </span>
+                <span className="text-sm">Jugadores ({gameState.players.length})</span>
               </button>
 
               <button
@@ -192,12 +187,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         )}
 
         {/* Click outside to close */}
-        {isMenuOpen && (
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsMenuOpen(false)}
-          />
-        )}
+        {isMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />}
       </div>
 
       {/* Leave Game Modal */}
@@ -208,14 +198,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
                 <LogOut className="w-6 h-6 text-red-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-200">
-                Salir de la Partida
-              </h3>
+              <h3 className="text-xl font-bold text-slate-200">Salir de la Partida</h3>
             </div>
             <p className="text-slate-300 mb-6">
               ¿Estás seguro de que quieres salir de la partida?
-              {isHost &&
-                " Como anfitrión, esto no terminará el juego para los demás jugadores."}
+              {isHost && " Como anfitrión, esto no terminará el juego para los demás jugadores."}
             </p>
             <div className="flex gap-3">
               <button
@@ -246,13 +233,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               <div className="w-12 h-12 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
                 <XCircle className="w-6 h-6 text-orange-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-200">
-                Terminar Juego
-              </h3>
+              <h3 className="text-xl font-bold text-slate-200">Terminar Juego</h3>
             </div>
             <p className="text-slate-300 mb-6">
-              ¿Estás seguro de que quieres terminar el juego para todos los
-              jugadores? Esta acción expulsará a todos y cerrará la sala.
+              ¿Estás seguro de que quieres terminar el juego para todos los jugadores? Esta acción
+              expulsará a todos y cerrará la sala.
             </p>
             <div className="flex gap-3">
               <button
@@ -276,10 +261,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
       )}
 
       {/* Rules Modal */}
-      <RulesModal
-        isOpen={showRulesModal}
-        onClose={() => setShowRulesModal(false)}
-      />
+      <RulesModal isOpen={showRulesModal} onClose={() => setShowRulesModal(false)} />
     </>
   );
 };

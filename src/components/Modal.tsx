@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from "react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -8,8 +8,8 @@ interface ModalProps {
   onConfirm?: () => void;
   confirmText?: string;
   cancelText?: string;
-  type?: 'info' | 'confirm' | 'danger';
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
+  type?: "info" | "confirm" | "danger";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
   showHeader?: boolean;
   showFooter?: boolean;
 }
@@ -20,24 +20,24 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   onClose,
   onConfirm,
-  confirmText = 'Aceptar',
-  cancelText = 'Cancelar',
-  type = 'info',
-  size = 'sm',
+  confirmText = "Aceptar",
+  cancelText = "Cancelar",
+  type = "info",
+  size = "sm",
   showHeader = true,
-  showFooter = true
+  showFooter = true,
 }) => {
   if (!isOpen) return null;
 
   const sizeClass = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-    '5xl': 'max-w-5xl',
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
+    "4xl": "max-w-4xl",
+    "5xl": "max-w-5xl",
   }[size];
 
   return (
@@ -49,9 +49,7 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Header */}
         {showHeader && (
           <div className="bg-white/5 border-b border-white/5 p-5">
-            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
-              {title}
-            </h2>
+            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">{title}</h2>
           </div>
         )}
 
@@ -63,7 +61,7 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Footer */}
         {showFooter && (
           <div className="p-5 border-t border-white/5 bg-black/20 flex justify-end gap-3">
-            {type !== 'info' && (
+            {type !== "info" && (
               <button
                 onClick={onClose}
                 className="bg-white/5 hover:bg-white/10 text-white font-bold py-2.5 px-6 rounded-xl transition-all active:scale-95 border border-white/5"
@@ -77,10 +75,11 @@ export const Modal: React.FC<ModalProps> = ({
                 if (onConfirm) onConfirm();
                 else onClose();
               }}
-              className={`font-black py-2.5 px-8 rounded-xl transition-all active:scale-95 shadow-xl ${type === 'danger'
-                ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/20'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
-                }`}
+              className={`font-black py-2.5 px-8 rounded-xl transition-all active:scale-95 shadow-xl ${
+                type === "danger"
+                  ? "bg-red-600 hover:bg-red-500 text-white shadow-red-500/20"
+                  : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+              }`}
             >
               {confirmText}
             </button>

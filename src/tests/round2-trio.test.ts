@@ -1,5 +1,5 @@
-import { Card } from "@/types/game";
-import { findPotentialContractGroups, canDoInitialDown } from "@/utils/handAnalyzer";
+import type { Card } from "@/types/game";
+import { canDoInitialDown, findPotentialContractGroups } from "@/utils/handAnalyzer";
 
 const createCard = (suit: string, value: number, id: string): Card => ({
   id,
