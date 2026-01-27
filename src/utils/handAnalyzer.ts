@@ -127,7 +127,14 @@ export const findPotentialContractGroups = (
     for (const [suit, cards] of bySuit) {
       for (let start = 1; start <= 13; start++) {
         const windowValues = Array.from({ length: reqs.escalaSize }, (_, i) => ((start + i - 1) % 13) + 1);
-        const cardsInWindow = cards.filter(c => windowValues.includes(c.value));
+        const usedValues = new Set<number>();
+        const cardsInWindow: Card[] = [];
+        for (const c of cards) {
+          if (!windowValues.includes(c.value)) continue;
+          if (usedValues.has(c.value)) continue;
+          usedValues.add(c.value);
+          cardsInWindow.push(c);
+        }
 
         // Simplified check
         const needed = reqs.escalaSize - cardsInWindow.length;

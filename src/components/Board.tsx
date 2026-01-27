@@ -291,6 +291,18 @@ export const Board: React.FC<BoardProps> = ({
     setPanelOpen(!isMobile);
   }, [isMobile]);
 
+  React.useEffect(() => {
+    if (
+      panelTab !== "actions" &&
+      stealableJokers.length > 0 &&
+      isMyTurn &&
+      hasDrawn &&
+      !isDownMode
+    ) {
+      setPanelTab("actions");
+    }
+  }, [panelTab, stealableJokers.length, isMyTurn, hasDrawn, isDownMode]);
+
   // Player layout (responsive for mobile and desktop)
   const layout = useMemo(() => {
     const all = gameState.players;
@@ -854,13 +866,16 @@ export const Board: React.FC<BoardProps> = ({
                     type="button"
                     onClick={() => setPanelTab("actions")}
                     className={cn(
-                      "text-xs md:text-sm font-semibold px-3 py-1 rounded-full",
+                      "text-xs md:text-sm font-semibold px-3 py-1 rounded-full relative",
                       panelTab === "actions"
                         ? "bg-blue-600/70 text-white"
                         : "bg-slate-800/70 text-slate-200",
                     )}
                   >
                     Acciones
+                    {stealableJokers.length > 0 && (
+                      <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-slate-900" />
+                    )}
                   </button>
                   <button
                     type="button"

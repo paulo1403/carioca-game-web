@@ -7,6 +7,7 @@ import {
     getCardPoints,
     canAddToMeld
 } from "@/utils/rules";
+import { canFulfillContract } from "@/utils/handAnalyzer";
 
 describe("Carioca Comprehensive Rules Verification", () => {
     const createCard = (suit: string, value: number, id: string): Card => ({
@@ -85,6 +86,23 @@ describe("Carioca Comprehensive Rules Verification", () => {
             ];
             expect(isEscala(group, 5)).toBe(true);
         });
+
+        test("Round 8: Should allow 7-card escala with jokers even with duplicate suit values", () => {
+            const hand = [
+                createCard("CLUB", 6, "C6"),
+                createCard("CLUB", 7, "C7"),
+                createCard("CLUB", 9, "C9a"),
+                createCard("CLUB", 9, "C9b"),
+                createCard("CLUB", 10, "C10"),
+                createCard("CLUB", 12, "CQ"),
+                createCard("JOKER", 0, "J1"),
+                createCard("JOKER", 0, "J2"),
+            ];
+
+            const result = canFulfillContract(hand, 8, false);
+            expect(result.canDown).toBe(true);
+            expect(result.groups.length).toBeGreaterThan(0);
+        });
     });
 
     describe("Joker Stealing Logic", () => {
@@ -125,6 +143,22 @@ describe("Carioca Comprehensive Rules Verification", () => {
 
             expect(canStealJoker(sevenClub, meld, [sevenClub])).toBe(false);
             expect(canStealJoker(sevenClub, meld, [sevenClub, createCard("DIAMOND", 7, "4")])).toBe(true);
+        });
+
+        test("In Group: Should allow stealing joker with two matching cards even with duplicate suits", () => {
+            const meld = [
+                createCard("HEART", 2, "h2a"),
+                createCard("HEART", 2, "h2b"),
+                createCard("DIAMOND", 2, "d2"),
+                createCard("CLUB", 2, "c2"),
+                createCard("SPADE", 2, "s2"),
+                createCard("JOKER", 0, "j1"),
+            ];
+
+            const twoA = createCard("CLUB", 2, "c2x");
+            const twoB = createCard("DIAMOND", 2, "d2x");
+
+            expect(canStealJoker(twoA, meld, [twoA, twoB])).toBe(true);
         });
     });
 

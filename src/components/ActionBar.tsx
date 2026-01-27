@@ -63,7 +63,7 @@ export const ActionBar: React.FC<ActionBarProps> = ({
         </button>
       )}
       {/* Steal Joker Buttons */}
-      {hasMelds && isMyTurn && hasDrawn && stealableJokers.length > 0 && !isDownMode && (
+      {isMyTurn && hasDrawn && stealableJokers.length > 0 && !isDownMode && (
         <div className="flex gap-2 bg-red-900/70 p-2 rounded-full border border-red-500/50 items-center">
           <span className="text-red-200 text-xs font-semibold px-2">🃏 {stealableJokers.length}</span>
           {stealableJokers.slice(0, 3).map((sj, index) => (
@@ -86,13 +86,15 @@ export const ActionBar: React.FC<ActionBarProps> = ({
       )}
 
       {/* Bajarse Button */}
-      {isMyTurn && hasDrawn && !isDownMode && canDown && (
+      {isMyTurn && !isDownMode && canDown && (
         <button
-          onClick={() => !processing && onToggleDownMode()}
-          disabled={processing}
+          onClick={() => !processing && hasDrawn && onToggleDownMode()}
+          disabled={processing || !hasDrawn}
           className={cn(
             "font-semibold px-6 py-2 rounded-full shadow-sm flex items-center gap-2 transition-all text-sm active:scale-95",
-            "bg-green-500 hover:bg-green-400 text-white",
+            hasDrawn
+              ? "bg-green-500 hover:bg-green-400 text-white"
+              : "bg-slate-800/60 text-slate-400 cursor-not-allowed",
             processing ? "opacity-60 cursor-not-allowed" : ""
           )}
         >
@@ -101,8 +103,8 @@ export const ActionBar: React.FC<ActionBarProps> = ({
           ) : (
             <ArrowDown className="w-5 h-5" />
           )}
-          {hasMelds ? "Bajada adicional" : "Bajarse"}
-          {canDown && !processing && <Check className="w-4 h-4" />}
+          {hasDrawn ? (hasMelds ? "Bajada adicional" : "Bajarse") : "Roba primero"}
+          {canDown && !processing && hasDrawn && <Check className="w-4 h-4" />}
         </button>
       )}
     </div>
